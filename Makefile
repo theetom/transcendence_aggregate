@@ -10,4 +10,6 @@ stop:
 clean: stop
 	docker system prune -a --force
 
-.PHONY: all restart stop clean
+re: clean all
+
+.PHONY: all restart stop clean re
