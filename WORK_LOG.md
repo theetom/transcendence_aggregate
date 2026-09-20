@@ -2,6 +2,56 @@
 
 This file is the running log for work done in this repository.
 
+## Current branch instructions — September 20, 2026
+
+- The current user instructions supersede older mock-data, preview-auth, and URL-identifier planning notes below.
+- Preserve the existing display/CSS while connecting to the partner backend. No frontend mock records, generated URL identifiers, client-side substitutes for backend features, or simulated successful actions.
+- Display actual HTTP responses for failures, including Django HTML error pages and every JSON validation field. Do not replace them with frontend-written unavailable notices.
+- At the user's explicit request, unsupported pages now issue requests too: profile uses `/api/me/`; category and search use their frontend paths under `/api/`; admin uses `/api/admin/`. These are requests to unimplemented URLs, not new or verified backend contracts. Django determines their responses. No backend routes were added.
+- Recipe sections also request image, author, favourites and related-data URLs and display their returned responses; those URLs are unimplemented in the current backend.
+- Successful signup redirects to `/login` and does not save the token returned by signup. Only successful login stores an authentication token; login redirects to `/`.
+- Do not guess the recipe author's ID, ask the user to supply it, or search the public users list to compensate for a missing current-user endpoint. Submit the form to the actual intake endpoint and display its validation response.
+- Removed static profile dashboards, unsupported search/moderation scaffolding and the manual recipe-author ID input. Restored the Profile button to reach the real `/api/me/` request.
+- Verification at the end of frontend conversion: production build and ESLint passed; HTTP error-preservation checks passed before their test file was removed at the user's request. Do not restore that test file or add permanent testing infrastructure without a request.
+- Do not modify backend source or Docker configuration. The attempted Compose startup change was undone; the backend was restarted with the original configuration. No complete database reset was performed.
+- The user explicitly requested deletion of one newly registered account. Deleted only `rohrohroh` (ID 3), its profile and auth token from the running database; verified no recipes or reviews belonged to it and that the seeded accounts remained. A pre-deletion backup exists at `/tmp/transcendence-db-backup.LaoVcG/db.sqlite3` (temporary storage).
+
+## Session wrap-up — September 20, 2026
+
+### Resume point
+- Slug-removal check for the partner report: no slug references remain in the application-owned frontend or backend source/configuration. Recipe links and requests use the exact backend title with URL encoding; category frontend routes use numeric IDs. Historical work-log entries still mention the previous implementation. Dependencies/build artifacts were excluded from this source scan.
+- The user confirms login and signup are both working perfectly. Testing stopped there; do not claim recipe creation or the entire website has been tested successfully.
+- Saved reminder: revisit the disputed `/api/recipes/add_recipe/` POST flow. The earlier message asked about creating the recipe, ingredient quantities/units, selected categories, ordered steps, authenticated author and uploaded images (A–F); the partner said that assessment was wrong. Latest user correction: test it first. Do not ask the partner for a working request or repeat the disputed missing-implementation claim in the report before testing.
+- Source recheck in this local backend copy: the POST route exists and calls `RecipeDetailedSerializer.save()`. That serializer has no custom nested `create()`, steps are `read_only=True`, images are not serialized, and recipe intake does not pass `request.user` into save. Older explicit recipe-creation code is inside a triple-quoted string and is not the routed handler. These are source findings in this copy, not a completed runtime test of the partner's latest implementation.
+- Next testing item: add-recipe, against the existing backend as it is. Show its real responses; do not implement backend fixes or frontend substitutes.
+- Required partner follow-up: implement authenticated `GET /api/me/` so the frontend can display the signed-in user's profile. `GET /api/users/` is a profiles list and must not be used as a substitute.
+- Checked `backend/config/urls.py`, `backend/users/urls.py`, and the user views: no website logout API is implemented. Request a logout endpoint that invalidates the current token; the frontend will also need to clear its saved token when logout succeeds. `/api/logout/` is a proposed path, not an existing route.
+- Keep registration and login separate: signup creates the account, then the frontend navigates to login without saving the signup token. Successful login saves the returned token and navigates home.
+
+### Next-session breakpoint: test add-recipe
+
+1. Resume on `frontend-backend_connection_test`; login/signup are confirmed working. Use the current backend/Docker setup without changing either.
+2. Open the add-recipe form while logged in. Check the actual `GET /api/recipes/add_recipe/` response and confirm the returned category/ingredient options reach the form.
+3. Submit a clearly identifiable test recipe through the actual frontend. Record the outgoing request body, HTTP status and full response before drawing conclusions. The current form sends title, ingredients with quantity/unit, categories as name objects, ordered steps and an empty reviews list, with the login token in the Authorization header. It does not supply a guessed user ID.
+4. Verify A–F against persisted data if creation succeeds: recipe record; ingredient amounts/units; category connections; step ordering; authenticated author; uploaded images. Do not equate a success response with every part being saved.
+5. Distinguish frontend limitations from backend behavior. The current picture input is disabled and no images are submitted, so the normal form cannot establish whether backend image upload works. A rejection at an earlier validation step also does not prove later creation stages work or fail.
+6. Compare observed failures with the backend code and separate a frontend request mismatch from a backend implementation gap. Preserve actual errors; add no substitute logic and make no backend/Docker edits.
+7. Only after testing, prepare a partner update with the exact request/response and verified findings. Until then, report only that add-recipe testing is pending.
+
+Category clarification: numeric IDs are implemented only in frontend links/routes (`/category/:id`) using IDs returned by the options API. The frontend's `/api/category/<id>/` request does not correspond to an implemented backend endpoint; it displays the actual response. Do not report category browsing as implemented or working.
+
+### Partner report draft
+
+Teammate Report (September 20, 2026)
+
+- Connected the frontend to the current backend API and removed the mock-data and development-login paths.
+- Pages display the server's actual HTTP responses/errors for testing.
+- Changed signup to require a separate login; it no longer signs users in automatically or redirects them to the profile page.
+- Testing stopped at login/signup. Add-recipe testing is next.
+- Please implement `/api/me/` for the authenticated user's profile; the existing users-list endpoint does not cover that behavior.
+- No website logout API is currently implemented. Please add token invalidation for logout and confirm the endpoint path with the frontend.
+- Current status: frontend integration in progress; profile/logout backend endpoints needed; add-recipe testing pending.
+
 ## Project Snapshot
 
 - Repository: `42_ft_transcendence`
@@ -188,6 +238,64 @@ Use this protocol whenever the user asks for a code explanation, logic walkthrou
   - add picture-box notice text that clearly states a minimum of 2 and maximum of 6 pictures are required
   - add one more picture upload section in the picture box flow
   - continue fixing the add-recipe page after the database-backed submission path is ready
+
+## 2026-09-18
+
+### Task
+- Resume the project after a two-week break and review the current frontend flow before examining a teammate's backend repository.
+
+### Actions
+- Confirmed the frontend production build succeeds.
+- Reviewed the frontend route structure, shared header/footer behavior, temporary auth preview, placeholder recipe/category/search data, profile, recipe submission, and moderation flows.
+- Confirmed that the current `frontend` branch is frontend-only: its working tree does not contain the Django backend, Nginx, or Docker Compose files, although the shared `main` Git history still contains a small Django user-auth API.
+- Identified that the frontend currently makes no network/API requests. `frontend/src/data/siteData.js` is the temporary data source and future backend integration boundary.
+- Identified current access-control gaps: `/add-recipe` is guarded by the frontend preview-auth check, while `/profile`, `/admin`, and `/admin/review/:slug` are not yet guarded; admin-role authorization is not implemented.
+- Confirmed the newest local frontend commit is one commit ahead of `origin/frontend`.
+- Confirmed `npm run lint` currently reports one React hook-rule error in `frontend/src/components/SiteHeader.jsx` because it synchronously calls `setMenuOpen(false)` inside an effect.
+
+### Notes
+- Resume point: frontend flow review is in progress. Next, explain the flow at complete-beginner level, beginning with the meaning and purpose of a URL slug.
+- The user plans to bring their partner's backend repository only after this frontend review. Do not begin backend integration until that repository is available and its actual endpoints/data models have been reviewed together.
+- User preference: explain frontend and backend flow as if teaching a complete beginner; do not provide only a compressed summary when they request a walkthrough.
+- Session rule: read `WORK_LOG.md` at the start of every future repository session and use it to continue the active question/progress flow.
+
+## 2026-09-18
+
+### Task
+- Inspect the partner repository at `/home/suroh/Documents/react_django_tryout` and explain its implemented backend before planning integration.
+
+### Actions
+- Inspected the repository read-only: its Git history, Django settings, URL configuration, models, serializers, and views for users, recipes, and reviews.
+- Confirmed the partner has implemented Django data models for user profiles/favourites, recipes, categories, ingredients with per-recipe quantity/unit, ordered recipe steps, recipe images, and reviews with grades/comments/timestamps.
+- Confirmed the partner has implemented read endpoints for the recipe landing page, all recipe summaries, a recipe detail selected by recipe title, a review detail selected by recipe title plus review ID, a registration endpoint that creates an auth token, and Django REST Framework's token-login endpoint.
+- Attempted `python manage.py check`; it could not run because this local checkout's Python environment lacks the `rest_framework` package. No repository files were changed.
+
+### Notes
+- Partner endpoint route shapes currently use `recipe_name` (the exact title) rather than a slug. This differs from the frontend's current `/recipe/:slug` direction and must be agreed before integration.
+- The partner recipe models currently have numeric database IDs but no slug field.
+- Before integration planning, explain the partner implementation as beginner-level flow and distinguish working read paths from unfinished/problematic write paths. In particular, the current nested `RecipeDetailedSerializer` does not implement creation of nested ingredients/categories/steps, and its recipe POST path is not ready to accept the frontend add-recipe form as-is.
+- The original repository's `main` Git history contains an earlier Django session-cookie authentication exercise. The user clarified that it was educational infrastructure only, not a backend previously built for this recipe website. Treat the partner repository as the first recipe-backend candidate. It uses DRF token authentication (`Authorization: Token <token>`), and the team must choose an authentication approach before wiring login/signup and protected requests.
+
+## 2026-09-18
+
+### Task
+- Explain the frontend/partner-backend differences in complete-beginner language and prepare a WhatsApp coordination message for the partner.
+
+### Actions
+- Clarified URL terminology: a slug is the readable, usually stable public identifier in a path such as `/recipe/chocolate-cake`; it is not a performance optimization. A database can still keep and use a numeric internal ID.
+- Clarified the reason for a stable slug: a visible title may change while the slug and previously shared URL can remain unchanged.
+- Clarified that the current frontend already implements slug-shaped browser routes and search query parameters, but no backend recipe/category/search integration exists yet.
+- Clarified that the partner backend and frontend were built independently; the partner did not change the frontend landing page. Their current landing endpoint and the frontend labels/data requirements simply differ and need a shared final definition.
+- Prepared a WhatsApp message that asks the partner to confirm: slug versus exact-title recipe lookup; username versus email login; frontend addition of `password_confirm`; a future current-user endpoint such as `/api/me/`; the completion state of recipe creation; missing search/category endpoints; and the final landing-page content direction.
+- Expanded the recipe-creation finding: `GET /api/recipes/add_recipe/` returns existing category and ingredient options. The intended `POST` route uses `RecipeDetailedSerializer`, but source review did not find the completed creation logic needed to create one recipe and save its ingredient quantity/unit links, categories, ordered steps, authenticated author, and uploaded image records.
+
+### Notes
+- User preference for explanations: define terms with concrete examples first; avoid abstract architecture language, vague future-planning lists, and unexplained database jargon. State plainly what code currently does, what it does not do, and why a recommendation is made.
+- Frontend signup decision: add a Confirm Password field so the frontend supplies the partner backend's required `password_confirm` value. This is a planned change only; do not edit files until the user explicitly asks to implement it and approves the proposed edit.
+- Auth integration is implementation work, not a conceptual dispute: replace the frontend-only dev-auth preview with the partner backend's token-based login flow after the team confirms login identity/endpoint details.
+- Profile integration gap: the partner backend has no current-user endpoint. `GET /api/users/` lists profiles; the frontend profile page instead needs a route such as `GET /api/me/` that returns the authenticated user's own profile and favourites.
+- Moderation gap: the frontend contains visual admin/review pages, but the partner backend currently has no pending-submission status, approve/deny action, moderator reply storage, or moderation API. Treat moderation as unconnected future work unless the project requires it now.
+- Do not claim the partner POST recipe route works end-to-end: its source has not been runtime-tested locally because the checkout lacks `rest_framework`, and the serializer/view source indicates nested recipe creation is unfinished.
 
 ## 2026-07-29
 

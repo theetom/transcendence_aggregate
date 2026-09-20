@@ -1,0 +1,115 @@
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import './App.css'
+import SiteHeader from './components/SiteHeader'
+import SiteFooter from './components/SiteFooter'
+import AddRecipePage from './pages/AddRecipePage'
+import AddRecipeSubmittedPage from './pages/AddRecipeSubmittedPage'
+import AdminPage from './pages/AdminPage'
+import CategoryPage from './pages/CategoryPage'
+import ConnectPage from './pages/ConnectPage'
+import HomePage from './pages/HomePage'
+import LoginPage from './pages/LoginPage'
+import NotFoundPage from './pages/NotFoundPage'
+import PrivacyPage from './pages/PrivacyPage'
+import ProfilePage from './pages/ProfilePage'
+import RecipePage from './pages/RecipePage'
+import SearchResultsPage from './pages/SearchResultsPage'
+import SignupPage from './pages/SignupPage'
+import TermsPage from './pages/TermsPage'
+import { isAuthenticated } from './auth'
+
+function ProtectedRoute({ children }) {
+  if (!isAuthenticated()) {
+    return <Navigate replace to="/connect" />
+  }
+
+  return children
+}
+
+function PublicOnlyRoute({ children }) {
+  if (isAuthenticated()) {
+    return <Navigate replace to="/" />
+  }
+
+  return children
+}
+
+function AppShell() {
+  const location = useLocation()
+  const isHomePage = location.pathname === '/'
+  const mainClassName = isHomePage ? 'page-main page-main--home' : 'page-main'
+
+  return (
+    <div className="site-frame">
+      <SiteHeader key={location.key} />
+
+      <main className={mainClassName}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/home" element={<Navigate replace to="/" />} />
+          <Route path="/category" element={<CategoryPage />} />
+          <Route path="/category/:id" element={<CategoryPage />} />
+          <Route path="/recipe/:title" element={<RecipePage />} />
+          <Route path="/results/search" element={<SearchResultsPage />} />
+          <Route
+            path="/connect"
+            element={
+              <PublicOnlyRoute>
+                <ConnectPage />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              <PublicOnlyRoute>
+                <LoginPage />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <PublicOnlyRoute>
+                <SignupPage />
+              </PublicOnlyRoute>
+            }
+          />
+          <Route
+            path="/add-recipe"
+            element={
+              <ProtectedRoute>
+                <AddRecipePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/add-recipe/submitted"
+            element={
+              <ProtectedRoute>
+                <AddRecipeSubmittedPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </main>
+
+      <SiteFooter />
+    </div>
+  )
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppShell />
+    </BrowserRouter>
+  )
+}
+
+export default App
