@@ -1,16 +1,7 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import PageHero from '../components/PageHero'
-import { enableDevAuthPreview, isViewerAuthenticated } from '../data/siteData'
 
 function ConnectPage() {
-  const navigate = useNavigate()
-  const isAuthenticated = isViewerAuthenticated()
-
-  function handleDevPreviewClick() {
-    enableDevAuthPreview()
-    navigate('/')
-  }
-
   return (
     <div className="connect-page">
       <div className="content-frame">
@@ -48,18 +39,6 @@ function ConnectPage() {
           </article>
         </section>
       </div>
-
-      {!isAuthenticated ? (
-        <div className="dev-auth-preview">
-          <button
-            type="button"
-            className="dev-auth-preview__button"
-            onClick={handleDevPreviewClick}
-          >
-            Dev login preview
-          </button>
-        </div>
-      ) : null}
     </div>
   )
 }

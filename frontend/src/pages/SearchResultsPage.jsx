@@ -1,12 +1,10 @@
 import { useSearchParams } from 'react-router-dom'
 import RecipeCard from '../components/RecipeCard'
 import SectionTitle from '../components/SectionTitle'
-import { searchRecipes } from '../data/siteData'
 
-function SearchResultsPage() {
+function SearchResultsPage({ results = null }) {
   const [searchParams] = useSearchParams()
   const query = searchParams.get('q') ?? ''
-  const results = searchRecipes(query)
 
   return (
     <div className="content-frame">
@@ -22,17 +20,19 @@ function SearchResultsPage() {
       <section className="page-section">
         <SectionTitle
           eyebrow="Matches"
-          title={`${results.length} result${results.length === 1 ? '' : 's'} found`}
+          title={results ? `${results.length} result${results.length === 1 ? '' : 's'} found` : 'Search results'}
           description="This section should render the database matches for the current query."
         />
-        {results.length > 0 ? (
+        {results?.length > 0 ? (
           <div className="results-grid">
             {results.map((recipe) => (
               <RecipeCard key={recipe.slug} recipe={recipe} variant="compact" />
             ))}
           </div>
         ) : (
-          <div className="empty-state">No recipes matched the current query.</div>
+          <div className="empty-state">
+            {results ? 'No recipes matched the current query.' : 'Search results have not been loaded.'}
+          </div>
         )}
       </section>
     </div>

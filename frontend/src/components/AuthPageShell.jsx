@@ -29,7 +29,12 @@ function AuthPageShell({
           <p className="eyebrow">{formEyebrow}</p>
           <h3>{formTitle}</h3>
           {children}
-          <p className="status-banner auth-card__status">{status}</p>
+          <p
+            className="status-banner auth-card__status"
+            style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
+          >
+            {status}
+          </p>
         </section>
       </div>
     </div>

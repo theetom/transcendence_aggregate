@@ -6,8 +6,6 @@ import {
   menuThemeLabels,
 } from '../data/siteData'
 
-function handleMenuPlaceholderClick() {}
-
 function SiteHeader() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -97,7 +95,7 @@ function SiteHeader() {
                       key={label}
                       type="button"
                       className="menu-line menu-line--nested"
-                      onClick={handleMenuPlaceholderClick}
+                      disabled
                     >
                       {label}
                     </button>
@@ -113,7 +111,7 @@ function SiteHeader() {
                       key={label}
                       type="button"
                       className="menu-line menu-line--nested"
-                      onClick={handleMenuPlaceholderClick}
+                      disabled
                     >
                       {label}
                     </button>

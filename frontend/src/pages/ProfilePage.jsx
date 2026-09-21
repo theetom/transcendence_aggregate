@@ -1,21 +1,14 @@
-import { Link, useNavigate } from 'react-router-dom'
-import RecipeCard from '../components/RecipeCard'
-import {
-  disableDevAuthPreview,
-  getFavoriteRecipes,
-  getProfileRecipes,
-  isDevAuthPreviewEnabled,
-  profilePreview,
-} from '../data/siteData'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { authTokenStorageKey } from '../data/siteData'
 
-function ProfilePreviewCard({ title, to = '', imageLabel = 'Recipe image' }) {
+/*
+function ProfileRecipeCard({ title, to = '' }) {
   const cardClassNames = ['landing-plain__popular-card', 'profile-preview-card']
 
   const cardContent = (
     <>
-      <div className="landing-plain__image-placeholder profile-preview-card__image">
-        <span>{imageLabel}</span>
-      </div>
+      <div className="landing-plain__image-placeholder profile-preview-card__image" />
       <div className="landing-plain__caption profile-preview-card__caption">{title}</div>
     </>
   )
@@ -30,79 +23,58 @@ function ProfilePreviewCard({ title, to = '', imageLabel = 'Recipe image' }) {
 
   return <article className={cardClassNames.join(' ')}>{cardContent}</article>
 }
+*/
 
 function ProfilePage() {
-  const navigate = useNavigate()
-  const yourRecipes = getProfileRecipes()
-  const favoriteRecipes = getFavoriteRecipes()
-  const isDevPreviewEnabled = isDevAuthPreviewEnabled()
+  const [status, setStatus] = useState('Loading profile...')
 
-  function handleDevLogoutPreviewClick() {
-    disableDevAuthPreview()
-    navigate('/connect')
-  }
+  useEffect(() => {
+    const token = window.sessionStorage.getItem(authTokenStorageKey)
+    let responseDetails = 'GET /api/me/'
+
+    if (!token) {
+      setStatus(`${responseDetails}\n\nFrontend: No saved login token was found.`)
+      return undefined
+    }
+
+    async function loadProfile() {
+      try {
+        const response = await fetch('/api/me/', {
+          headers: {
+            Authorization: `Token ${token}`,
+          },
+        })
+
+        responseDetails += `\nHTTP ${response.status} ${response.statusText}`
+        const body = await response.text()
+        responseDetails += `\n\n${body}`
+        setStatus(responseDetails)
+      } catch (error) {
+        setStatus(`${responseDetails}\n\n${error.name}: ${error.message}`)
+      }
+    }
+
+    loadProfile()
+
+    return undefined
+  }, [])
 
   return (
     <div className="profile-page">
       <div className="content-frame">
         <section className="page-hero">
           <p className="eyebrow">Profile page</p>
-          <h1>{profilePreview.name}</h1>
-          <p className="page-hero__lead">{profilePreview.bio}</p>
-          <div className="hero-stats">
-            <span className="stat-pill">Sample profile preview</span>
-            {profilePreview.isAdmin ? <span className="stat-pill">Admin flag enabled</span> : null}
-          </div>
+          <h1>Profile</h1>
+          <p className="page-hero__lead">
+            The profile response from the backend is shown below.
+          </p>
         </section>
 
         <section className="page-section">
           <article className="detail-panel detail-panel--profile-section">
-            <p className="profile-page__section-title">Your recipes</p>
-            <p className="profile-page__section-note">
-              This is a sample profile preview until account data is connected.
-            </p>
-            {yourRecipes.length > 0 ? (
-              <div className="feature-grid">
-                {yourRecipes.map((recipe) => (
-                  <RecipeCard key={recipe.slug} recipe={recipe} variant="compact" />
-                ))}
-              </div>
-            ) : (
-              <p className="profile-page__empty-copy">
-                No recipes linked to this sample profile yet.
-              </p>
-            )}
-          </article>
-        </section>
-
-        <section className="page-section">
-          <article className="detail-panel detail-panel--profile-section">
-            <p className="profile-page__section-title">Favourite Recipes</p>
-            {favoriteRecipes.length > 0 ? (
-              <div className="landing-plain__popular-grid profile-preview-grid">
-                {favoriteRecipes.map((recipe) => (
-                  <ProfilePreviewCard
-                    key={recipe.slug}
-                    title={recipe.title}
-                    to={recipe.slug ? `/recipe/${recipe.slug}` : ''}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="profile-page__empty-copy">No favourites chosen yet.</p>
-            )}
-          </article>
-        </section>
-
-        <section className="page-section">
-          <article className="detail-panel detail-panel--profile-section">
-            <p className="profile-page__section-title">Pending Recipe Addition Requests</p>
-            <p className="profile-page__section-note profile-page__section-note--pending">
-              Recipe request history will appear here after the database-backed
-              submission flow is connected.
-            </p>
-            <p className="profile-page__empty-copy">
-              No recipe requests are shown until database integration is complete.
+            <p className="profile-page__section-title">Backend response</p>
+            <p className="status-banner" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+              {status}
             </p>
           </article>
         </section>
@@ -113,18 +85,6 @@ function ProfilePage() {
           </Link>
         </div>
       </div>
-
-      {isDevPreviewEnabled ? (
-        <div className="dev-auth-preview profile-page__dev-preview">
-          <button
-            type="button"
-            className="dev-auth-preview__button"
-            onClick={handleDevLogoutPreviewClick}
-          >
-            Dev logout preview
-          </button>
-        </div>
-      ) : null}
     </div>
   )
 }

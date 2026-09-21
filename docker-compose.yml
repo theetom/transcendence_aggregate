@@ -1,0 +1,21 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data
+    command: >-
+      sh -c "if [ ! -f /data/db.sqlite3 ]; then
+      cp /app/db.sqlite3 /data/db.sqlite3;
+      fi && python manage.py migrate &&
+      gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend

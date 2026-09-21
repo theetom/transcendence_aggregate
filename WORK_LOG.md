@@ -97,97 +97,62 @@ Use this protocol whenever the user asks for a code explanation, logic walkthrou
 
 - At the start of every future Codex session in this repository, read `WORK_LOG.md` before suggesting or applying changes.
 
+## Testing Rule — September 21, 2026
+
+- The user will perform testing and judge whether the implementation works.
+- Do not run tests unless the user explicitly asks. Never create or use temporary folders, copied applications, or containers for testing or verification without an explicit request.
+- This instruction supersedes the testing workflows in older log entries. Read-only source review is still allowed; do not launch builds, lint runs, or other verification work as a substitute for the prohibited temporary tests.
+
 ## Frontend Styling Rule
 
 - Do not add additional or extra styling unless the user explicitly asks for it.
 - When the user asks for structure only, keep the frontend plain and close to the existing header/footer style.
 - Use the same straightforward font direction as the existing header/footer unless the user asks for a different one.
 
-## 2026-08-26
+## 2026-07-24
 
 ### Task
-- Save the user's standing rule for future frontend styling and session startup behavior
+- Create a dedicated markdown file to track work done in this project
 
 ### Actions
-- Added a session-start instruction to read `WORK_LOG.md` at the beginning of future work in this repository
-- Added a frontend styling rule to avoid extra styling unless the user explicitly requests it
-- Recorded that plain structural frontend work should stay aligned with the existing header/footer style and font direction
+- Read the repository structure and identified the main areas: `backend/`, `frontend/`, and `nginx/`
+- Reviewed the main project context from `README.md`
+- Reviewed service orchestration in `docker-compose.yml`
+- Reviewed backend dependencies in `backend/requirements.txt`
+- Reviewed frontend dependencies in `frontend/package.json`
+- Reviewed Django configuration in `backend/config/settings.py`
+- Reviewed frontend routing in `frontend/src/App.jsx`
+- Reviewed reverse proxy setup in `nginx/default.conf`
+- Created this file as the persistent work log for future sessions
 
 ### Notes
-- Frontend structure should default to plain layout work, not visual design expansion, unless the user asks for styling
+- The project is set up as a Dockerized full-stack app with Django, PostgreSQL, React, and Nginx
+- Authentication and basic policy pages are already described in the repository documentation
+- This file can now be appended as we continue working
 
-## 2026-08-26
+## 2026-07-24
 
 ### Task
-- Record the user's current routing and URL-usage direction for later team discussion
+- Read `Notes.txt` and align with the current study progress
 
 ### Actions
-- Recorded that slug-based path identifiers should remain under strong consideration for single-item detail pages
-- Recorded that query parameters should remain under strong consideration for search, filtering, sorting, pagination, and similar page-state controls
-- Recorded that `id + slug` is not the preferred direction right now because it feels unnecessarily complex for the current stage
+- Reviewed `Notes.txt` in the project root
+- Confirmed the repository study plan is organized into six logic flows named A through F
+- Noted that steps A and B are complete and the next focus is step C: React frontend startup and routing flow
+- Reviewed the step C files:
+  - `frontend/src/main.jsx`
+  - `frontend/src/App.jsx`
+  - `frontend/src/pages/LoginPage.jsx`
+  - `frontend/src/pages/SignupPage.jsx`
+  - `frontend/src/pages/HomePage.jsx`
+  - `frontend/src/pages/PrivacyPage.jsx`
+  - `frontend/src/pages/TermsPage.jsx`
 
 ### Notes
-- Current preference under discussion:
-  - path identifiers such as slugs for one-item detail pages
-  - query parameters for search and UI state
-- This is a design consideration note, not a final backend contract
-
-## 2026-08-26
-
-### Task
-- Save the user's teammate-facing routing report and note the follow-up report preference
-
-### Actions
-- Recorded the user's Teammate Report 1 text for August 26, 2026
-- Recorded that a later Teammate Report 2 for the same day is expected and should be generated from the user's queue/instructions when requested
-
-### Notes
-- User-authored report text:
-  - `Teammate Report 1 ( Auguest 26, 2026)`
-  - `Worked on the frontend routing structure.`
-  - `- React Router = the frontend routing system that decides which React page/component to show when the URL changes.`
-  - `- URL identifier = the value inside the URL that tells the app which specific record to load, for example a slug or an id.`
-  - `Difference between them:`
-  - `- React Router chooses the page type.`
-  - `- The URL identifier chooses the specific data for that page.`
-  - `(e.g.`
-  - `router is for which page in the whole site.`
-  - `/login/, /admin/, /recipe/, etc.`
-  - `Identifier is for which specific data within those respective pages.`
-  - `/login/who/, /recipe/examplefood/, etc.)`
-  - `used Reach Router + slug in my case.`
-  - `Left untouched for later:`
-  - `- The homepage recipe image/name boxes are still just clickable no-op buttons for now.`
-  - `- Nothing is connected  to backend/database data yet.`
-  - `- Real recipe-page redirection and real data loading are  for later development.`
-- Future preference:
-  - when the user later provides the queue for Teammate Report 2 on August 26, 2026, generate it in the same general reporting context unless the user asks for a different format
-
-## 2026-08-30
-
-### Task
-- Save a teammate-facing report for the recent frontend profile/auth flow changes
-- Record follow-up work still needed on the add-recipe page
-
-### Actions
-- Recorded a concise teammate report covering profile page creation/refinement, auth-route cleanup, footer behavior changes, temporary recipe-request storage removal, and auth-state testing
-- Saved remaining add-recipe follow-up items as explicit notes for later implementation
-
-### Notes
-- Teammate Report (August 30, 2026)
-- Built and refined the profile page flow, including the profile hero and the recipe, favourites, and pending-request sections.
-- Updated the profile page text styling so the main profile title and profile box titles render black consistently.
-- Removed the temporary frontend-only recipe request persistence and changed the profile/add-recipe messaging so it no longer implies database-backed saving exists yet.
-- Hid `Connect` in the footer for authenticated state and redirected authenticated users away from `/connect`, `/login`, and `/signup` to `/profile`.
-- Fixed the logged-in footer layout so the remaining footer buttons stay evenly distributed when `Connect` is hidden.
-- Tested both `isAuthenticated = true` and `isAuthenticated = false` states to check footer links, connect-page access, and auth-gated navigation behavior.
-- Restored the italic pending-request notice and fixed the CSS specificity issue that had kept one profile section title brown.
-- Current status: frontend-only cleanup completed, backend/database integration still pending.
-- Add-recipe page follow-up items still pending:
-  - add safety and spam protections so the add-recipe flow is harder to abuse or troll
-  - add picture-box notice text that clearly states a minimum of 2 and maximum of 6 pictures are required
-  - add one more picture upload section in the picture box flow
-  - continue fixing the add-recipe page after the database-backed submission path is ready
+- Step C starts in `frontend/src/main.jsx`, where React loads and mounts `<App />` into the HTML element with id `root`
+- `frontend/src/App.jsx` wraps the app in `BrowserRouter`, renders the navigation links, and maps URL paths to page components
+- The page files are the route targets that React Router displays after matching the browser URL
+- `LoginPage.jsx`, `SignupPage.jsx`, and `HomePage.jsx` also contain request logic, so they belong partly to step D as well
 
 ## 2026-07-29
 
@@ -276,51 +241,6 @@ Use this protocol whenever the user asks for a code explanation, logic walkthrou
   - finish and clean the local/development setup first
   - then make the app more Kanban-focused
   - then prepare the deployable/production version
-
-## 2026-07-24
-
-### Task
-- Create a dedicated markdown file to track work done in this project
-
-### Actions
-- Read the repository structure and identified the main areas: `backend/`, `frontend/`, and `nginx/`
-- Reviewed the main project context from `README.md`
-- Reviewed service orchestration in `docker-compose.yml`
-- Reviewed backend dependencies in `backend/requirements.txt`
-- Reviewed frontend dependencies in `frontend/package.json`
-- Reviewed Django configuration in `backend/config/settings.py`
-- Reviewed frontend routing in `frontend/src/App.jsx`
-- Reviewed reverse proxy setup in `nginx/default.conf`
-- Created this file as the persistent work log for future sessions
-
-### Notes
-- The project is set up as a Dockerized full-stack app with Django, PostgreSQL, React, and Nginx
-- Authentication and basic policy pages are already described in the repository documentation
-- This file can now be appended as we continue working
-
-## 2026-07-24
-
-### Task
-- Read `Notes.txt` and align with the current study progress
-
-### Actions
-- Reviewed `Notes.txt` in the project root
-- Confirmed the repository study plan is organized into six logic flows named A through F
-- Noted that steps A and B are complete and the next focus is step C: React frontend startup and routing flow
-- Reviewed the step C files:
-  - `frontend/src/main.jsx`
-  - `frontend/src/App.jsx`
-  - `frontend/src/pages/LoginPage.jsx`
-  - `frontend/src/pages/SignupPage.jsx`
-  - `frontend/src/pages/HomePage.jsx`
-  - `frontend/src/pages/PrivacyPage.jsx`
-  - `frontend/src/pages/TermsPage.jsx`
-
-### Notes
-- Step C starts in `frontend/src/main.jsx`, where React loads and mounts `<App />` into the HTML element with id `root`
-- `frontend/src/App.jsx` wraps the app in `BrowserRouter`, renders the navigation links, and maps URL paths to page components
-- The page files are the route targets that React Router displays after matching the browser URL
-- `LoginPage.jsx`, `SignupPage.jsx`, and `HomePage.jsx` also contain request logic, so they belong partly to step D as well
 
 ## 2026-08-24
 
@@ -535,6 +455,66 @@ Use this protocol whenever the user asks for a code explanation, logic walkthrou
 ## 2026-08-26
 
 ### Task
+- Save the user's standing rule for future frontend styling and session startup behavior
+
+### Actions
+- Added a session-start instruction to read `WORK_LOG.md` at the beginning of future work in this repository
+- Added a frontend styling rule to avoid extra styling unless the user explicitly requests it
+- Recorded that plain structural frontend work should stay aligned with the existing header/footer style and font direction
+
+### Notes
+- Frontend structure should default to plain layout work, not visual design expansion, unless the user asks for styling
+
+## 2026-08-26
+
+### Task
+- Record the user's current routing and URL-usage direction for later team discussion
+
+### Actions
+- Recorded that slug-based path identifiers should remain under strong consideration for single-item detail pages
+- Recorded that query parameters should remain under strong consideration for search, filtering, sorting, pagination, and similar page-state controls
+- Recorded that `id + slug` is not the preferred direction right now because it feels unnecessarily complex for the current stage
+
+### Notes
+- Current preference under discussion:
+  - path identifiers such as slugs for one-item detail pages
+  - query parameters for search and UI state
+- This is a design consideration note, not a final backend contract
+
+## 2026-08-26
+
+### Task
+- Save the user's teammate-facing routing report and note the follow-up report preference
+
+### Actions
+- Recorded the user's Teammate Report 1 text for August 26, 2026
+- Recorded that a later Teammate Report 2 for the same day is expected and should be generated from the user's queue/instructions when requested
+
+### Notes
+- User-authored report text:
+  - `Teammate Report 1 ( Auguest 26, 2026)`
+  - `Worked on the frontend routing structure.`
+  - `- React Router = the frontend routing system that decides which React page/component to show when the URL changes.`
+  - `- URL identifier = the value inside the URL that tells the app which specific record to load, for example a slug or an id.`
+  - `Difference between them:`
+  - `- React Router chooses the page type.`
+  - `- The URL identifier chooses the specific data for that page.`
+  - `(e.g.`
+  - `router is for which page in the whole site.`
+  - `/login/, /admin/, /recipe/, etc.`
+  - `Identifier is for which specific data within those respective pages.`
+  - `/login/who/, /recipe/examplefood/, etc.)`
+  - `used Reach Router + slug in my case.`
+  - `Left untouched for later:`
+  - `- The homepage recipe image/name boxes are still just clickable no-op buttons for now.`
+  - `- Nothing is connected  to backend/database data yet.`
+  - `- Real recipe-page redirection and real data loading are  for later development.`
+- Future preference:
+  - when the user later provides the queue for Teammate Report 2 on August 26, 2026, generate it in the same general reporting context unless the user asks for a different format
+
+## 2026-08-26
+
+### Task
 - Unify the frontend visual style around the landing-page system, refine auth page copy, and build a placeholder category directory plus one sample category detail page
 
 ### Actions
@@ -608,6 +588,32 @@ Teammate Report (August 26, 2026)
 ## 2026-08-30
 
 ### Task
+- Save a teammate-facing report for the recent frontend profile/auth flow changes
+- Record follow-up work still needed on the add-recipe page
+
+### Actions
+- Recorded a concise teammate report covering profile page creation/refinement, auth-route cleanup, footer behavior changes, temporary recipe-request storage removal, and auth-state testing
+- Saved remaining add-recipe follow-up items as explicit notes for later implementation
+
+### Notes
+- Teammate Report (August 30, 2026)
+- Built and refined the profile page flow, including the profile hero and the recipe, favourites, and pending-request sections.
+- Updated the profile page text styling so the main profile title and profile box titles render black consistently.
+- Removed the temporary frontend-only recipe request persistence and changed the profile/add-recipe messaging so it no longer implies database-backed saving exists yet.
+- Hid `Connect` in the footer for authenticated state and redirected authenticated users away from `/connect`, `/login`, and `/signup` to `/profile`.
+- Fixed the logged-in footer layout so the remaining footer buttons stay evenly distributed when `Connect` is hidden.
+- Tested both `isAuthenticated = true` and `isAuthenticated = false` states to check footer links, connect-page access, and auth-gated navigation behavior.
+- Restored the italic pending-request notice and fixed the CSS specificity issue that had kept one profile section title brown.
+- Current status: frontend-only cleanup completed, backend/database integration still pending.
+- Add-recipe page follow-up items still pending:
+  - add safety and spam protections so the add-recipe flow is harder to abuse or troll
+  - add picture-box notice text that clearly states a minimum of 2 and maximum of 6 pictures are required
+  - add one more picture upload section in the picture box flow
+  - continue fixing the add-recipe page after the database-backed submission path is ready
+
+## 2026-08-30
+
+### Task
 - Save the user's August 30 teammate report and standardize the teammate-report format for future entries, including the report text stored in `WORK_LOG.md`
 
 ### Actions
@@ -625,3 +631,143 @@ Teammate Report (August 30, 2026)
 - Cleaned up the recipe page comments section by removing the extra title and copy and merging the empty comments area into a single box.
 - Unified the button styling on the connect, login, and signup pages so those action buttons now use the same white style.
 - Current status: this was frontend UI cleanup only. Backend and data connection are still for later.
+
+## 2026-09-18
+
+### Task
+- Resume the project after a two-week break and review the current frontend flow before examining a teammate's backend repository.
+
+### Actions
+- Confirmed the frontend production build succeeds.
+- Reviewed the frontend route structure, shared header/footer behavior, temporary auth preview, placeholder recipe/category/search data, profile, recipe submission, and moderation flows.
+- Confirmed that the current `frontend` branch is frontend-only: its working tree does not contain the Django backend, Nginx, or Docker Compose files, although the shared `main` Git history still contains a small Django user-auth API.
+- Identified that the frontend currently makes no network/API requests. `frontend/src/data/siteData.js` is the temporary data source and future backend integration boundary.
+- Identified current access-control gaps: `/add-recipe` is guarded by the frontend preview-auth check, while `/profile`, `/admin`, and `/admin/review/:slug` are not yet guarded; admin-role authorization is not implemented.
+- Confirmed the newest local frontend commit is one commit ahead of `origin/frontend`.
+- Confirmed `npm run lint` currently reports one React hook-rule error in `frontend/src/components/SiteHeader.jsx` because it synchronously calls `setMenuOpen(false)` inside an effect.
+
+### Notes
+- Resume point: frontend flow review is in progress. Next, explain the flow at complete-beginner level, beginning with the meaning and purpose of a URL slug.
+- The user plans to bring their partner's backend repository only after this frontend review. Do not begin backend integration until that repository is available and its actual endpoints/data models have been reviewed together.
+- User preference: explain frontend and backend flow as if teaching a complete beginner; do not provide only a compressed summary when they request a walkthrough.
+- Session rule: read `WORK_LOG.md` at the start of every future repository session and use it to continue the active question/progress flow.
+
+## 2026-09-18
+
+### Task
+- Inspect the partner repository at `/home/suroh/Documents/react_django_tryout` and explain its implemented backend before planning integration.
+
+### Actions
+- Inspected the repository read-only: its Git history, Django settings, URL configuration, models, serializers, and views for users, recipes, and reviews.
+- Confirmed the partner has implemented Django data models for user profiles/favourites, recipes, categories, ingredients with per-recipe quantity/unit, ordered recipe steps, recipe images, and reviews with grades/comments/timestamps.
+- Confirmed the partner has implemented read endpoints for the recipe landing page, all recipe summaries, a recipe detail selected by recipe title, a review detail selected by recipe title plus review ID, a registration endpoint that creates an auth token, and Django REST Framework's token-login endpoint.
+- Attempted `python manage.py check`; it could not run because this local checkout's Python environment lacks the `rest_framework` package. No repository files were changed.
+
+### Notes
+- Partner endpoint route shapes currently use `recipe_name` (the exact title) rather than a slug. This differs from the frontend's current `/recipe/:slug` direction and must be agreed before integration.
+- The partner recipe models currently have numeric database IDs but no slug field.
+- Before integration planning, explain the partner implementation as beginner-level flow and distinguish working read paths from unfinished/problematic write paths. In particular, the current nested `RecipeDetailedSerializer` does not implement creation of nested ingredients/categories/steps, and its recipe POST path is not ready to accept the frontend add-recipe form as-is.
+- The original repository's `main` Git history contains an earlier Django session-cookie authentication exercise. The user clarified that it was educational infrastructure only, not a backend previously built for this recipe website. Treat the partner repository as the first recipe-backend candidate. It uses DRF token authentication (`Authorization: Token <token>`), and the team must choose an authentication approach before wiring login/signup and protected requests.
+
+## 2026-09-18
+
+### Task
+- Explain the frontend/partner-backend differences in complete-beginner language and prepare a WhatsApp coordination message for the partner.
+
+### Actions
+- Clarified URL terminology: a slug is the readable, usually stable public identifier in a path such as `/recipe/chocolate-cake`; it is not a performance optimization. A database can still keep and use a numeric internal ID.
+- Clarified the reason for a stable slug: a visible title may change while the slug and previously shared URL can remain unchanged.
+- Clarified that the current frontend already implements slug-shaped browser routes and search query parameters, but no backend recipe/category/search integration exists yet.
+- Clarified that the partner backend and frontend were built independently; the partner did not change the frontend landing page. Their current landing endpoint and the frontend labels/data requirements simply differ and need a shared final definition.
+- Prepared a WhatsApp message that asks the partner to confirm: slug versus exact-title recipe lookup; username versus email login; frontend addition of `password_confirm`; a future current-user endpoint such as `/api/me/`; the completion state of recipe creation; missing search/category endpoints; and the final landing-page content direction.
+- Expanded the recipe-creation finding: `GET /api/recipes/add_recipe/` returns existing category and ingredient options. The intended `POST` route uses `RecipeDetailedSerializer`, but source review did not find the completed creation logic needed to create one recipe and save its ingredient quantity/unit links, categories, ordered steps, authenticated author, and uploaded image records.
+
+### Notes
+- User preference for explanations: define terms with concrete examples first; avoid abstract architecture language, vague future-planning lists, and unexplained database jargon. State plainly what code currently does, what it does not do, and why a recommendation is made.
+- Frontend signup decision: add a Confirm Password field so the frontend supplies the partner backend's required `password_confirm` value. This is a planned change only; do not edit files until the user explicitly asks to implement it and approves the proposed edit.
+- Auth integration is implementation work, not a conceptual dispute: replace the frontend-only dev-auth preview with the partner backend's token-based login flow after the team confirms login identity/endpoint details.
+- Profile integration gap: the partner backend has no current-user endpoint. `GET /api/users/` lists profiles; the frontend profile page instead needs a route such as `GET /api/me/` that returns the authenticated user's own profile and favourites.
+- Moderation gap: the frontend contains visual admin/review pages, but the partner backend currently has no pending-submission status, approve/deny action, moderator reply storage, or moderation API. Treat moderation as unconnected future work unless the project requires it now.
+- Do not claim the partner POST recipe route works end-to-end: its source has not been runtime-tested locally because the checkout lacks `rest_framework`, and the serializer/view source indicates nested recipe creation is unfinished.
+
+## 2026-09-20 — Current branch instructions
+
+- The current user instructions supersede older mock-data, preview-auth, and URL-identifier planning notes below.
+- Preserve the existing display/CSS while connecting to the partner backend. No frontend mock records, generated URL identifiers, client-side substitutes for backend features, or simulated successful actions.
+- Display actual HTTP responses for failures, including Django HTML error pages and every JSON validation field. Do not replace them with frontend-written unavailable notices.
+- At the user's explicit request, unsupported pages now issue requests too: profile uses `/api/me/`; category and search use their frontend paths under `/api/`; admin uses `/api/admin/`. These are requests to unimplemented URLs, not new or verified backend contracts. Django determines their responses. No backend routes were added.
+- Recipe sections also request image, author, favourites and related-data URLs and display their returned responses; those URLs are unimplemented in the current backend.
+- Successful signup redirects to `/login` and does not save the token returned by signup. Only successful login stores an authentication token; login redirects to `/`.
+- Do not guess the recipe author's ID, ask the user to supply it, or search the public users list to compensate for a missing current-user endpoint. Submit the form to the actual intake endpoint and display its validation response.
+- Removed static profile dashboards, unsupported search/moderation scaffolding and the manual recipe-author ID input. Restored the Profile button to reach the real `/api/me/` request.
+- Verification at the end of frontend conversion: production build and ESLint passed; HTTP error-preservation checks passed before their test file was removed at the user's request. Do not restore that test file or add permanent testing infrastructure without a request.
+- Do not modify backend source or Docker configuration. The attempted Compose startup change was undone; the backend was restarted with the original configuration. No complete database reset was performed.
+- The user explicitly requested deletion of one newly registered account. Deleted only `rohrohroh` (ID 3), its profile and auth token from the running database; verified no recipes or reviews belonged to it and that the seeded accounts remained. A pre-deletion backup exists at `/tmp/transcendence-db-backup.LaoVcG/db.sqlite3` (temporary storage).
+
+## 2026-09-20 — Session wrap-up
+
+### Resume point
+- Slug-removal check for the partner report: no slug references remain in the application-owned frontend or backend source/configuration. Recipe links and requests use the exact backend title with URL encoding; category frontend routes use numeric IDs. Historical work-log entries still mention the previous implementation. Dependencies/build artifacts were excluded from this source scan.
+- The user confirms login and signup are both working perfectly. Testing stopped there; do not claim recipe creation or the entire website has been tested successfully.
+- Saved reminder: revisit the disputed `/api/recipes/add_recipe/` POST flow. The earlier message asked about creating the recipe, ingredient quantities/units, selected categories, ordered steps, authenticated author and uploaded images (A–F); the partner said that assessment was wrong. Latest user correction: test it first. Do not ask the partner for a working request or repeat the disputed missing-implementation claim in the report before testing.
+- Source recheck in this local backend copy: the POST route exists and calls `RecipeDetailedSerializer.save()`. That serializer has no custom nested `create()`, steps are `read_only=True`, images are not serialized, and recipe intake does not pass `request.user` into save. Older explicit recipe-creation code is inside a triple-quoted string and is not the routed handler. These are source findings in this copy, not a completed runtime test of the partner's latest implementation.
+- Next testing item: add-recipe, against the existing backend as it is. Show its real responses; do not implement backend fixes or frontend substitutes.
+- Required partner follow-up: implement authenticated `GET /api/me/` so the frontend can display the signed-in user's profile. `GET /api/users/` is a profiles list and must not be used as a substitute.
+- Checked `backend/config/urls.py`, `backend/users/urls.py`, and the user views: no website logout API is implemented. Request a logout endpoint that invalidates the current token; the frontend will also need to clear its saved token when logout succeeds. `/api/logout/` is a proposed path, not an existing route.
+- Keep registration and login separate: signup creates the account, then the frontend navigates to login without saving the signup token. Successful login saves the returned token and navigates home.
+
+### Next-session breakpoint: test add-recipe
+
+1. Resume on `frontend-backend_connection_test`; login/signup are confirmed working. Use the current backend/Docker setup without changing either.
+2. Open the add-recipe form while logged in. Check the actual `GET /api/recipes/add_recipe/` response and confirm the returned category/ingredient options reach the form.
+3. Submit a clearly identifiable test recipe through the actual frontend. Record the outgoing request body, HTTP status and full response before drawing conclusions. The current form sends title, ingredients with quantity/unit, categories as name objects, ordered steps and an empty reviews list, with the login token in the Authorization header. It does not supply a guessed user ID.
+4. Verify A–F against persisted data if creation succeeds: recipe record; ingredient amounts/units; category connections; step ordering; authenticated author; uploaded images. Do not equate a success response with every part being saved.
+5. Distinguish frontend limitations from backend behavior. The current picture input is disabled and no images are submitted, so the normal form cannot establish whether backend image upload works. A rejection at an earlier validation step also does not prove later creation stages work or fail.
+6. Compare observed failures with the backend code and separate a frontend request mismatch from a backend implementation gap. Preserve actual errors; add no substitute logic and make no backend/Docker edits.
+7. Only after testing, prepare a partner update with the exact request/response and verified findings. Until then, report only that add-recipe testing is pending.
+
+Category clarification: numeric IDs are implemented only in frontend links/routes (`/category/:id`) using IDs returned by the options API. The frontend's `/api/category/<id>/` request does not correspond to an implemented backend endpoint; it displays the actual response. Do not report category browsing as implemented or working.
+
+### Partner report draft
+
+Teammate Report (September 20, 2026)
+
+- Connected the frontend to the current backend API and removed the mock-data and development-login paths.
+- Pages display the server's actual HTTP responses/errors for testing.
+- Changed signup to require a separate login; it no longer signs users in automatically or redirects them to the profile page.
+- Testing stopped at login/signup. Add-recipe testing is next.
+- Please implement `/api/me/` for the authenticated user's profile; the existing users-list endpoint does not cover that behavior.
+- No website logout API is currently implemented. Please add token invalidation for logout and confirm the endpoint path with the frontend.
+- Current status: frontend integration in progress; profile/logout backend endpoints needed; add-recipe testing pending.
+
+## 2026-09-21 — Frontend preparation on frontend-side_Roh
+
+### Task
+- Remove mock data and simulated actions, prepare the login/signup fields, and align the landing-page labels while preserving the existing styling and keeping changes small.
+- Do not connect additional APIs or change backend code or Docker configuration in this step.
+
+### Actions
+- Removed development login/logout, the sample profile/recipe cards, generated category records and identifiers, local mock lookup/search/ranking helpers, and simulated submission/moderation actions.
+- Kept the existing page sections, CSS, and slug routes. Unconnected data defaults are empty; authentication stays signed out until real login is connected.
+- Changed login from email to username. Added signup's `password_confirm` field and required-value/password-match checks using the existing form styling.
+- Updated both landing recipe headings to describe best-rated and most-reviewed recipes from the last 30 days. Removed fabricated fallback titles, counts, and recipe links.
+- Left the existing homepage `/api/recipes/` request and its error handling unchanged; added no API requests.
+
+### Verification and resume notes
+- The edited frontend passes the production build and rendering checks for 12 pages. ESLint reports only the pre-existing `SiteHeader.jsx` effect/setState error, also confirmed against the original source; that unrelated logic was left alone.
+- Verification used a temporary copy of the edited frontend in the existing frontend container with its installed dependencies. No dependencies or permanent test infrastructure were added to the repository.
+- The running frontend container contains older source. Rebuild only that service to display these edits: `docker compose up -d --build --no-deps frontend`.
+- Earlier integration entries in this imported log describe another branch. This branch is currently at frontend preparation only; login/signup and other new API connections have not been implemented or tested here.
+
+## 2026-09-21 — Approved login and signup connections
+
+### Actions
+- Applied the five frontend changes after showing the proposal and receiving the user's confirmation.
+- Login now posts username/password to `/api/login/`, stores the returned token in `sessionStorage` under `recipe-site-auth-token`, and navigates to `/` only after receiving a successful response with a token.
+- Signup now posts username/email/password/password_confirm to `/api/sign_up/`. HTTP 201 with the created user redirects to `/login`; the signup token is not stored.
+- Both forms prevent duplicate submissions while a request is pending. Failures display the endpoint, HTTP status, and complete response body in the existing status box; browser/parsing errors retain their actual messages. HTML response bodies are displayed as text.
+- The existing authentication check now reads the saved login token. Updated the frontend Vite proxy to `http://backend:8000` for Docker Compose.
+- Preserved the existing form layout. No backend, database, Dockerfile, or Compose changes were made.
+
+### Verification
+- Read-only source review only. No tests, builds, lint runs, API calls, container starts, or temporary verification setups were performed. Runtime testing belongs to the user and is pending.

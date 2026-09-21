@@ -1,32 +1,23 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import {
-  formatDate,
-  getPendingRecipeBySlug,
-} from '../data/siteData'
+import { Link } from 'react-router-dom'
+import { formatDate } from '../data/siteData'
 
-function ReviewRequestPage() {
-  const { slug } = useParams()
-  const request = getPendingRecipeBySlug(slug)
+function ReviewRequestPage({ request = null }) {
   const [moderatorReply, setModeratorReply] = useState('')
-  const [status, setStatus] = useState('No moderation action has been taken yet.')
 
   if (!request) {
     return (
       <div className="content-frame">
         <section className="page-hero not-found">
           <p className="eyebrow">Review request</p>
-          <h1>That pending recipe request could not be found.</h1>
+          <h1>Review request</h1>
+          <p className="page-hero__lead">Submission details have not been loaded.</p>
           <Link className="button button--primary" to="/admin">
             Back to admin page
           </Link>
         </section>
       </div>
     )
-  }
-
-  function handleModeration(action) {
-    setStatus(`${action} was recorded in the UI only. Backend moderation is not connected yet.`)
   }
 
   return (
@@ -81,14 +72,14 @@ function ReviewRequestPage() {
             <button
               type="button"
               className="button button--primary"
-              onClick={() => handleModeration('Approval')}
+              disabled
             >
               Approve
             </button>
             <button
               type="button"
               className="button button--secondary"
-              onClick={() => handleModeration('Denial')}
+              disabled
             >
               Deny
             </button>
@@ -99,7 +90,7 @@ function ReviewRequestPage() {
           <p className="eyebrow">Current state</p>
           <h3>Moderation status message</h3>
           <p className="status-banner" style={{ marginTop: '18px' }}>
-            {status}
+            Moderation is not connected yet.
           </p>
           <div style={{ marginTop: '18px' }}>
             <Link className="button button--ghost" to="/admin">

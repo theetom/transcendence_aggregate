@@ -1,16 +1,5 @@
-import { Link, useParams } from 'react-router-dom'
-import {
-  formatDate,
-  getRecipeBySlug,
-  getSuggestedRecipes,
-  sampleRecipeSlug,
-} from '../data/siteData'
-
-const suggestionPlaceholderCards = Array.from({ length: 3 }, (_, index) => ({
-  id: `recipe-suggestion-slot-${index + 1}`,
-  slug: sampleRecipeSlug,
-  title: 'Recipe name',
-}))
+import { Link } from 'react-router-dom'
+import { formatDate } from '../data/siteData'
 
 function getImageSource(imageRecord) {
   const candidates = [imageRecord?.src, imageRecord?.url, imageRecord?.imageUrl]
@@ -20,7 +9,7 @@ function getImageSource(imageRecord) {
 
 function getAuthorName(recipe) {
   if (!recipe) {
-    return 'Author name'
+    return ''
   }
 
   if (typeof recipe.author === 'string' && recipe.author.trim()) {
@@ -31,7 +20,7 @@ function getAuthorName(recipe) {
     return recipe.author.name
   }
 
-  return 'Author name'
+  return ''
 }
 
 function getAuthorSummary(recipe) {
@@ -43,7 +32,7 @@ function getAuthorSummary(recipe) {
     return recipe.author.bio
   }
 
-  return 'Author profile text from the recipe record will appear here.'
+  return ''
 }
 
 function getRatingValue(recipe) {
@@ -55,7 +44,7 @@ function getRatingValue(recipe) {
     return recipe.rating.toFixed(1)
   }
 
-  return 'Pending'
+  return ''
 }
 
 function getReviewCountLabel(recipe, comments) {
@@ -67,34 +56,24 @@ function getReviewCountLabel(recipe, comments) {
     return `${comments.length} comment${comments.length === 1 ? '' : 's'}`
   }
 
-  return 'Pending'
+  return ''
 }
 
-function RecipePage() {
-  const { slug = '' } = useParams()
-  const recipe = getRecipeBySlug(slug)
+function RecipePage({ recipe = null, suggestions = [] }) {
   const gallery = Array.isArray(recipe?.gallery) ? recipe.gallery : []
   const ingredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : []
   const steps = Array.isArray(recipe?.steps) ? recipe.steps : []
   const comments = Array.isArray(recipe?.comments) ? recipe.comments : []
-  const suggestions = recipe ? getSuggestedRecipes(recipe, 3) : []
-  const visibleSuggestionCards = suggestions.length > 0 ? suggestions : suggestionPlaceholderCards
-  const suggestionGridClassName = `recipe-shell__suggestion-grid recipe-shell__suggestion-grid--${visibleSuggestionCards.length}`
+  const suggestionGridClassName = `recipe-shell__suggestion-grid recipe-shell__suggestion-grid--${suggestions.length}`
   const previewImages = gallery.slice(0, 6)
   const hasPreviewImages = previewImages.length > 0
-  const visibleImageCards = previewImages.length > 0 ? previewImages : [null]
   const imageGridClassName = hasPreviewImages
-    ? `recipe-shell__image-grid recipe-shell__image-grid--${visibleImageCards.length}`
+    ? `recipe-shell__image-grid recipe-shell__image-grid--${previewImages.length}`
     : 'recipe-shell__image-grid recipe-shell__image-grid--empty'
-  const isSampleRecipePage = slug === sampleRecipeSlug && !recipe
   const authorName = getAuthorName(recipe)
   const authorSummary = getAuthorSummary(recipe)
-  const title = recipe?.title ?? (isSampleRecipePage ? 'Sample recipe' : 'Recipe title')
-  const lead =
-    recipe?.summary ??
-    (isSampleRecipePage
-      ? 'This sample recipe page shows the structure that later recipe records will use.'
-      : 'This route now holds the full recipe-page structure so Django-backed recipe content can be dropped in without another layout rewrite.')
+  const title = recipe?.title ?? 'Recipe'
+  const lead = recipe?.summary
   const ratingValue = getRatingValue(recipe)
   const reviewCountLabel = getReviewCountLabel(recipe, comments)
   const publishedOn = recipe?.addedOn ? formatDate(recipe.addedOn) : null
@@ -133,12 +112,11 @@ function RecipePage() {
             <h3 className="recipe-shell__media-title">Recipe image</h3>
 
             <div className={imageGridClassName}>
-              {visibleImageCards.map((item, index) => {
+              {previewImages.map((item, index) => {
                 const imageSource = getImageSource(item)
                 const imageKey = item?.id ?? item?.title ?? `recipe-image-slot-${index + 1}`
-                const altBase = title === 'Recipe title' ? 'Recipe image' : title
                 const altText =
-                  visibleImageCards.length > 1 ? `${altBase} ${index + 1}` : altBase
+                  previewImages.length > 1 ? `${title} ${index + 1}` : title
 
                 return (
                   <div
@@ -157,6 +135,11 @@ function RecipePage() {
                   </div>
                 )
               })}
+              {!hasPreviewImages ? (
+                <div className="recipe-shell__image-frame recipe-shell__image-frame--empty">
+                  <div className="recipe-shell__image-empty">Images have not been loaded.</div>
+                </div>
+              ) : null}
             </div>
           </article>
         </div>
@@ -204,9 +187,7 @@ function RecipePage() {
           </div>
 
           <div className="recipe-shell__author-header">
-            <div className="recipe-shell__author-mark" aria-hidden="true">
-              AU
-            </div>
+            <div className="recipe-shell__author-mark" aria-hidden="true" />
             <div className="recipe-shell__author-copy">
               <h3>{authorName}</h3>
               <p>{authorSummary}</p>
@@ -214,16 +195,16 @@ function RecipePage() {
           </div>
 
           <div className="card-meta-strip">
-            {publishedOn ? <span>{`Published ${publishedOn}`}</span> : <span>Publish date pending</span>}
+            {publishedOn ? <span>{`Published ${publishedOn}`}</span> : null}
             <span>Author profile link pending</span>
           </div>
         </article>
 
         <div className="recipe-detail__actions recipe-shell__actions">
-          <button type="button" className="button button--ghost">
+          <button type="button" className="button button--ghost" disabled>
             Share recipe
           </button>
-          <button type="button" className="button button--ghost">
+          <button type="button" className="button button--ghost" disabled>
             Add to favorites
           </button>
         </div>
@@ -236,33 +217,16 @@ function RecipePage() {
           </div>
 
           <div className={suggestionGridClassName}>
-            {suggestions.length > 0 ? (
-              visibleSuggestionCards.map((suggestedRecipe) => (
-                <Link
-                  key={suggestedRecipe.slug}
-                  className="landing-plain__popular-card landing-plain__card-button recipe-shell__suggestion-card"
-                  to={`/recipe/${suggestedRecipe.slug}`}
-                >
-                  <div className="landing-plain__image-placeholder" aria-hidden="true">
-                    Recipe image
-                  </div>
-                  <div className="landing-plain__caption">{suggestedRecipe.title}</div>
-                </Link>
-              ))
-            ) : (
-              visibleSuggestionCards.map((item) => (
-                <Link
-                  key={item.id}
-                  className="landing-plain__popular-card landing-plain__card-button recipe-shell__suggestion-card"
-                  to={`/recipe/${item.slug}`}
-                >
-                  <div className="landing-plain__image-placeholder" aria-hidden="true">
-                    Recipe image
-                  </div>
-                  <div className="landing-plain__caption">{item.title}</div>
-                </Link>
-              ))
-            )}
+            {suggestions.map((suggestedRecipe) => (
+              <Link
+                key={suggestedRecipe.slug}
+                className="landing-plain__popular-card landing-plain__card-button recipe-shell__suggestion-card"
+                to={`/recipe/${suggestedRecipe.slug}`}
+              >
+                <div className="landing-plain__image-placeholder" aria-hidden="true" />
+                <div className="landing-plain__caption">{suggestedRecipe.title}</div>
+              </Link>
+            ))}
           </div>
         </article>
       </section>

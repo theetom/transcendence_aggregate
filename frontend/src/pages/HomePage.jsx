@@ -3,29 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import {
   getCategoryPath,
   landingRecipeCategories,
-  sampleRecipePath,
-  sampleRecipeSlug,
 } from '../data/siteData'
-
-const placeholderPopular = Array.from({ length: 5 }, (_, index) => ({
-  id: `popular-${index + 1}`,
-  slug: sampleRecipeSlug,
-  title: 'Recipe name',
-  ingredients: [],
-  categories: [],
-  average_score: 0,
-  number_of_reviews: 0,
-}))
-
-const placeholderLatest = Array.from({ length: 4 }, (_, index) => ({
-  id: `latest-${index + 1}`,
-  slug: sampleRecipeSlug,
-  title: 'Recipe name',
-  ingredients: [],
-  categories: [],
-  average_score: 0,
-  number_of_reviews: 0,
-}))
 
 function HomePage() {
   const location = useLocation()
@@ -73,16 +51,11 @@ function HomePage() {
     }
   }, [location.hash])
 
-  function handlePlaceholderClick() {}
-
-  const popularRecipes = bestAverageRecipes.length > 0 ? bestAverageRecipes : placeholderPopular
-  const latestRecipes = mostReviewedRecipes.length > 0 ? mostReviewedRecipes : placeholderLatest
-
   return (
     <div className="content-frame landing-plain">
       <section className="landing-plain__section" aria-labelledby="popular-section-title">
         <div className="landing-plain__titlebar">
-          <h1 id="popular-section-title">Best average ratings</h1>
+          <h1 id="popular-section-title">Best-rated recipes from the last 30 days</h1>
         </div>
 
         {isLoading ? (
@@ -91,18 +64,18 @@ function HomePage() {
           <p>{error}</p>
         ) : (
           <div className="landing-plain__popular-grid">
-            {popularRecipes.map((item) => {
-              const recipeTitle = item.title ?? item.name ?? 'Recipe name'
+            {bestAverageRecipes.map((item) => {
+              const recipeTitle = item.title
               const ingredients = Array.isArray(item.ingredients) ? item.ingredients.map((entry) => entry.name).join(', ') : ''
-              const categories = Array.isArray(item.categories) ? item.categories.map((entry) => entry.name).join(', ') : 'General'
-              const recipePath = item.slug ? `/recipe/${item.slug}` : item.id ? `/recipe/${item.id}` : sampleRecipePath
+              const categories = Array.isArray(item.categories) ? item.categories.map((entry) => entry.name).join(', ') : ''
+              const Card = item.slug ? Link : 'article'
 
               return (
-                <Link
+                <Card
                   key={item.id ?? recipeTitle}
-                  to={recipePath}
+                  {...(item.slug ? { to: `/recipe/${item.slug}` } : {})}
                   className="landing-plain__popular-card landing-plain__card-button"
-                  data-recipe-slug={item.slug ?? item.id}
+                  data-recipe-slug={item.slug}
                 >
                   <div className="landing-plain__image-placeholder" aria-hidden="true">
                     {categories}
@@ -112,27 +85,20 @@ function HomePage() {
                   <div className="landing-plain__caption" style={{ fontSize: '0.8rem' }}>
                     {typeof item.average_score === 'number' ? `Avg: ${item.average_score.toFixed(1)}` : 'Avg: n/a'}
                     {' · '}
-                    {typeof item.number_of_reviews === 'number' ? `${item.number_of_reviews} reviews` : '0 reviews'}
+                    {typeof item.number_of_reviews === 'number' ? `${item.number_of_reviews} reviews` : 'Review count unavailable'}
                   </div>
-                </Link>
+                </Card>
               )
             })}
           </div>
         )}
 
-        <button
-          type="button"
-          className="header-button landing-plain__action"
-          onClick={handlePlaceholderClick}
-        >
-          See more
-        </button>
       </section>
 
       <section className="landing-plain__section" aria-labelledby="latest-section-title">
         <div className="landing-plain__titlebar">
-          <h2 id="latest-section-title">Most reviewed recipes</h2>
-          <p>Ordered by review count from the backend.</p>
+          <h2 id="latest-section-title">Most-reviewed recipes from the last 30 days</h2>
+          <p>Ranked by reviews received in the last 30 days.</p>
         </div>
 
         {isLoading ? (
@@ -141,21 +107,19 @@ function HomePage() {
           <p>{error}</p>
         ) : (
           <div className="landing-plain__latest-grid">
-            {latestRecipes.map((item) => {
-              const recipeTitle = item.title ?? item.name ?? 'Recipe name'
+            {mostReviewedRecipes.map((item) => {
+              const recipeTitle = item.title
               const ingredients = Array.isArray(item.ingredients) ? item.ingredients.map((entry) => entry.name).join(', ') : ''
-              const recipePath = item.slug ? `/recipe/${item.slug}` : item.id ? `/recipe/${item.id}` : sampleRecipePath
+              const Card = item.slug ? Link : 'article'
 
               return (
-                <Link
+                <Card
                   key={item.id ?? recipeTitle}
-                  to={recipePath}
+                  {...(item.slug ? { to: `/recipe/${item.slug}` } : {})}
                   className="landing-plain__latest-card landing-plain__card-button"
-                  data-recipe-slug={item.slug ?? item.id}
+                  data-recipe-slug={item.slug}
                 >
-                  <div className="landing-plain__latest-image" aria-hidden="true">
-                    Recipe image
-                  </div>
+                  <div className="landing-plain__latest-image" aria-hidden="true" />
 
                   <div className="landing-plain__latest-copy">
                     <h3>{recipeTitle}</h3>
@@ -163,22 +127,15 @@ function HomePage() {
                     <p>
                       {typeof item.average_score === 'number' ? `Avg: ${item.average_score.toFixed(1)}` : 'Avg: n/a'}
                       {' · '}
-                      {typeof item.number_of_reviews === 'number' ? `${item.number_of_reviews} reviews` : '0 reviews'}
+                      {typeof item.number_of_reviews === 'number' ? `${item.number_of_reviews} reviews` : 'Review count unavailable'}
                     </p>
                   </div>
-                </Link>
+                </Card>
               )
             })}
           </div>
         )}
 
-        <button
-          type="button"
-          className="header-button landing-plain__action"
-          onClick={handlePlaceholderClick}
-        >
-          See more
-        </button>
       </section>
 
       <section

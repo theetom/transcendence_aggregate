@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom'
 import SectionTitle from '../components/SectionTitle'
-import { formatDate, pendingRecipes } from '../data/siteData'
+import { formatDate } from '../data/siteData'
 
-function AdminPage() {
+function AdminPage({ pendingRecipes = [] }) {
   return (
     <div className="content-frame">
       <section className="page-hero">
@@ -40,7 +40,7 @@ function AdminPage() {
             ))}
           </div>
         ) : (
-          <div className="empty-state">No submissions are waiting for moderation.</div>
+          <div className="empty-state">Submissions have not been loaded.</div>
         )}
       </section>
     </div>

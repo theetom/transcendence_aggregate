@@ -1370,6 +1370,10 @@
   width: 100%;
 }
 
+.site-footer__category-list:empty {
+  display: none;
+}
+
 .footer-category-link {
   display: flex;
   align-items: center;

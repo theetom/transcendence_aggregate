@@ -1,25 +1,64 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import AuthPageShell from '../components/AuthPageShell'
+import { authTokenStorageKey } from '../data/siteData'
 
 function LoginPage() {
-  const [email, setEmail] = useState('')
+  const navigate = useNavigate()
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [status, setStatus] = useState(
-    'Frontend auth layout is ready. Django login wiring comes next.',
-  )
+  const [status, setStatus] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
 
-    if (!email.trim() || !password) {
-      setStatus('Enter both email and password before continuing.')
+    if (isSubmitting) {
       return
     }
 
-    setStatus(
-      'Login form validated on the frontend. The next step is connecting this layout to Django session endpoints.',
-    )
+    if (!username.trim() || !password) {
+      setStatus('Enter both username and password before continuing.')
+      return
+    }
+
+    setIsSubmitting(true)
+    setStatus('Signing in...')
+    let responseDetails = 'POST /api/login/'
+
+    try {
+      const response = await fetch('/api/login/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: username.trim(),
+          password,
+        }),
+      })
+
+      responseDetails += `\nHTTP ${response.status} ${response.statusText}`
+      const body = await response.text()
+      responseDetails += `\n\n${body}`
+
+      if (!response.ok) {
+        setStatus(responseDetails)
+        return
+      }
+
+      const data = JSON.parse(body)
+
+      if (typeof data?.token !== 'string' || !data.token.trim()) {
+        setStatus(`${responseDetails}\n\nFrontend: The response did not contain a login token.`)
+        return
+      }
+
+      window.sessionStorage.setItem(authTokenStorageKey, data.token)
+      navigate('/', { replace: true })
+    } catch (error) {
+      setStatus(`${responseDetails}\n\n${error.name}: ${error.message}`)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -38,13 +77,15 @@ function LoginPage() {
     >
       <form className="field-list" onSubmit={handleSubmit} style={{ marginTop: '18px' }}>
         <div className="field">
-          <label htmlFor="login-email">Email</label>
+          <label htmlFor="login-username">Username</label>
           <input
-            id="login-email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@example.com"
+            id="login-username"
+            name="username"
+            type="text"
+            autoComplete="username"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+            placeholder="Enter your username"
           />
         </div>
 
@@ -52,7 +93,9 @@ function LoginPage() {
           <label htmlFor="login-password">Password</label>
           <input
             id="login-password"
+            name="password"
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Enter your password"
@@ -60,7 +103,7 @@ function LoginPage() {
         </div>
 
         <div className="auth-card__actions">
-          <button type="submit" className="button button--ghost">
+          <button type="submit" className="button button--ghost" disabled={isSubmitting}>
             Continue
           </button>
           <Link className="button button--ghost" to="/signup">

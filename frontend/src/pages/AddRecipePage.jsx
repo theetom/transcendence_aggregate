@@ -1,30 +1,15 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import PageHero from '../components/PageHero'
-import { recipeCategories, recipes } from '../data/siteData'
-
-function getIngredientOptions() {
-  return Array.from(
-    new Set(
-      recipes.flatMap((recipe) =>
-        Array.isArray(recipe.ingredients)
-          ? recipe.ingredients.filter(
-              (ingredient) => typeof ingredient === 'string' && ingredient.trim(),
-            )
-          : [],
-      ),
-    ),
-  ).sort((left, right) => left.localeCompare(right))
-}
+import { recipeCategories } from '../data/siteData'
 
 function AddRecipePage() {
-  const navigate = useNavigate()
-  const ingredientOptions = getIngredientOptions()
+  const ingredientOptions = []
   const [recipeName, setRecipeName] = useState('')
   const [ingredients, setIngredients] = useState([''])
   const [categories, setCategories] = useState([''])
   const [steps, setSteps] = useState([''])
   const [pictures, setPictures] = useState([0])
+  const [status, setStatus] = useState('')
 
   function handleSubmit(event) {
     event.preventDefault()
@@ -35,7 +20,7 @@ function AddRecipePage() {
       return
     }
 
-    navigate('/add-recipe/submitted')
+    setStatus('Recipe submission is not connected yet. No recipe was submitted.')
   }
 
   function updateIngredient(index, value) {
@@ -146,8 +131,13 @@ function AddRecipePage() {
                         id={`category-${index + 1}`}
                         value={category}
                         onChange={(event) => updateCategory(index, event.target.value)}
+                        disabled={recipeCategories.length === 0}
                       >
-                        <option value="">Select category</option>
+                        <option value="">
+                          {recipeCategories.length > 0
+                            ? 'Select category'
+                            : 'Category list not available yet'}
+                        </option>
                         {recipeCategories.map((option) => (
                           <option key={option.id} value={option.slug}>
                             {option.name}
@@ -222,6 +212,7 @@ function AddRecipePage() {
               Add recipe
             </button>
           </div>
+          {status ? <p className="status-banner">{status}</p> : null}
         </form>
       </section>
     </div>
