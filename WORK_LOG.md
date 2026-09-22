@@ -771,3 +771,39 @@ Teammate Report (September 20, 2026)
 
 ### Verification
 - Read-only source review only. No tests, builds, lint runs, API calls, container starts, or temporary verification setups were performed. Runtime testing belongs to the user and is pending.
+
+## 2026-09-22 — Add Recipe API connection and restart checkpoint
+
+### Current branch and publishing
+- Working branch: `frontend-side_Roh`. Existing local commit: `37a0cea` (login/signup API work).
+- Publishing failed because GitHub denied write access to `theetom/transcendence_aggregate.git` for account `IDsuroh`. The user explicitly deferred publishing. Do not retry pushing unless requested.
+
+### Approved changes
+- The user requested a before/after proposal and explicitly approved connecting Add Recipe with minimal changes. Implementation is confined to `frontend/src/pages/AddRecipePage.jsx` and is not committed yet.
+- The page loads ingredient and category options from `GET /api/recipes/add_recipe/`.
+- Ingredient rows now collect name, quantity, and unit. Category selections use backend names rather than nonexistent option slugs.
+- Submission sends `title`, ingredient name/quantity/unit objects, category name objects, and numbered step objects to `POST /api/recipes/add_recipe/`. Requests include the saved login token when present.
+- IMPORTANT: The submitted payload omits `reviews`. After discussing why the current serializer includes reviews, the user agreed to test without that field and observe the real backend response. Do not restore the earlier proposed `reviews: []` workaround.
+- No guessed author/user ID is supplied. No images are submitted.
+- The page displays the actual POST HTTP status and full response, including JSON validation errors or HTML error bodies as text. GET failures also retain response details. Duplicate submissions are disabled while waiting.
+- Picture inputs and the Add picture button are disabled with the text: "Picture upload is not implemented for this backend endpoint yet."
+- Backend source, Docker configuration, and database contents were not changed.
+
+### Verification
+- ESLint passed for the edited AddRecipePage.jsx, and the production frontend build passed using existing dependencies in a temporary `docker compose run --rm --no-deps` frontend container.
+- `git diff --check` passed. No permanent tests or dependencies were added.
+- No recipe was submitted and no API/database persistence behavior was tested in this step. Do not claim recipe saving succeeds or fails based on this frontend implementation.
+- The regular frontend service was not running when checked. The updated application was not started or rebuilt as a persistent service. The user was given `docker compose up -d --build` to start the updated application.
+
+### Resume after VS Code restart
+1. Read this latest checkpoint; older integrated-frontend notes in this log refer to another branch and are not the current branch state.
+2. The next step is for the user to test the connected Add Recipe page while logged in. Verify the options GET and inspect the actual submitted POST payload, status, and complete response.
+3. If creation succeeds, inspect persisted recipe data and its ingredient quantity/unit links, categories, ordered steps, and author. Picture persistence is outside this first test because the form does not submit images.
+4. If validation fails (for example, missing `user` or `reviews`), preserve the exact response. That failure does not establish whether later nested saving would succeed or fail.
+5. Explain findings to the partner only after observing the real behavior. The partner reports recipe saving worked in their own test; investigate differences rather than assume equivalent code or requests.
+6. Continue step by step. Ask for approval before further code changes, as the user requested. Current authorization covered the frontend connection only, not backend fixes.
+
+### Relevant source findings, not runtime results
+- `recipe_intake` uses `RecipeDetailedSerializer` for POST as well as that serializer being used for recipe detail output.
+- That serializer includes writable nested ingredients/categories/reviews, has no custom nested creation method, and declares steps with `read_only=True`. Images are absent, and the intake handler does not pass `request.user` to save.
+- The user now understands that table definitions describe storage, while explicit saving logic is needed for this nested request shape. The immediate objective is to gather request/response and persistence evidence, not implement a custom create method yet.
