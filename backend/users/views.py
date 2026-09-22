@@ -44,3 +44,13 @@ def sign_up(request):
         },
         status=status.HTTP_201_CREATED,
     )
+
+@api_view(["GET"])
+def user_me(request):
+    serializer= UserProfileSerializer
+
+@api_view(["GET"])
+def user_detail(request, user_name):
+    users = UserProfile.objects.get(username=user_name)
+    serializer = UserProfileSerializer(users, many=True)
+    return Response(serializer.data)
