@@ -1,0 +1,56 @@
+{
+	"title": "Citrus Herb Pasta",
+	"user": 2,
+	"description": "A quick pasta with lemon, herbs, and toasted garlic.",
+	"ingredients": [
+		{
+			"name": "Spaghetti",
+			"quantity": "250",
+			"unit": "g"
+		},
+		{
+			"name": "Garlic",
+			"quantity": "3",
+			"unit": "cloves"
+		},
+		{
+			"name": "Lemon",
+			"quantity": "1",
+			"unit": "whole"
+		},
+		{
+			"name": "Fresh basil",
+			"quantity": "10",
+			"unit": "leaves"
+		},
+		{
+			"name": "Olive oil",
+			"quantity": "2",
+			"unit": "tablespoons"
+		}
+	],
+	"categories": [
+		{
+			"name": "Quick meals"
+		},
+		{
+			"name": "Vegetarian"
+		}
+	],
+	"steps": [
+		{
+			"step_number": 1,
+			"instruction": "Cook the spaghetti in salted water until al dente."
+		},
+		{
+			"step_number": 2,
+			"instruction": "Warm the olive oil and gently toast the sliced garlic."
+		},
+		{
+			"step_number": 3,
+			"instruction": "Drain the pasta, then toss it with the garlic oil, lemon zest, lemon juice, and basil."
+		}
+	],
+	"reviews": []
+}
+

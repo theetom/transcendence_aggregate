@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db import transaction
 from .models import Recipe, RecipeIngredient, RecipeStep, Category, Ingredient
 from reviews.serializers import ReviewSerializer
 
@@ -35,6 +36,8 @@ class IngredientSerializer(serializers.ModelSerializer):
 		fields = ["id", "name"]
 
 class RecipeDetailedSerializer(serializers.ModelSerializer):
+	user = serializers.PrimaryKeyRelatedField(read_only=True)
+
 	ingredients = RecipeIngredientSerializer(
 		source="recipe_ingredients",
 		many=True
@@ -48,7 +51,8 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 		read_only=True
 	)
 	reviews = ReviewSerializer(
-		many=True
+		many=True,
+		read_only=True
 	)
 	average_score = serializers.SerializerMethodField()
 	number_of_reviews = serializers.SerializerMethodField()
@@ -78,6 +82,31 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 
 	def get_number_of_reviews(self, recipe):
 		return recipe.reviews.count()
+
+	@transaction.atomic
+	def create(self, validated_data):
+		ingredient_data = validated_data.pop("recipe_ingredients", [])
+		category_data = validated_data.pop("categories", [])
+		validated_data.pop("reviews", [])
+
+		recipe = Recipe.objects.create(**validated_data)
+
+		for category in category_data:
+			category_name = category.get("name") if isinstance(category, dict) else category
+			category_object, _ = Category.objects.get_or_create(name=category_name)
+			recipe.categories.add(category_object)
+
+		for item in ingredient_data:
+			ingredient = item.pop("ingredient")
+			ingredient_name = ingredient.get("name")
+			ingredient_object, _ = Ingredient.objects.get_or_create(name=ingredient_name)
+			RecipeIngredient.objects.create(
+				recipe=recipe,
+				ingredient=ingredient_object,
+				**item,
+			)
+
+		return recipe
 
 
 class RecipeSummarySerializer(serializers.ModelSerializer):

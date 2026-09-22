@@ -1,0 +1,4 @@
+curl -X POST "http://localhost:8000/api/recipes/add_recipe/" ^
+  -H "Authorization: Token 42a2bf573eb8aa6d904cd91814b4b42cae4e2f50" ^
+  -H "Content-Type: application/json" ^
+  --data-binary "@recipe_test_payload.json"
