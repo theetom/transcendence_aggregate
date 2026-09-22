@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from .models import Recipe, Category, Ingredient
-from .serializers import RecipeSummarySerializer, RecipeDetailedSerializer, CategorySerializer, IngredientSerializer
+from .serializers import RecipeSummarySerializer, RecipeDetailedSerializer, RecipeUpdateSerializer, CategorySerializer, IngredientSerializer
 from reviews.serializers import ReviewSerializer
 
 @api_view(["GET", "POST"])
@@ -85,7 +85,7 @@ def recipe_landing_page(request):
 		"most_reviews": RecipeSummarySerializer(most_reviews, many=True).data,
 	})
 
-@api_view(["GET", "POST"])
+@api_view(["GET", "POST", "PUT"])
 def recipe_detail(request, recipe_name):
 
 	try:
@@ -99,6 +99,34 @@ def recipe_detail(request, recipe_name):
 	if request.method == "GET":
 		serializer = RecipeDetailedSerializer(recipe)
 		return Response(serializer.data)
+
+	if request.method == "PUT":
+		if not request.user.is_authenticated:
+			return Response(
+				{"error": "You must be logged in to edit a recipe."},
+				status=status.HTTP_401_UNAUTHORIZED
+			)
+
+		if not request.user.is_staff and recipe.user_id != request.user.id:
+			return Response(
+				{"error": "You do not have permission to edit this recipe."},
+				status=status.HTTP_403_FORBIDDEN
+			)
+
+		serializer = RecipeUpdateSerializer(
+			recipe,
+			data=request.data,
+			partial=True
+		)
+
+		if serializer.is_valid():
+			serializer.save()
+			return Response(RecipeDetailedSerializer(recipe).data)
+
+		return Response(
+			serializer.errors,
+			status=status.HTTP_400_BAD_REQUEST
+		)
 
 	if request.method == "POST":
 		if not request.user.is_authenticated:
