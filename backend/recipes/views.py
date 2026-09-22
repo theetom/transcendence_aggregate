@@ -30,7 +30,7 @@ def recipe_intake(request):
 
 		if serializer.is_valid():
 
-			serializer.save()
+			serializer.save(user=request.user)
 
 			return Response(
 				serializer.data,
