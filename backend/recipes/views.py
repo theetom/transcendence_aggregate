@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from .models import Recipe, Category, Ingredient
-from .serializers import RecipeSummarySerializer, RecipeDetailedSerializer, CategorySerializer, IngredientSerializer
+from .serializers import RecipeSummarySerializer, RecipeDetailedSerializer, RecipeUpdateSerializer, CategorySerializer, IngredientSerializer
 from reviews.serializers import ReviewSerializer
 
 @api_view(["GET", "POST"])
@@ -30,7 +30,7 @@ def recipe_intake(request):
 
 		if serializer.is_valid():
 
-			serializer.save()
+			serializer.save(user=request.user)
 
 			return Response(
 				serializer.data,
@@ -60,27 +60,32 @@ def recipe_list(request):
 def recipe_landing_page(request):
 	cutoff = timezone.now() - timedelta(days=30)
 	recent_reviews = Q(reviews__timestamp__gte=cutoff)
-	recipes = Recipe.objects.filter(
-		recent_reviews
-	).annotate(
+	recipes = Recipe.objects.annotate(
 		recent_average_score=Avg("reviews__grade", filter=recent_reviews),
 		recent_number_of_reviews=Count("reviews", filter=recent_reviews),
 	)
+	reviewed_recipes = recipes.filter(recent_number_of_reviews__gt=0)
+	unreviewed_recipes = recipes.filter(recent_number_of_reviews=0)
 
-	best_average = recipes.order_by(
+	best_average = reviewed_recipes.order_by(
 		"-recent_average_score", "-recent_number_of_reviews", "id"
 	)[:5]
 	best_average_ids = best_average.values_list("id", flat=True)
-	most_reviews = recipes.exclude(id__in=best_average_ids).order_by(
+	most_reviews = reviewed_recipes.exclude(id__in=best_average_ids).order_by(
 		"-recent_number_of_reviews", "-recent_average_score", "id"
 	)[:5]
+	remaining_slots = 5 - len(most_reviews)
+	if remaining_slots > 0:
+		most_reviews = list(most_reviews) + list(
+			unreviewed_recipes.order_by("-date_created")[:remaining_slots]
+		)
 
 	return Response({
 		"best_average": RecipeSummarySerializer(best_average, many=True).data,
 		"most_reviews": RecipeSummarySerializer(most_reviews, many=True).data,
 	})
 
-@api_view(["GET", "POST"])
+@api_view(["GET", "POST", "PUT"])
 def recipe_detail(request, recipe_name):
 
 	try:
@@ -94,6 +99,34 @@ def recipe_detail(request, recipe_name):
 	if request.method == "GET":
 		serializer = RecipeDetailedSerializer(recipe)
 		return Response(serializer.data)
+
+	if request.method == "PUT":
+		if not request.user.is_authenticated:
+			return Response(
+				{"error": "You must be logged in to edit a recipe."},
+				status=status.HTTP_401_UNAUTHORIZED
+			)
+
+		if not request.user.is_staff and recipe.user_id != request.user.id:
+			return Response(
+				{"error": "You do not have permission to edit this recipe."},
+				status=status.HTTP_403_FORBIDDEN
+			)
+
+		serializer = RecipeUpdateSerializer(
+			recipe,
+			data=request.data,
+			partial=True
+		)
+
+		if serializer.is_valid():
+			serializer.save()
+			return Response(RecipeDetailedSerializer(recipe).data)
+
+		return Response(
+			serializer.errors,
+			status=status.HTTP_400_BAD_REQUEST
+		)
 
 	if request.method == "POST":
 		if not request.user.is_authenticated:
