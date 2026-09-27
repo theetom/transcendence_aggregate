@@ -888,3 +888,13 @@ I found another function called `create_recipe()` that explicitly saves the reci
 3. The pending questions are author identification from the login token, optional reviews on creation, explicit saving of the nested request, acceptance/persistence of steps, and how Carbonara was originally inserted.
 4. If the partner supplies an updated implementation and the user wants to retest, first inspect the actual request/response expectations read-only. Keep the frontend unchanged unless an explicitly authorized adjustment is needed.
 5. Only report recipe creation as working after the user confirms the new test and its saved data. No backend implementation work is authorized.
+
+## 2026-09-22 — Final next-session starting point
+
+- The user is ending today's session and wants to check existing recipe details next time while waiting for the partner's response. Do not begin testing or implementation now.
+- Start with the user opening `http://localhost:8000/api/recipes/Carbonara/` while the backend is running and sharing the actual response.
+- Check the returned title/description, ingredient names with quantities/units, categories, ordered steps, author's user ID, reviews, average score, and review count. This checks reading existing data independently of the blocked add-recipe submission.
+- Current source confirms the backend route `recipes/<str:recipe_name>/` reaches `recipe_detail`. The frontend `RecipePage.jsx` has no API fetch and receives no recipe data from its current route in `App.jsx`; it is not connected to the detail API yet. Do not confuse older work-log entries from other branches with this state.
+- After reviewing the real response, discuss connecting the frontend recipe-detail page. The user has selected the next investigation, not authorized implementation changes yet.
+- No request to the Carbonara endpoint was made during this planning step. The response and frontend integration remain untested.
+- Continue to preserve the no-backend-edits rule and the user's preference to perform runtime testing. The add-recipe error and partner questions remain pending.
