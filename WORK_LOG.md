@@ -898,3 +898,47 @@ I found another function called `create_recipe()` that explicitly saves the reci
 - After reviewing the real response, discuss connecting the frontend recipe-detail page. The user has selected the next investigation, not authorized implementation changes yet.
 - No request to the Carbonara endpoint was made during this planning step. The response and frontend integration remain untested.
 - Continue to preserve the no-backend-edits rule and the user's preference to perform runtime testing. The add-recipe error and partner questions remain pending.
+
+## 2026-09-27 — Backend updates imported; testing deferred until the user's cue
+
+### Completed and verified
+- Branch: `frontend-side_Roh`. The user committed the backend import as `f4591e4` (`Brought backend updates from main`). The working tree was clean when this checkpoint began.
+- A full `git merge origin/main` initially caused frontend and database conflicts. The user successfully canceled that merge using `git restore --source=HEAD --staged -- data/db.sqlite3`, followed by `git merge --abort`.
+- The user then explicitly authorized copying only the backend from `origin/main`, excluding generated Python cache files. The successful command was `git restore --source=origin/main --staged --worktree -- backend ':(exclude)**/__pycache__/**'`.
+- Source revision: `a66b557` on `origin/main`, also confirmed against GitHub during the session. This was a selective file import followed by a regular commit, not a full merge of main's history.
+- Exactly seven files changed: `backend/Makefile`, `backend/config/settings.py`, `backend/recipes/serializers.py`, `backend/recipes/views.py`, `backend/users/serializers.py`, `backend/users/urls.py`, and `backend/users/views.py`.
+- Verified those backend files match main. The frontend, `data/db.sqlite3`, and `backend/db.sqlite3` remained unchanged. No new API implementation or fixes were authored.
+
+### Database comparison and abandoned replacement
+- Read-only comparison found identical schemas and migrations in the two committed copies of `data/db.sqlite3`. Main contains all existing records unchanged, plus Citrus Herb Pasta, four ingredients (Garlic, Lemon, Fresh basil, Olive oil), two categories (Quick meals, Vegetarian), and the new recipe's ingredient links and three steps. Accounts, profiles, tokens, and reviews are identical.
+- Despite the earlier recommendation to use main's database, that replacement was NOT completed. It failed because the local `data` directory and file belong to `nobody:nogroup`. An attempted `sudo -n chown` failed because a password was required; it made no ownership changes. The full merge was subsequently aborted.
+- Backups are in `/tmp/transcendence-merge-backup-j9900n1t/`, including both database copies and the conflicted frontend snapshot. This is temporary storage, not a permanent backup guarantee.
+- Do not assume the extra records from main exist in the local database. Do not retry database replacement or ownership changes as part of routine testing setup without explaining the need and obtaining any required authorization.
+
+### Updated source findings — not runtime test results
+- Recipe creation now saves the recipe, ingredient quantities/units, and category links in an atomic transaction. The view passes `request.user`; the serializer's author field is read-only.
+- Reviews are now read-only, so a submission should not require `reviews: []`.
+- Creation still declares steps read-only and does not save step records. The separate update serializer contains step-saving logic; that does not establish that initial creation saves steps.
+- Recipe creation lacks an explicit authentication check despite the default AllowAny permission. Admin approval and normalized ingredient/category deduplication are not implemented in the inspected code.
+- `/api/me/` now has a route, but `user_me` only assigns the serializer class and returns no response. The user-detail route also has a `username` versus `user_name` argument mismatch. These are source findings to keep distinct from observed endpoint responses.
+- Signup now requires a nonblank email. Settings now allow localhost, 127.0.0.1, and backend, and use `/data/db.sqlite3`, matching the existing Compose data mount.
+- No recipe/profile API tests, builds, backend rebuilds, or migrations were run. A Compose status check during permission troubleshooting showed no services for this project at that time; check the actual state when resuming.
+
+### Partner feedback and scope
+- The partner said the inactive recipe-creation function was a brute-force way to seed data. He prefers one picture per recipe rather than pictures per step.
+- His intended input flow permits entering missing ingredient/category names, with admin validation to avoid duplicates. This intention is not evidence that moderation is implemented.
+- Fixed ingredient units were discussed but no final unit list or implementation was agreed. Free-entry selectors, units, moderation, and image changes remain future work.
+- Authorization to import the partner's backend files does not authorize independently fixing backend code. Preserve the user's preference to run runtime tests themselves.
+
+### Resume only when the user gives the cue
+- The user ended today's work and wants profile-page testing and Add Recipe testing next time. Wait for the cue before giving the detailed test steps or starting work.
+- Suggested order: profile first, then Add Recipe. Begin by confirming the current checkout and running environment. Explain any rebuild needed to load the imported backend before asking the user to run it; do not silently rebuild or alter data.
+- Guide the user one step at a time through login/profile and the actual `/api/me/` response, then recipe options, submission, and retrieval of saved recipe data. Inspect title, author, ingredient quantities/units, categories, steps, and reviews. A success response alone is not proof that every related record was saved.
+- Compare observed responses with the source findings above before suggesting fixes. Do not claim either feature works yet.
+- Explain every proposed command in plain language: what it changes, why it is needed, and whether it only reads files, stages changes, commits, or pushes. Clearly distinguish approval requests, successful execution, failed/aborted execution, and verification. Prefer understandable scoped commands; do not rerun a full merge of main without explaining its frontend/database consequences.
+
+### Standing workflow instructions added at the user's request
+- Added root `AGENTS.md` to require future sessions in this repository to read `WORK_LOG.md` before starting work and to record every file/repository-state change as it happens, without waiting for a reminder.
+- The instructions also require plain-language command explanations, accurate completion/verification reporting, preservation of the current testing/backend boundaries, and an end-of-session checkpoint.
+- Updated this log with the completed backend import, database comparison, failed/canceled merge actions, and the deferred profile/Add Recipe testing plan. These documentation changes do not alter application code or databases.
+- Verification: reviewed the documentation diff and repository status. No application tests or builds were run for these documentation-only changes. `AGENTS.md` and this work-log update are not committed by the assistant.
