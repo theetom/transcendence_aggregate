@@ -1,10 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
 
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.authtoken.models import Token
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.generics import get_object_or_404
 
 from .models import UserProfile
 from .serializers import SignupSerializer, UserProfileSerializer
@@ -46,8 +48,11 @@ def sign_up(request):
     )
 
 @api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def user_me(request):
-    serializer= UserProfileSerializer
+    profile = get_object_or_404(UserProfile, user=request.user)
+    serializer = UserProfileSerializer(profile)
+    return Response(serializer.data)
 
 @api_view(["GET"])
 def user_detail(request, user_name):
