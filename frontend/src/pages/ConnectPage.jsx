@@ -16,7 +16,7 @@ function ConnectPage() {
             <p className="eyebrow">Login</p>
             <h3>Already have an account?</h3>
             <p>
-              Log in to access backend features that require authentication.
+              Jump into saved recipes, profile history, and future moderation updates.
             </p>
             <div className="connect-grid__actions" style={{ marginTop: '20px' }}>
               <Link className="button button--ghost" to="/login">
@@ -29,7 +29,7 @@ function ConnectPage() {
             <p className="eyebrow">Registration</p>
             <h3>Need to create one first?</h3>
             <p>
-              Create an account, then log in before using authenticated backend features.
+              Start with the signup flow, then come back to propose recipes and build favorites.
             </p>
             <div className="connect-grid__actions" style={{ marginTop: '20px' }}>
               <Link className="button button--ghost" to="/signup">

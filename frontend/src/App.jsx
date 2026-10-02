@@ -13,13 +13,14 @@ import NotFoundPage from './pages/NotFoundPage'
 import PrivacyPage from './pages/PrivacyPage'
 import ProfilePage from './pages/ProfilePage'
 import RecipePage from './pages/RecipePage'
+import ReviewRequestPage from './pages/ReviewRequestPage'
 import SearchResultsPage from './pages/SearchResultsPage'
 import SignupPage from './pages/SignupPage'
 import TermsPage from './pages/TermsPage'
-import { isAuthenticated } from './auth'
+import { isViewerAuthenticated } from './data/siteData'
 
 function ProtectedRoute({ children }) {
-  if (!isAuthenticated()) {
+  if (!isViewerAuthenticated()) {
     return <Navigate replace to="/connect" />
   }
 
@@ -27,8 +28,8 @@ function ProtectedRoute({ children }) {
 }
 
 function PublicOnlyRoute({ children }) {
-  if (isAuthenticated()) {
-    return <Navigate replace to="/" />
+  if (isViewerAuthenticated()) {
+    return <Navigate replace to="/profile" />
   }
 
   return children
@@ -37,19 +38,21 @@ function PublicOnlyRoute({ children }) {
 function AppShell() {
   const location = useLocation()
   const isHomePage = location.pathname === '/'
+  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+|\/results\/search|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile(?:\/recipes)?|\/admin(?:\/review\/[^/]+)?|\/privacy|\/terms)$/
+  const hideShell = !knownPathPattern.test(location.pathname)
   const mainClassName = isHomePage ? 'page-main page-main--home' : 'page-main'
 
   return (
     <div className="site-frame">
-      <SiteHeader key={location.key} />
+      {!hideShell && <SiteHeader />}
 
       <main className={mainClassName}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/home" element={<Navigate replace to="/" />} />
-          <Route path="/category" element={<CategoryPage />} />
-          <Route path="/category/:id" element={<CategoryPage />} />
-          <Route path="/recipe/:title" element={<RecipePage />} />
+          <Route path="/category" element={<Navigate replace to="/" />} />
+          <Route path="/category/:slug" element={<CategoryPage />} />
+          <Route path="/recipe/:slug" element={<RecipePage />} />
           <Route path="/results/search" element={<SearchResultsPage />} />
           <Route
             path="/connect"
@@ -91,15 +94,24 @@ function AppShell() {
               </ProtectedRoute>
             }
           />
-          <Route path="/admin" element={<AdminPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route
+            path="/profile/recipes"
+            element={
+              <ProtectedRoute>
+                <ProfilePage showAllRecipes />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/review/:slug" element={<ReviewRequestPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
 
-      <SiteFooter />
+      {!hideShell && <SiteFooter />}
     </div>
   )
 }

@@ -1,5 +1,3 @@
-import { BackendError } from './BackendResponse'
-
 function AuthPageShell({
   introEyebrow,
   introTitle,
@@ -8,7 +6,6 @@ function AuthPageShell({
   formEyebrow,
   formTitle,
   status,
-  error,
   children,
 }) {
   return (
@@ -32,8 +29,12 @@ function AuthPageShell({
           <p className="eyebrow">{formEyebrow}</p>
           <h3>{formTitle}</h3>
           {children}
-          <p className="status-banner auth-card__status" role="status">{status}</p>
-          {error ? <BackendError error={error} /> : null}
+          <p
+            className="status-banner auth-card__status"
+            style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
+          >
+            {status}
+          </p>
         </section>
       </div>
     </div>

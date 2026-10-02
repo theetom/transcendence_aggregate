@@ -1,18 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { isAuthenticated } from '../auth'
+import {
+  isViewerAuthenticated,
+  menuRecipeTypeLabels,
+  menuThemeLabels,
+} from '../data/siteData'
 
 function SiteHeader() {
   const location = useLocation()
   const navigate = useNavigate()
-  const authenticated = isAuthenticated()
+  const isAuthenticated = isViewerAuthenticated()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [query, setQuery] = useState(() => (
-    location.pathname === '/results/search'
-      ? new URLSearchParams(location.search).get('q') ?? ''
-      : ''
-  ))
+  const [query, setQuery] = useState('')
   const menuPopoverRef = useRef(null)
+
+  useEffect(() => {
+    setMenuOpen(false)
+
+    if (location.pathname === '/results/search') {
+      const params = new URLSearchParams(location.search)
+      setQuery(params.get('q') ?? '')
+    }
+  }, [location.pathname, location.search])
 
   useEffect(() => {
     if (!menuOpen) {
@@ -71,13 +80,44 @@ function SiteHeader() {
             className={menuOpen ? 'menu-panel is-open' : 'menu-panel'}
           >
             <div className="menu-panel__stack">
-              <Link className="menu-line" to={authenticated ? '/add-recipe' : '/connect'}>
+              <Link className="menu-line" to={isAuthenticated ? '/add-recipe' : '/connect'}>
                 Propose a recipe{' '}
-                {!authenticated ? (
+                {!isAuthenticated ? (
                   <span className="menu-line__hint">(needs login)</span>
                 ) : null}
               </Link>
 
+              <section className="menu-group">
+                <p className="menu-group__title">Recipes by Type</p>
+                <div className="menu-link-list">
+                  {menuRecipeTypeLabels.map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className="menu-line menu-line--nested"
+                      disabled
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section className="menu-group">
+                <p className="menu-group__title">Recipes by Theme</p>
+                <div className="menu-link-list">
+                  {menuThemeLabels.map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      className="menu-line menu-line--nested"
+                      disabled
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </section>
             </div>
           </div>
         </div>
@@ -103,12 +143,15 @@ function SiteHeader() {
         </form>
 
         <div className="header-actions">
-          {!authenticated ? (
+          {!isAuthenticated ? (
             <Link className="header-button" to="/connect">
               Connect
             </Link>
           ) : null}
-          <Link className="header-button header-button--profile" to="/profile">
+          <Link
+            className="header-button header-button--profile"
+            to={isAuthenticated ? '/profile' : '/connect'}
+          >
             Profile
           </Link>
         </div>

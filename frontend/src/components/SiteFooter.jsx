@@ -1,9 +1,13 @@
 import { Link } from 'react-router-dom'
-import { isAuthenticated } from '../auth'
+import {
+  getCategoryPath,
+  isViewerAuthenticated,
+  landingRecipeCategories,
+} from '../data/siteData'
 
 function SiteFooter() {
-  const authenticated = isAuthenticated()
-  const footerLinksClassName = authenticated
+  const isAuthenticated = isViewerAuthenticated()
+  const footerLinksClassName = isAuthenticated
     ? 'site-footer__links site-footer__links--authenticated'
     : 'site-footer__links'
 
@@ -31,13 +35,24 @@ function SiteFooter() {
             <Link className="footer-link" to="/privacy">
               Privacy
             </Link>
-            {!authenticated ? (
+            {!isAuthenticated ? (
               <Link className="footer-link" to="/connect">
                 Connect
               </Link>
             ) : null}
           </nav>
 
+          <nav className="site-footer__category-list" aria-label="Footer categories">
+            {landingRecipeCategories.map((category) => (
+              <Link
+                key={category.id}
+                className="footer-category-link"
+                to={getCategoryPath(category.slug)}
+              >
+                {category.name}
+              </Link>
+            ))}
+          </nav>
         </div>
       </div>
     </footer>

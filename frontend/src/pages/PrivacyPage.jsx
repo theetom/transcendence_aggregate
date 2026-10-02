@@ -25,7 +25,7 @@ function PrivacyPage() {
           <h3>Educational project boundaries</h3>
           <p>
             This remains a student project. Sensitive production-grade privacy handling
-            is not assumed yet, and the frontend reflects only implemented backend behavior.
+            is not assumed yet, and the frontend currently acts as a structured preview.
           </p>
         </article>
       </section>
