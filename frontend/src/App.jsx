@@ -38,7 +38,7 @@ function PublicOnlyRoute({ children }) {
 function AppShell() {
   const location = useLocation()
   const isHomePage = location.pathname === '/'
-  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+|\/results\/search|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile|\/admin(?:\/review\/[^/]+)?|\/privacy|\/terms)$/
+  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+|\/results\/search|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile(?:\/recipes)?|\/admin(?:\/review\/[^/]+)?|\/privacy|\/terms)$/
   const hideShell = !knownPathPattern.test(location.pathname)
   const mainClassName = isHomePage ? 'page-main page-main--home' : 'page-main'
 
@@ -95,6 +95,14 @@ function AppShell() {
             }
           />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route
+            path="/profile/recipes"
+            element={
+              <ProtectedRoute>
+                <ProfilePage showAllRecipes />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/review/:slug" element={<ReviewRequestPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
