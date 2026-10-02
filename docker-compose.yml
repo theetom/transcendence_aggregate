@@ -2,20 +2,44 @@ services:
   backend:
     build:
       context: ./backend
+    init: true
+    restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     volumes:
       - ./data:/data
     command: >-
-      sh -c "if [ ! -f /data/db.sqlite3 ]; then
-      cp /app/db.sqlite3 /data/db.sqlite3;
-      fi && python manage.py migrate &&
-      gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+      sh -c "python manage.py migrate --noinput &&
+      exec gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import socket; socket.create_connection(('127.0.0.1', 8000), timeout=3).close()"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   frontend:
     build:
       context: ./frontend
+    init: true
+    restart: unless-stopped
     ports:
-      - "5173:5173"
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
+    command: ["npm", "run", "dev", "--", "--strictPort"]
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:5173/').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s

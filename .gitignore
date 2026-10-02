@@ -1,2 +1,7 @@
 djangorecipe/
 venv/
+
+# Local environment configuration; keep examples available to teammates.
+.env
+.env.*
+!.env.example
