@@ -942,3 +942,139 @@ I found another function called `create_recipe()` that explicitly saves the reci
 - The instructions also require plain-language command explanations, accurate completion/verification reporting, preservation of the current testing/backend boundaries, and an end-of-session checkpoint.
 - Updated this log with the completed backend import, database comparison, failed/canceled merge actions, and the deferred profile/Add Recipe testing plan. These documentation changes do not alter application code or databases.
 - Verification: reviewed the documentation diff and repository status. No application tests or builds were run for these documentation-only changes. `AGENTS.md` and this work-log update are not committed by the assistant.
+
+## 2026-09-29 — Resume profile testing guidance
+
+- The user gave the cue to resume guided profile testing, followed by Add Recipe testing. The user continues to perform runtime testing.
+- Read the work log and inspected Git status, `docker-compose.yml`, `ProfilePage.jsx`, `LoginPage.jsx`, and `App.jsx` read-only. `docker compose ps` showed no running project services.
+- Current branch is `frontend-side_Roh`, one commit ahead of its remote tracking branch; `AGENTS.md` is untracked. No Git state-changing commands were run.
+- The profile page requests `/api/me/` with the saved login token and displays the actual HTTP status/body. Login stores its token in session storage.
+- Next step: ask the user to run `docker compose up -d --build` from the repository root to load the current source and start both services. Explain that backend startup applies pending migrations to the existing mounted database. This command has not been run by the assistant.
+- After startup, guide login/profile inspection one step at a time, then Add Recipe submission and persisted-data inspection. No feature is confirmed working by this session yet.
+- Only this log was edited. Verification was read-only source/status inspection; no tests, builds, API requests, service starts, backend edits, or database writes were performed by the assistant.
+
+## 2026-09-29 — Profile HTTP 500 confirmed by user testing
+
+- The user supplied the actual profile response: `GET /api/me/`, HTTP 500, `AssertionError`: expected a Response/HttpResponse/StreamingHttpResponse but received NoneType. The traceback names `users.views.user_me` and identifies request user `roh`.
+- Read-only inspection traced `ProfilePage.jsx` fetching `/api/me/` with `Authorization: Token <saved token>`, the Vite `/api` proxy targeting `http://backend:8000`, and Django's `api/` include plus `me/` route reaching `user_me`. Login and profile use the same token storage key, and backend settings configure TokenAuthentication.
+- Exact backend cause: `backend/users/views.py:48–50` only declares `user_me(request)` and assigns `serializer = UserProfileSerializer`. It does not select the signed-in user's profile, instantiate the serializer with that profile, or return a response. The implicit None return matches the user's observed error.
+- No frontend request/connection defect was found for this failure. The supplied response confirms backend reachability and recognition of user `roh`. The frontend intentionally shows the raw status/body; rendering a populated profile remains unfinished and is separate from the backend HTTP 500.
+- The partner needs to complete the current-user handler before profile data can be tested successfully. No backend fixes are authorized or applied. Do not suggest a new account or a frontend workaround for this missing response.
+- Only `WORK_LOG.md` was edited to preserve the result. Verification consisted of source reads and a backend/frontend diff review (no differences); the assistant ran no tests, builds, requests, or database mutations. Startup output was not supplied, so do not claim the exact rebuild process was independently verified.
+- Next steps: explain the confirmed profile failure, retain it for partner discussion, then continue user-led Add Recipe testing when ready. Profile success and Add Recipe persistence remain unverified.
+
+### Proposed profile solution — explanation only
+- The user asked what the solution would be. Read `backend/users/models.py` and confirmed `UserProfile.user` is a one-to-one account relationship.
+- Proposed that the partner require authentication on `user_me`, look up `UserProfile` by `user=request.user` using `get_object_or_404`, instantiate `UserProfileSerializer(profile)`, and return `Response(serializer.data)`. This would return 404 if the account lacks a profile instead of raising an unhandled lookup error.
+- Also identified that the nested `UserSerializer` uses `fields = "__all__"`; recommend explicitly selecting safe response fields rather than including the account's stored password hash.
+- No proposed backend changes were applied or tested. Only this log was updated. Profile retesting awaits a partner fix; user-led Add Recipe testing remains pending.
+
+### Profile proposal clarification
+- Rechecked the account/profile source after the user asked whether the suggested fields and fix are certain. The project does not override `AUTH_USER_MODEL` and uses Django's standard User model. Proposed account fields are id, username, first_name, last_name, email, and date_joined. Signup supplies username/email/password only, so first/last names may be blank. Email and real names are personal information and should not automatically be exposed through public endpoints that reuse this serializer.
+- The proposed handler addresses the observed missing-response failure, but has not been implemented or runtime-tested. A missing UserProfile would yield 404. Successful output would appear as raw JSON in the current frontend; a complete profile layout and richer favorites/recipe data remain separate work.
+- Read-only discovery attempted a nonexistent `backend/requirements.txt` and encountered a missing local library directory and one permission-denied directory. No dependencies were installed; local Django auth model source was found and inspected. No application code, database, or Git state was changed; only this log was updated.
+
+### Explicitly authorized isolated testing of the profile proposal
+- The user explicitly requested testing the proposed changes. This authorizes this scoped test; it does not authorize backend source edits or unrelated tests.
+- Initial Docker status access was blocked by the sandbox socket restriction. Retried with escalation successfully and confirmed both services running. Read the backend Dockerfile and profile migration.
+- Created `/tmp/transcendence_profile_proposal_test_20260929.py` to run with the backend's installed dependencies. It configures an in-memory database before Django initialization, migrates only that database, creates synthetic accounts/profiles, reproduces the original handler failure, and swaps the proposed handler/serializer fields only inside its own process.
+- Planned checks: valid-token own-profile response, both suggested field lists, exclusion of password/admin fields, missing/invalid token, and missing profile. The script has been created but has not yet run. Backend repository files and the existing database remain unchanged.
+
+### Isolated profile test results
+- Successfully ran the temporary script with `docker compose exec -T backend python -B -` using the existing container's Django 6.1.1 dependencies. Exit code 0; all checks passed.
+- Existing handler reproduced HTTP 500 with NoneType. The proposed process-local replacement returned HTTP 200 for a valid token and the correct account's profile, with biography, profile-picture field, and empty favorites.
+- Both the six-field list (id, username, first_name, last_name, email, date_joined) and the four-field list (id, username, email, date_joined) serialized successfully and included exactly those account fields, excluding password/admin fields.
+- Missing and invalid tokens returned HTTP 401. An authenticated account without a UserProfile returned HTTP 404.
+- All migrations and synthetic data writes used SQLite `:memory:`; no requests were sent to the running HTTP server. Handler and serializer changes existed only in the test process. No backend source edits, rebuilds, or existing database mutations were performed.
+- Limits: this verifies the proposed backend behavior through Django's test client, not a browser UI or a deployed fix. Nonempty favorites and uploaded picture serving were not tested. The live endpoint remains unchanged and still needs the partner's implementation, followed by rebuild and user retesting. Shared public serializers still require care before exposing email.
+- Temporary script remains at `/tmp/transcendence_profile_proposal_test_20260929.py`. Next step: give the partner the tested proposal; continue Add Recipe testing separately when requested.
+- Final Git review confirmed no backend/frontend source diff. Status also shows `data/db.sqlite3` modified relative to Git, alongside this log and untracked `AGENTS.md`. The database difference's cause was not investigated; do not claim the entire database file matches Git. The isolated script explicitly selected only the in-memory database.
+
+### Resume user-led Add Recipe testing
+- The user requested guidance testing Add Recipe. Read the current AddRecipePage form, recipe routes, intake handler, and creation serializer. No requests or submissions were made by the assistant.
+- First step is to inspect the actual GET `/api/recipes/add_recipe/` status/body in browser Network tools while opening the signed-in frontend `/add-recipe` page, and confirm ingredient/category options appear. Submission and saved-record inspection follow after that result.
+- The form sends title, ingredients with quantities/units, category name objects, and numbered steps. Current source still treats creation steps as read-only; runtime persistence must be checked rather than inferred from a success response. Profile fixes remain proposed, not applied.
+- Only this log was changed. No backend/frontend edits, builds, database writes, or additional assistant-run tests were performed in this step.
+
+### User's Add Recipe submission returned HTTP 201
+- The user tested the page and supplied POST `/api/recipes/add_recipe/`, HTTP 201 Created. Response: recipe id 2, title `Test`, empty description, date_created `2026-09-29T09:23:43.518646Z`, user id 3, ingredient Spaghetti with quantity `10` and unit `10`, Italian category id 1, empty steps/reviews, average_score 0.0, number_of_reviews 0.
+- This establishes the observed successful creation response and removal of the previous missing-user/reviews validation failure for this submission. Independent retrieval of saved data is still pending. User id 3 has not been independently mapped to the signed-in account in this investigation.
+- Empty steps requires comparison with the actual outgoing POST payload: the user has not yet said whether instructions were entered. Source previously showed creation steps read-only, but do not label this submission's steps lost until submitted content is confirmed.
+- The user also saw two `add_recipe` Network entries, both HTTP 200. Need their Request Method before identifying them as options GETs; a matching POST should show 201. Read `frontend/src/main.jsx` to check development StrictMode as a possible explanation for duplicate GETs.
+- No additional API calls, database writes, or source changes were made by the assistant. Only this work log was updated. Next: inspect the Network POST payload/method and retrieve recipe `Test` separately to check saved fields.
+
+### Requested Add Recipe frontend interaction changes — in progress
+- The user requested tighter title spacing, a visible missing-title message, at least one ingredient/category/step/photo, and a friendly success message referring to admin approval.
+- Read the complete form and relevant CSS, recipe model/serializers/routes, and existing submission page. The intake endpoint has no image-saving support or approval state; creation steps remain read-only. Asked the user whether to defer the photo requirement while keeping submission usable, or block submission until backend photo support exists. This choice is pending. Do not implement backend changes or claim moderation/upload exists.
+- Updated `frontend/src/pages/AddRecipePage.jsx`: removed the title body's extra 18px top margin; added live inline validation after a submit attempt for a nonblank title, at least one ingredient/category/nonblank step, and complete name/quantity/unit values for any started ingredient row. Empty extra rows remain optional. Invalid submissions stop before POST and focus the first invalid field. Added accessible error associations and custom validation instead of browser-only validation bubbles.
+- Updated `frontend/src/App.css` with a small error-box spacing rule using the existing status-banner style. No broader restyling.
+- No tests, builds, or API submissions run for these edits; the earlier isolated profile-test authorization does not cover new frontend tests. Source review and remaining photo/success decisions are pending. No backend or database changes were made by the assistant.
+
+### Frontend edit checkpoint — photo decision pending
+- Reviewed the frontend diff and existing field CSS read-only. Spacing/error markup and validation guards are in place; no runtime verification was performed.
+- Updated successful POST handling in `AddRecipePage.jsx` to show `Recipe added successfully.` instead of the raw HTTP response. Failed requests still display actual server details. This message is used only after a successful backend response.
+- The asynchronous choice about photos is still unanswered. File inputs remain disabled because the endpoint does not save images. Do not claim the required-photo feature is complete. The requested admin-approval wording is also pending because the backend has no approval state or workflow.
+- Current completed scope: title spacing, visible missing-field messages, frontend checks for title/ingredient/category/step and ingredient quantity/unit, and a plain success message. Source-only review; no tests, lint/builds, service rebuilds, API submissions, backend edits, or database writes were performed for this frontend change.
+- Continue after the user's photo/approval clarification. The frontend changes have not been loaded into the existing Docker image. Step persistence still needs a backend fix; frontend-required steps do not change that.
+
+### Add Recipe validation corrections and mandatory-photo gate
+- The user clarified that all empty ingredient fields need messages, quantities must reject letters, no-photo submission must be blocked, and the repeated Add recipe heading must be removed. This supersedes the pending photo-choice question.
+- Updated `frontend/src/pages/AddRecipePage.jsx` only: ingredient name/quantity/unit now each validate even on wholly empty rows; every displayed category/step must be filled. Quantity editing permits digits and one decimal point and validation requires a finite value greater than zero. Added a decimal keyboard hint.
+- Replaced the repeated eyebrow/title pair on this page with one heading using the existing page-hero styling; other pages/components remain unchanged.
+- Enabled local image-file selection and additional picture fields. Submission requires at least one photo and rejects selected non-image/empty files. Missing-photo errors appear inline after a submit attempt.
+- Because the current endpoint cannot persist images, an otherwise valid form is also blocked before POST with `Photo upload is not available yet. Your recipe has not been submitted.` The picture section explains that submission is currently unavailable. No selected file is silently discarded in a successful recipe submission, and no backend upload contract was invented.
+- No backend or database changes, tests, builds, or API submissions were performed. Source review is pending. Backend image saving is required to re-enable successful submission with the mandatory-photo rule; backend step saving and moderation remain unfinished too.
+- Source diff review completed: confirmed independent empty-field checks, numeric input guard, one Add recipe heading, image selection/error associations, and both no-photo and unsupported-upload guards before POST. No backend source diff was present. Runtime/browser behavior remains for the user to verify; no frontend rebuild was performed. Next step is user review of the revised form and partner implementation of photo/step saving before complete submissions can resume.
+
+### Two SQLite files — purpose and proposed cleanup
+- The user clarified that the database-duplication task concerns two `db.sqlite3` files, not duplicate records within tables, and asked why both exist and how to resolve it.
+- Read Compose, backend Dockerfile/Makefile/settings, Git tracking/status, ignore rules, file ownership, and references to SQLite paths. `COPY . .` packages `backend/db.sqlite3` as `/app/db.sqlite3`; Compose copies it to `/data/db.sqlite3` only if that file is absent. The `./data:/data` mount maps the persistent database to host `data/db.sqlite3`, and Django settings select `/data/db.sqlite3`. This is starter data plus a live database, not two active synchronized databases.
+- Read-only SQLite connections (`mode=ro`, query_only) found starter DB: 2 accounts/profiles, 1 recipe (Carbonara); live DB: 3 accounts/profiles, 4 recipes (Carbonara, Test, aa, asdfasdf). Both have 2 ingredients, 2 categories, 2 step records, and no images. Live DB has 4 ingredient links versus 2 in the starter. No account secrets or tokens were queried.
+- Both SQLite files are Git-tracked. The live data directory/file remain owned by nobody:nogroup. Do not repeat ownership changes or replace the live database.
+- Proposed cleanup, NOT performed: back up both files, retain `data/db.sqlite3` as the sole operational database, remove Compose's conditional copy from `/app/db.sqlite3` while retaining migrations/startup, archive/remove the old starter file, add database/backup ignore rules and exclude database files from the backend Docker context, and stop tracking the live DB without deleting it locally. Fresh installations would use migrations to create an empty database; starter catalog data would need an explicit seed process if desired.
+- This involves backend-directory removal/configuration and Git index changes; present the concrete scope for approval under the standing no-backend-changes rule before execution. Only this log has been edited for this investigation. No application changes, database writes, tests, builds, backups, deletions, staging, commits, or pushes were performed.
+
+### Starter SQLite database inventory
+- At the user's request, inspected `backend/db.sqlite3` with a read-only/query-only SQLite connection. It is currently a starter file used only by Compose's copy-on-first-start behavior, not the configured live write target.
+- Contains accounts `test_user` (id 1) and `admin` (id 2, staff/superuser), two profiles, and Carbonara (id 1, author id 1, description `Uma receita simples`). Ingredients: Spaghetti 200 g and Egg 2 units. Categories: Italian and Pasta. Steps: `Cozer a massa` and `Misturar os ovos`.
+- Additional counts: 1 review, 0 recipe images, 0 favorites, 1 authentication token, 1 session, 27 migration records, 16 content types, 64 permissions, and no groups or admin-log entries. Password hashes, token values, and session contents were not selected or displayed.
+- Only this log was updated. No database/configuration changes, removals, backups, tests, or Git state-changing operations were performed. Cleanup remains proposed and unapproved; keep both databases until the user explicitly authorizes the scoped cleanup.
+
+### Starter-to-live record comparison confirmed
+- Compared every record in every application/Django table of `backend/db.sqlite3` against `data/db.sqlite3` by primary key and complete row values using read-only transactions. Table schemas matched. SQLite's internal `sqlite_sequence` counter table was excluded from the record comparison.
+- Every starter record exists unchanged in the live database: no missing or changed starter rows. Live additions are 1 account, 1 profile, 1 token, 3 recipes, 2 recipe-category links, and 2 recipe-ingredient links. All other compared tables match exactly.
+- Only aggregate counts and changed-field names were output; no passwords, token values, or session contents were displayed. No database mutations, deletions, or configuration changes occurred. Only this log was updated; proposed cleanup remains unperformed.
+
+### Database cleanup deferred — await partner approval and user cue
+- The user explicitly chose to keep both SQLite files and the current configuration unchanged while waiting for the partner's approval. Do not begin cleanup, backups, deletions, untracking, infrastructure edits, or deferred testing until the user gives the cue.
+- Agreed conclusion: all application/Django records in `backend/db.sqlite3` are present unchanged in `data/db.sqlite3`; the latter additionally contains newer records and is the active database. The backend copy is starter data used only when Compose initializes a missing live database.
+- Future cleanup should preserve the active database and coordinate removal of the starter-copy command with archiving/removal of the starter file. This remains a proposal, not an approved or completed change.
+- Only this checkpoint was appended. No database, application, configuration, or Git state-changing operations were performed.
+
+## 2026-09-29 — End-of-day checkpoint and requested publication
+
+### Completed today
+- Diagnosed the user's `/api/me/` HTTP 500: the frontend reaches the handler with a recognized account, but the backend `user_me` returns no response. At the user's explicit request, tested the proposed authenticated handler and safe serializer field lists in temporary infrastructure with an in-memory database. Tests passed: valid profile 200, invalid/missing token 401, missing profile 404. No backend fix was installed.
+- Prepared partner messages about completing the profile handler and deciding whether `/api/me/` and `/api/users/` should share serializers or use separate ones. The decision depends on the users-list purpose and access permissions. Password hashes must not be returned; email must not unintentionally become public. Messages were drafted only, not sent.
+- The user observed Add Recipe HTTP 201 for `Test` before the photo gate was added. A later database inspection confirmed Test exists; exact outgoing steps and complete per-field persistence remain unverified. Source still does not save creation steps or photos, and no admin approval workflow exists.
+- Frontend changes: tightened title-box spacing; removed the repeated heading; added inline required-field warnings, first-invalid-field focus, positive numeric quantities with letters rejected, required ingredient/category/step fields, and mandatory photo selection. Actual file selection works locally. The entire POST is deliberately blocked until backend photo persistence is supported, so selected photos are not silently lost. Success copy was simplified, but cannot currently be reached through this guarded form. Errors retain server details.
+- Inspected changes read-only. No frontend tests, lint runs, builds, container rebuilds, or API submissions were run by the assistant for these edits. User screenshots showed an intermediate version; do not claim the final frontend behavior has passed browser testing.
+
+### Proposals and Trello notes — not implemented
+- Units proposal: define fixed choices in new `backend/recipes/units.py` (g, kg, ml, L, piece); include value/label options in GET `/api/recipes/add_recipe/` via `backend/recipes/views.py`; validate creation/update units with ChoiceField in `backend/recipes/serializers.py`; consume them in a dropdown in `frontend/src/pages/AddRecipePage.jsx`. Keep the existing POST unit string and database field. No unit code or schema changes were made or tested.
+- Drafted Trello text for required photo upload/persistence, deciding shared versus separate user serializers, completing Docker infrastructure, configuring the required proxy and checking the project description, and choosing the final database system. No Trello cards were created externally. Infrastructure compliance was not audited during this discussion.
+- Clarified that the database-duplication item is two SQLite files, not an established duplicate-record bug. Every starter record in `backend/db.sqlite3` is unchanged in active `data/db.sqlite3`, which also has newer records. Both files, tracking, ownership, and copy-on-first-start configuration stay as they are pending partner approval AND the user's explicit cue. Do not start deferred cleanup or database changes.
+
+### Commit/push scope and resume instructions
+- User requested saving today's work, committing, and pushing. Reviewed current branch `frontend-side_Roh`, which is one commit ahead of its tracking branch at existing commit `01280a9` before this publication.
+- Selected scope: `frontend/src/pages/AddRecipePage.jsx`, `frontend/src/App.css`, `WORK_LOG.md`, and previously untracked `AGENTS.md`. Leave the modified `data/db.sqlite3` unstaged and local. Do not delete, reset, untrack, or commit either database as part of this publication.
+- Staging, commit, and push have not yet run at this checkpoint; record outcomes after execution. No new application testing is authorized by this commit/push request.
+- Next session: read this checkpoint; preserve the no-backend-edits and user-led-testing rules. Continue from partner replies on profile, photo/step persistence, units, and serializer scope. Database cleanup remains on hold until the user's cue. Do not describe recipe submission, images, admin approval, or the full profile UI as complete.
+
+## 2026-10-02 — Short recap and commit-message suggestion
+
+- The user requested a very short recap and a suggested commit message for their planned commit/push. Read this log and `AGENTS.md`, then inspected Git status, recent commits, diff statistics, and the frontend diff read-only.
+- Current branch is `frontend-side_Roh`, one commit ahead of its locally recorded tracking branch at `01280a9`. The Add Recipe validation, heading/spacing cleanup, mandatory local photo selection, and submission block pending backend photo support remain uncommitted. Suggested message: `Improve Add Recipe validation and photo requirements`.
+- Working-tree changes also include this log, untracked `AGENTS.md`, modified `data/db.sqlite3`, and deletion of `backend/db.sqlite3`. The starter-database deletion differs from the prior checkpoint; its cause and intent were not investigated. No database cleanup or restoration was performed. Preserve the earlier publication scope of the two frontend files, `WORK_LOG.md`, and `AGENTS.md`; exclude both database paths unless the user explicitly changes that scope.
+- Only `WORK_LOG.md` was edited in this session to record the recap and current state. Verification was source/Git review only; no tests, builds, API calls, staging, commits, pushes, backend edits, or database writes were performed.
+- Resume from the user's publication instructions or partner replies on profile, photo/step persistence, units, and serializer scope. Backend implementation and database cleanup remain outside the authorized scope; final frontend runtime testing remains with the user.

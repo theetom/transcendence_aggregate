@@ -1256,6 +1256,12 @@
   color: var(--muted-strong);
 }
 
+.add-recipe-form__error {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+}
+
 .comment-card__meta,
 .pending-item__meta {
   display: flex;
