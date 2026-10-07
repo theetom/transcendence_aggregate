@@ -5,3 +5,11 @@ venv/
 .env
 .env.*
 !.env.example
+
+# Private SQLite backup and database-transfer fixtures.
+/data/postgres-transfer/
+
+# Local TLS certificates and private keys are machine-specific.
+/certs/
+*.key
+*-key.pem

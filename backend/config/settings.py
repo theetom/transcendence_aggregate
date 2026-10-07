@@ -10,7 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +23,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-bk6@6c6-ife$*u-e+60_y_b!y6j&oo&9ta3yk-12=-x-3j-r=@'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', '')
+if not SECRET_KEY.strip():
+    raise ImproperlyConfigured('Set DJANGO_SECRET_KEY in the backend environment.')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+debug_value = os.environ.get('DJANGO_DEBUG', 'False').strip().lower()
+if debug_value not in {'true', 'false', '1', '0', 'yes', 'no', 'on', 'off'}:
+    raise ImproperlyConfigured('DJANGO_DEBUG must be a true or false value.')
+DEBUG = debug_value in {'true', '1', 'yes', 'on'}
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'backend']
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get(
+        'DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,backend'
+    ).split(',')
+    if host.strip()
+]
+
+# Nginx overwrites this header and is the browser-facing HTTPS entry point.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
@@ -86,12 +103,31 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': Path('/data/db.sqlite3'),
+database_engine = os.environ.get('DJANGO_DB_ENGINE', 'sqlite').strip().lower()
+if database_engine == 'sqlite':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': Path('/data/db.sqlite3'),
+        }
     }
-}
+elif database_engine == 'postgresql':
+    postgres_password = os.environ.get('POSTGRES_PASSWORD', '')
+    if not postgres_password.strip():
+        raise ImproperlyConfigured('Set POSTGRES_PASSWORD in the backend environment.')
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('POSTGRES_DB', 'recipes'),
+            'USER': os.environ.get('POSTGRES_USER', 'recipes'),
+            'PASSWORD': postgres_password,
+            'HOST': os.environ.get('POSTGRES_HOST', 'postgres'),
+            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            'OPTIONS': {'connect_timeout': 5},
+        }
+    }
+else:
+    raise ImproperlyConfigured('DJANGO_DB_ENGINE must be sqlite or postgresql.')
 
 
 # Password validation
@@ -128,8 +164,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
-STATIC_URL = 'static/'
-
+STATIC_URL = '/static/'
+STATIC_ROOT = Path('/srv/django/static')
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration

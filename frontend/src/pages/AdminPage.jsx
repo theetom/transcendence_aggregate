@@ -32,7 +32,7 @@ function AdminPage({ pendingRecipes = [] }) {
                 </div>
                 <p>{recipe.summary}</p>
                 <div style={{ marginTop: '18px' }}>
-                  <Link className="button button--primary" to={`/admin/review/${recipe.slug}`}>
+                  <Link className="button button--primary" to={`/staff/review/${recipe.slug}`}>
                     Review request
                   </Link>
                 </div>

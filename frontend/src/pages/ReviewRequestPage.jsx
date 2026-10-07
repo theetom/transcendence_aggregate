@@ -12,8 +12,8 @@ function ReviewRequestPage({ request = null }) {
           <p className="eyebrow">Review request</p>
           <h1>Review request</h1>
           <p className="page-hero__lead">Submission details have not been loaded.</p>
-          <Link className="button button--primary" to="/admin">
-            Back to admin page
+          <Link className="button button--primary" to="/staff">
+            Back to staff page
           </Link>
         </section>
       </div>
@@ -93,7 +93,7 @@ function ReviewRequestPage({ request = null }) {
             Moderation is not connected yet.
           </p>
           <div style={{ marginTop: '18px' }}>
-            <Link className="button button--ghost" to="/admin">
+            <Link className="button button--ghost" to="/staff">
               Back to dashboard
             </Link>
           </div>

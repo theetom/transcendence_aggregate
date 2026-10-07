@@ -24,7 +24,6 @@ function LoginPage() {
 
     setIsSubmitting(true)
     setStatus('Signing in...')
-    let responseDetails = 'POST /api/login/'
 
     try {
       const response = await fetch('/api/login/', {
@@ -36,26 +35,28 @@ function LoginPage() {
         }),
       })
 
-      responseDetails += `\nHTTP ${response.status} ${response.statusText}`
-      const body = await response.text()
-      responseDetails += `\n\n${body}`
+      const data = await response.json().catch(() => null)
 
       if (!response.ok) {
-        setStatus(responseDetails)
+        const invalidCredentials = response.status === 400
+          && Array.isArray(data?.non_field_errors)
+          && data.non_field_errors.includes('Unable to log in with provided credentials.')
+
+        setStatus(invalidCredentials
+          ? 'Incorrect username or password. Please try again.'
+          : 'Unable to sign in right now. Please try again later.')
         return
       }
 
-      const data = JSON.parse(body)
-
       if (typeof data?.token !== 'string' || !data.token.trim()) {
-        setStatus(`${responseDetails}\n\nFrontend: The response did not contain a login token.`)
+        setStatus('Unable to sign in right now. Please try again later.')
         return
       }
 
       window.sessionStorage.setItem(authTokenStorageKey, data.token)
       navigate('/', { replace: true })
-    } catch (error) {
-      setStatus(`${responseDetails}\n\n${error.name}: ${error.message}`)
+    } catch {
+      setStatus('Unable to complete sign-in. Check your connection and try again.')
     } finally {
       setIsSubmitting(false)
     }

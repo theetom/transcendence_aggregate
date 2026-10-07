@@ -1,22 +1,53 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: recipes
+      POSTGRES_USER: recipes
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "recipes", "-d", "recipes"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   backend:
     build:
       context: ./backend
     init: true
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    expose:
+      - "8000"
+    environment:
+      DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in the root .env file}"
+      DJANGO_DEBUG: "${DJANGO_DEBUG:-False}"
+      DJANGO_ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}"
+      DJANGO_DB_ENGINE: "${DJANGO_DB_ENGINE:-sqlite}"
+      POSTGRES_DB: recipes
+      POSTGRES_USER: recipes
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
     volumes:
       - ./data:/data
+      - django_static:/srv/django/static
+    depends_on:
+      postgres:
+        condition: service_healthy
     command: >-
       sh -c "python manage.py migrate --noinput &&
+      python manage.py collectstatic --noinput &&
       exec gunicorn config.wsgi:application --bind 0.0.0.0:8000"
     healthcheck:
       test:
         - CMD
         - python
         - -c
-        - "import socket; socket.create_connection(('127.0.0.1', 8000), timeout=3).close()"
+        - "import os, socket; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings'); import django; django.setup(); from django.db import connection; connection.cursor().execute('SELECT 1'); socket.create_connection(('127.0.0.1', 8000), timeout=3).close()"
       interval: 10s
       timeout: 5s
       retries: 5
@@ -27,19 +58,38 @@ services:
       context: ./frontend
     init: true
     restart: unless-stopped
+    environment:
+      HTTPS_PORT: "${HTTPS_PORT:-8443}"
+      SERVER_NAME: "${SERVER_NAME:-localhost}"
+      NGINX_ENVSUBST_FILTER: "HTTPS_PORT|SERVER_NAME"
     ports:
-      - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
-    command: ["npm", "run", "dev", "--", "--strictPort"]
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:80"
+      - "127.0.0.1:${HTTPS_PORT:-8443}:443"
+    volumes:
+      - django_static:/srv/django/static:ro
+      - type: bind
+        source: "${TLS_CERT_DIR:-./certs}"
+        target: /etc/nginx/certs
+        read_only: true
+        bind:
+          create_host_path: false
     depends_on:
       backend:
         condition: service_healthy
     healthcheck:
       test:
         - CMD
-        - node
-        - -e
-        - "fetch('http://127.0.0.1:5173/').then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))"
+        - curl
+        - --fail
+        - --silent
+        - --show-error
+        - --insecure
+        - https://127.0.0.1/
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 20s
+
+volumes:
+  postgres_data:
+  django_static:
