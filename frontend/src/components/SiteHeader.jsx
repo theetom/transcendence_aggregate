@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
+  authTokenStorageKey,
   isViewerAuthenticated,
   menuRecipeTypeLabels,
   menuThemeLabels,
@@ -12,6 +13,7 @@ function SiteHeader() {
   const isAuthenticated = isViewerAuthenticated()
   const [menuOpen, setMenuOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const menuPopoverRef = useRef(null)
 
   useEffect(() => {
@@ -54,6 +56,27 @@ function SiteHeader() {
     }
 
     navigate(`/results/search?q=${encodeURIComponent(trimmedQuery)}`)
+  }
+
+  async function handleLogout() {
+    if (isLoggingOut) {
+      return
+    }
+
+    setIsLoggingOut(true)
+
+    try {
+      await fetch('/api/logout/', {
+        method: 'POST',
+        headers: {
+          Authorization: `Token ${window.sessionStorage.getItem(authTokenStorageKey)}`,
+        },
+      })
+    } finally {
+      window.sessionStorage.removeItem(authTokenStorageKey)
+      navigate('/connect', { replace: true })
+      setIsLoggingOut(false)
+    }
   }
 
   return (
@@ -154,6 +177,16 @@ function SiteHeader() {
           >
             Profile
           </Link>
+          {isAuthenticated ? (
+            <button
+              type="button"
+              className="header-button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut ? 'Logging out...' : 'Log out'}
+            </button>
+          ) : null}
         </div>
       </div>
     </header>
