@@ -1,17 +1,20 @@
-from urllib import request
+import json
 from datetime import timedelta
 
+from django.db import transaction
 from django.db.models import Avg, Count, Q
 from django.utils import timezone
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, parser_classes
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import Recipe, Category, Ingredient
+from .models import Recipe, Category, Ingredient, IngredientImage, RecipeImage
 from .serializers import RecipeSummarySerializer, RecipeDetailedSerializer, RecipeUpdateSerializer, CategorySerializer, IngredientSerializer
 from reviews.serializers import ReviewSerializer
 
 @api_view(["GET", "POST"])
+@parser_classes([MultiPartParser, FormParser])
 def recipe_intake(request):
 	if request.method == "GET":
 		categories = Category.objects.all()
@@ -23,14 +26,60 @@ def recipe_intake(request):
 		})
 	
 	if request.method == "POST":
+		if not request.user.is_authenticated:
+			return Response(
+				{"error": "You must be logged in to add a recipe."},
+				status=status.HTTP_401_UNAUTHORIZED,
+			)
+
+		data = request.data.copy()
+		image_files = request.FILES.getlist("images")
+		ingredient_image_files = [
+			image_file
+			for key in request.FILES
+			if key.startswith("ingredient_images_")
+			for image_file in request.FILES.getlist(key)
+		]
+		for image_file in image_files + ingredient_image_files:
+			content_type = getattr(image_file, "content_type", "")
+			if not content_type.startswith("image/"):
+				return Response(
+					{"images": "Only image files are allowed."},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			if image_file.size > 5 * 1024 * 1024:
+				return Response(
+					{"images": "Each image must be 5 MB or smaller."},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+
+		for field in ("ingredients", "categories", "steps"):
+			try:
+				data[field] = json.loads(data.get(field, "[]"))
+			except (TypeError, json.JSONDecodeError):
+				return Response(
+					{field: "This field must contain a valid JSON array."},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
 
 		serializer = RecipeDetailedSerializer(
-			data=request.data
+			data=data
 		)
 
 		if serializer.is_valid():
+			with transaction.atomic():
+				recipe = serializer.save(user=request.user)
 
-			serializer.save(user=request.user)
+				for image_file in image_files:
+					RecipeImage.objects.create(recipe=recipe, image=image_file)
+
+				for index, ingredient_data in enumerate(data["ingredients"]):
+					ingredient = Ingredient.objects.get(name=ingredient_data["name"])
+					for image_file in request.FILES.getlist(f"ingredient_images_{index}"):
+						IngredientImage.objects.create(
+							ingredient=ingredient,
+							image=image_file,
+						)
 
 			return Response(
 				serializer.data,

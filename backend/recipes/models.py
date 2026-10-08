@@ -17,6 +17,10 @@ class Ingredient(models.Model):
     def __str__(self):
         return self.name
 
+class IngredientImage(models.Model):
+    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE, related_name="images")
+    image = models.ImageField(upload_to="ingredients/")
+
 class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name='recipe_ingredients')
     ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)

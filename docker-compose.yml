@@ -6,6 +6,7 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/data
+      - ./media:/app/media
     command: >-
       sh -c "if [ ! -f /data/db.sqlite3 ]; then
       cp /app/db.sqlite3 /data/db.sqlite3;

@@ -10,14 +10,17 @@ async function requestRecipeApi(method, payload) {
     headers.Authorization = `Token ${token}`
   }
 
-  if (payload !== undefined) {
+  if (!(payload instanceof FormData) && payload !== undefined) {
     headers['Content-Type'] = 'application/json'
   }
 
   const response = await fetch(endpoint, {
     method,
     headers,
-    body: payload === undefined ? undefined : JSON.stringify(payload),
+    body:
+      payload instanceof FormData || payload === undefined
+        ? payload
+        : JSON.stringify(payload),
   })
 
   const body = await response.text()
@@ -41,7 +44,7 @@ function AddRecipePage() {
   const [recipeCategories, setRecipeCategories] = useState([])
   const [recipeName, setRecipeName] = useState('')
   const [ingredients, setIngredients] = useState([
-    { name: '', quantity: '', unit: '' },
+    { name: '', quantity: '', unit: '', image: null },
   ])
   const [categories, setCategories] = useState([''])
   const [steps, setSteps] = useState([''])
@@ -67,6 +70,9 @@ function AddRecipePage() {
     }
     if (!ingredient.unit.trim()) {
       validationErrors[`unit-${index + 1}`] = 'Enter a unit, such as g or pieces.'
+    }
+    if (ingredient.image && (!ingredient.image.type.startsWith('image/') || ingredient.image.size === 0)) {
+      validationErrors[`ingredient-image-${index + 1}`] = 'Choose a nonempty image file.'
     }
   })
 
@@ -156,14 +162,7 @@ function AddRecipePage() {
       return
     }
 
-    // The current intake endpoint cannot save images. Keep selected photos local
-    // and prevent recipe creation until the backend supports photo uploads.
-    if (pictures.some(Boolean)) {
-      setStatus('Photo upload is not available yet. Your recipe has not been submitted.')
-      return
-    }
-
-    const payload = {
+    const recipeData = {
       title: recipeName.trim(),
       ingredients: ingredients
         .filter((ingredient) => ingredient.name)
@@ -183,6 +182,22 @@ function AddRecipePage() {
           instruction,
         })),
     }
+
+    const payload = new FormData()
+    payload.append('title', recipeData.title)
+    payload.append('ingredients', JSON.stringify(recipeData.ingredients))
+    payload.append('categories', JSON.stringify(recipeData.categories))
+    payload.append('steps', JSON.stringify(recipeData.steps))
+
+    pictures.filter(Boolean).forEach((picture) => {
+      payload.append('images', picture)
+    })
+
+    ingredients.forEach((ingredient, index) => {
+      if (ingredient.image) {
+        payload.append(`ingredient_images_${index}`, ingredient.image)
+      }
+    })
 
     setIsSubmitting(true)
     setStatus('Submitting recipe...')
@@ -228,7 +243,7 @@ function AddRecipePage() {
   function addIngredientField() {
     setIngredients((current) => [
       ...current,
-      { name: '', quantity: '', unit: '' },
+      { name: '', quantity: '', unit: '', image: null },
     ])
   }
 
@@ -247,6 +262,14 @@ function AddRecipePage() {
   function updatePicture(index, file) {
     setPictures((current) =>
       current.map((picture, pictureIndex) => (pictureIndex === index ? file : picture)),
+    )
+  }
+
+  function updateIngredientImage(index, file) {
+    setIngredients((current) =>
+      current.map((ingredient, ingredientIndex) =>
+        ingredientIndex === index ? { ...ingredient, image: file } : ingredient,
+      ),
     )
   }
 
@@ -335,6 +358,25 @@ function AddRecipePage() {
                         }
                       />
                       <FieldError id={`unit-${index + 1}-error`} message={fieldError(`unit-${index + 1}`)} />
+                    </div>
+                    <div className="field">
+                      <label htmlFor={`ingredient-image-${index + 1}`}>Ingredient picture</label>
+                      <input
+                        id={`ingredient-image-${index + 1}`}
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) =>
+                          updateIngredientImage(index, event.target.files?.[0] ?? null)
+                        }
+                        aria-invalid={Boolean(fieldError(`ingredient-image-${index + 1}`))}
+                        aria-describedby={fieldError(`ingredient-image-${index + 1}`)
+                          ? `ingredient-image-${index + 1}-error`
+                          : undefined}
+                      />
+                      <FieldError
+                        id={`ingredient-image-${index + 1}-error`}
+                        message={fieldError(`ingredient-image-${index + 1}`)}
+                      />
                     </div>
                   </div>
                 ))}

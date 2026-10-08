@@ -1,14 +1,22 @@
 from rest_framework import serializers
 from django.db import transaction
-from .models import Recipe, RecipeIngredient, RecipeStep, Category, Ingredient
+from .models import Recipe, RecipeIngredient, RecipeStep, Category, Ingredient, IngredientImage, RecipeImage
 from reviews.serializers import ReviewSerializer
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
 	name = serializers.CharField(source="ingredient.name")
+	images = serializers.SerializerMethodField()
+
+	def get_images(self, recipe_ingredient):
+		return IngredientImageSerializer(
+			recipe_ingredient.ingredient.images.all(),
+			many=True,
+			context=self.context,
+		).data
 
 	class Meta:
 		model = RecipeIngredient
-		fields = ["name", "quantity", "unit"]
+		fields = ["name", "quantity", "unit", "images"]
 
 
 class RecipeIngredientNameSerializer(serializers.ModelSerializer):
@@ -23,6 +31,11 @@ class RecipeStepSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = RecipeStep
 		fields = ["step_number", "instruction"]
+
+class IngredientImageSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = IngredientImage
+		fields = ["id", "image"]
 
 
 class RecipeUpdateIngredientSerializer(serializers.Serializer):
@@ -41,9 +54,16 @@ class CategorySerializer(serializers.ModelSerializer):
 		fields = ["id", "name"]
 
 class IngredientSerializer(serializers.ModelSerializer):
+	images = IngredientImageSerializer(many=True, read_only=True)
+
 	class Meta:
 		model = Ingredient
-		fields = ["id", "name"]
+		fields = ["id", "name", "images"]
+
+class RecipeImageSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = RecipeImage
+		fields = ["id", "image"]
 
 class RecipeDetailedSerializer(serializers.ModelSerializer):
 	user = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -64,6 +84,10 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 		many=True,
 		read_only=True
 	)
+	images = RecipeImageSerializer(
+		many=True,
+		read_only=True
+	)
 	average_score = serializers.SerializerMethodField()
 	number_of_reviews = serializers.SerializerMethodField()
 
@@ -79,6 +103,7 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 			"steps",
 			"categories",
 			"reviews",
+			"images",
 			"average_score",
 			"number_of_reviews",
 		]
