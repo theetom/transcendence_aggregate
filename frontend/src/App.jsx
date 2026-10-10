@@ -104,7 +104,7 @@ function AppShell() {
             }
           />
           <Route path="/staff" element={<AdminPage />} />
-          <Route path="/staff/review/:slug" element={<ReviewRequestPage />} />
+          <Route path="/staff/review/:submissionId" element={<ReviewRequestPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="*" element={<NotFoundPage />} />

@@ -5,7 +5,7 @@ import { authTokenStorageKey } from '../data/siteData'
 
 function LoginPage() {
   const navigate = useNavigate()
-  const [username, setUsername] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -17,8 +17,8 @@ function LoginPage() {
       return
     }
 
-    if (!username.trim() || !password) {
-      setStatus('Enter both username and password before continuing.')
+    if (!identifier.trim() || !password) {
+      setStatus('Enter your username or email and password before continuing.')
       return
     }
 
@@ -30,7 +30,7 @@ function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: username.trim(),
+          username: identifier.trim(),
           password,
         }),
       })
@@ -43,7 +43,7 @@ function LoginPage() {
           && data.non_field_errors.includes('Unable to log in with provided credentials.')
 
         setStatus(invalidCredentials
-          ? 'Incorrect username or password. Please try again.'
+          ? 'Incorrect login details. Please try again.'
           : 'Unable to sign in right now. Please try again later.')
         return
       }
@@ -78,15 +78,15 @@ function LoginPage() {
     >
       <form className="field-list" onSubmit={handleSubmit} style={{ marginTop: '18px' }}>
         <div className="field">
-          <label htmlFor="login-username">Username</label>
+          <label htmlFor="login-username">Username or email</label>
           <input
             id="login-username"
             name="username"
             type="text"
             autoComplete="username"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            placeholder="Enter your username"
+            value={identifier}
+            onChange={(event) => setIdentifier(event.target.value)}
+            placeholder="Enter your username or email"
           />
         </div>
 

@@ -1,16 +1,36 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import SectionTitle from '../components/SectionTitle'
+import { getPendingSubmissions } from '../data/moderationApi'
 import { formatDate } from '../data/siteData'
 
-function AdminPage({ pendingRecipes = [] }) {
+function AdminPage() {
+  const [pendingRecipes, setPendingRecipes] = useState(null)
+  const [status, setStatus] = useState('Loading submissions...')
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    async function loadSubmissions() {
+      try {
+        const submissions = await getPendingSubmissions(controller.signal)
+        if (!controller.signal.aborted) setPendingRecipes(submissions)
+      } catch (error) {
+        if (!controller.signal.aborted) setStatus(error.message)
+      }
+    }
+
+    loadSubmissions()
+    return () => controller.abort()
+  }, [])
+
   return (
     <div className="content-frame">
       <section className="page-hero">
         <p className="eyebrow">Admin page</p>
         <h1>Moderation dashboard</h1>
         <p className="page-hero__lead">
-          Recipe submissions waiting for moderation will appear here once the
-          backend moderation queue is connected.
+          Review pending recipe submissions and send a decision to their authors.
         </p>
       </section>
 
@@ -18,21 +38,23 @@ function AdminPage({ pendingRecipes = [] }) {
         <SectionTitle
           eyebrow="Pending list"
           title="Submissions waiting for moderation"
-          description="Each card should link to a moderation detail page backed by stored submission data."
+          description="Open a submission to read its ingredients and steps before making a decision."
         />
-        {pendingRecipes.length > 0 ? (
+        {!pendingRecipes ? (
+          <div className="empty-state" role="status">{status}</div>
+        ) : pendingRecipes.length > 0 ? (
           <div className="feature-grid">
             {pendingRecipes.map((recipe) => (
-              <article key={recipe.slug} className="admin-card">
+              <article key={recipe.id} className="admin-card">
                 <p className="eyebrow">Pending request</p>
                 <h3>{recipe.title}</h3>
                 <div className="card-meta-strip">
                   <span>{recipe.author}</span>
-                  <span>{formatDate(recipe.submittedOn)}</span>
+                  <span>{formatDate(recipe.date_created.split('T')[0])}</span>
                 </div>
-                <p>{recipe.summary}</p>
+                <p>{recipe.description}</p>
                 <div style={{ marginTop: '18px' }}>
-                  <Link className="button button--primary" to={`/staff/review/${recipe.slug}`}>
+                  <Link className="button button--primary" to={`/staff/review/${recipe.id}`}>
                     Review request
                   </Link>
                 </div>
@@ -40,7 +62,7 @@ function AdminPage({ pendingRecipes = [] }) {
             ))}
           </div>
         ) : (
-          <div className="empty-state">Submissions have not been loaded.</div>
+          <div className="empty-state">No submissions are waiting for review.</div>
         )}
       </section>
     </div>

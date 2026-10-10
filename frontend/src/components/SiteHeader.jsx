@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
+  authTokenStorageKey,
   isViewerAuthenticated,
   menuRecipeTypeLabels,
   menuThemeLabels,
@@ -12,7 +13,10 @@ function SiteHeader() {
   const isAuthenticated = isViewerAuthenticated()
   const [menuOpen, setMenuOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [logoutError, setLogoutError] = useState('')
   const menuPopoverRef = useRef(null)
+  const logoutPendingRef = useRef(false)
 
   useEffect(() => {
     setMenuOpen(false)
@@ -54,6 +58,44 @@ function SiteHeader() {
     }
 
     navigate(`/results/search?q=${encodeURIComponent(trimmedQuery)}`)
+  }
+
+  async function handleLogout() {
+    if (logoutPendingRef.current) {
+      return
+    }
+
+    const token = window.sessionStorage.getItem(authTokenStorageKey)
+
+    if (!token) {
+      navigate('/connect', { replace: true })
+      return
+    }
+
+    logoutPendingRef.current = true
+    setIsLoggingOut(true)
+    setLogoutError('')
+
+    try {
+      const response = await fetch('/api/logout/', {
+        method: 'POST',
+        headers: { Authorization: `Token ${token}` },
+      })
+
+      // An invalid token may mean a previous logout succeeded but its response was lost.
+      if (response.status !== 204 && response.status !== 401) {
+        setLogoutError('Unable to log out right now. Please try again.')
+        return
+      }
+
+      window.sessionStorage.removeItem(authTokenStorageKey)
+      navigate('/connect', { replace: true })
+    } catch {
+      setLogoutError('Unable to log out. Check your connection and try again.')
+    } finally {
+      logoutPendingRef.current = false
+      setIsLoggingOut(false)
+    }
   }
 
   return (
@@ -154,8 +196,25 @@ function SiteHeader() {
           >
             Profile
           </Link>
+          {isAuthenticated ? (
+            <button
+              type="button"
+              className="header-button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              aria-busy={isLoggingOut}
+              aria-describedby={logoutError ? 'logout-error' : undefined}
+            >
+              {isLoggingOut ? 'Logging out...' : 'Log out'}
+            </button>
+          ) : null}
         </div>
       </div>
+      {logoutError ? (
+        <p id="logout-error" className="status-banner content-frame" role="alert">
+          {logoutError}
+        </p>
+      ) : null}
     </header>
   )
 }
