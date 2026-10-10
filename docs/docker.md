@@ -11,18 +11,24 @@ and a complete deployment-readiness review remain separate work.
 
 - Docker Engine or Docker Desktop with a current Docker Compose plugin supporting
   `config --format json`, `up --wait`, and `--wait-timeout`.
+- Linux with Chrome as the evaluation browser, or WSL with Windows Chrome.
 - Run commands from the repository root.
 - Docker must be able to write to the host `data/` directory.
-- Network access for missing host packages, image downloads, and app dependencies.
-- Permission to install missing host packages and a local certificate authority.
-  The launcher may request your administrator password.
+- Network access for image downloads and build dependencies.
+- Permission to write your own Chrome certificate store and trust a local CA.
 
-The launcher automatically installs missing mkcert, Python 3 (for configuration
-reading and the database-transfer helpers), and Linux certutil through apt on
-Debian/Kali/Ubuntu. On other platforms, install these host tools through your
-platform's supported instructions first. Docker itself must already be installed,
-running, and accessible by your normal user. The launcher does not install Docker,
-change Docker permissions, or bypass evaluation-machine restrictions.
+The launcher needs no host sudo or host certificate packages. It builds a cached
+Docker tools image containing Python, OpenSSL, certutil and mkcert. The official
+mkcert v1.4.4 binary for x86-64, ARM64 or ARM is checked against its pinned
+SHA-256 and size before execution inside the image. These tools and their
+dependencies are installed inside Docker, not on the school computer.
+
+Docker must already be installed, running, and accessible by your normal user
+through a local Unix socket. Ordinary Docker and local rootless Docker are
+supported; remote endpoints and remapped rootful Docker stop with an explanation
+because browser-store mounts/ownership cannot be assumed in those configurations.
+Keep the working private `.env` available; startup does not generate replacement
+credentials, change Docker permissions or bypass machine restrictions.
 
 Python and backend dependencies are installed inside the backend image. Node.js
 and frontend dependencies are used in the frontend build stage; the final
@@ -97,45 +103,36 @@ deliberately need local diagnostic responses.
 
 ## One-time local certificate setup
 
-The single-command launcher below performs this setup automatically. These manual
-steps are an alternative for troubleshooting or for machines where automated
-package installation is not permitted; they are not required before the launcher.
+Close Chrome before running `sh scripts/start.sh`. The launcher performs the
+certificate setup as your normal user without installing host packages or system
+trust. No separate certificate command is required.
 
-These commands change local dependencies, certificate trust, and certificate
-files; they are setup instructions for you to run, not assistant-run tests.
+On native Linux it imports only the public CA into the selected Chrome NSS
+store and verifies that exact certificate there. Chrome uses an existing
+`~/.pki/nssdb` directory first; otherwise current Chrome uses
+`${XDG_DATA_HOME:-$HOME/.local/share}/pki/nssdb`. The launcher preserves that
+selection. On a fresh account with neither store, it initializes the legacy
+location supported by old and current Chrome. Partial/nonempty stores are never
+reset. This targets the normal Linux Chrome installation used for evaluation;
+an isolated browser package or a managed trust policy may need its own permitted
+configuration.
 
-1. Ensure mkcert and certutil are installed. mkcert was found on this computer,
-   while certutil was absent during source preparation. On Debian/Kali/Ubuntu,
-   install the browser trust helper if missing:
+Chrome's store selection follows the
+[Chromium NSS implementation](https://chromium.googlesource.com/chromium/src/crypto/+/refs/heads/main/nss_util.cc)
+and [Linux certificate guidance](https://chromium.googlesource.com/chromium/src/+/main/docs/linux/cert_management.md).
 
-   ```sh
-   sudo apt install libnss3-tools
-   ```
+The user's CA is read from `CAROOT`, or from
+`${XDG_DATA_HOME:-$HOME/.local/share}/mkcert` by default. An existing valid CA
+identity is preserved. A fresh CA is created using an isolated tools-container
+home; host/system trust is not installed during generation. The signing key
+stays in its protected host CA directory and is mounted read-only only for
+site-certificate preparation. The browser-import container receives the public
+CA and the selected NSS directory, not the signing key. The tools image build
+receives only the whitelisted scripts, with no host certificate files.
 
-   For another machine/platform, follow the official mkcert installation guide
-   linked at the end. The Docker images do not install host browser tools.
-
-2. Create/install your local certificate authority into the system and supported
-   browser trust stores, running as your normal user:
-
-   ```sh
-   mkcert -install
-   ```
-
-   It may request administrator authentication to update system trust. Restart
-   the browser after installation. Keep mkcert's root CA private key private;
-   never put it in the image, share it with teammates, or commit it.
-
-3. From the repository root, generate this site's certificate and private key:
-
-   ```sh
-   sh scripts/create-local-cert.sh
-   ```
-
-   This writes `certs/server.crt` and `certs/server.key` for `localhost` and
-   `127.0.0.1`. The directory is Git-ignored, and the key has restrictive
-   permissions. The script refuses to overwrite an existing certificate/key.
-   If both already exist and are still valid for your address, use them.
+Default site files are `certs/server.crt` and `certs/server.key`, covering the
+configured `SERVER_NAME`, `localhost` and `127.0.0.1`. They are Git-ignored.
+Keep the CA signing key and site private keys private; do not share or commit them.
 
 The certificate directory is mounted read-only into Nginx; certificates and keys
 are not included in the image. Missing files/directories prevent direct Compose
@@ -143,19 +140,46 @@ startup; the launcher creates them first. Each evaluation computer/browser must
 trust the CA that signed the certificate it sees; teammates can create their own
 local pairs.
 
-To use a different certificate directory or names, supply them explicitly:
-
-```sh
-sh scripts/create-local-cert.sh ./certs/renewed localhost 127.0.0.1
-```
-
-Then set `TLS_CERT_DIR=./certs/renewed` in `.env`. This also provides a renewal
-path that preserves the old pair; recreate the frontend container to load it.
+To select another site-certificate directory, set `TLS_CERT_DIR` in `.env` and
+run the launcher. It prepares the selected pair and loads it into Nginx. It can
+renew a pair in the existing directory, retaining previous files in a protected
+`.previous-cert-*` backup.
 For a custom address, include that DNS name/IP in the certificate and configure
 the corresponding Nginx name, host access, and Django allowed hosts. Other-machine
 access is not enabled by changing the certificate alone. Public deployment needs
 certificates and trust appropriate to the public domain, rather than this local
 mkcert setup.
+
+### Windows browser with a WSL terminal
+
+When the terminal runs in WSL, the launcher targets Windows Chrome. Windows
+must trust the public CA that signed the site's certificate; a Linux NSS import
+does not establish Windows browser trust.
+
+The launcher performs the Windows current-user import using `certutil.exe` and
+`wslpath`. It stops if those interoperability tools are unavailable rather than
+claiming success from a Linux store. For manual troubleshooting with the default
+CA location, the equivalent WSL command is:
+
+```sh
+certutil.exe -user -addstore Root "$(wslpath -w "$HOME/.local/share/mkcert/rootCA.pem")"
+```
+
+This uses Windows certutil to import the public `rootCA.pem` into your Windows
+user's Trusted Root Certification Authorities. Adjust that public-file path if
+you use `CAROOT` or `XDG_DATA_HOME`. No host mkcert is required. Accept the
+Windows trust confirmation if one appears, then fully quit Chrome, including
+its incognito windows, reopen it, and visit
+`https://localhost:8443/`.
+
+The existing server certificate must be signed by this CA and cover the address
+you visit. Windows trust does not configure the school computer; a fresh school
+checkout should generate its own local certificate and establish trust there.
+Native Linux Chrome uses the per-user NSS setup above and needs no Windows
+command. This WSL branch assumes Chrome is on Windows.
+
+References: [Windows certificate import](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/certutil#-addstore)
+and [Chrome local trust stores](https://chromium.googlesource.com/chromium/src/+/main/net/data/ssl/chrome_root_store/faq.md#how-does-the-chrome-certificate-verifier-integrate-with-platform-trust-stores-for-local-trust-decisions).
 
 ## Start the project
 
@@ -167,32 +191,53 @@ sh scripts/start.sh
 
 This one command:
 
-1. Checks Docker and Compose access.
-2. Installs missing certificate tools and the small host configuration parser
-   dependency through apt when needed on Debian/Kali/Ubuntu.
-3. Reads the same resolved settings Compose uses, without overwriting or executing
-   your `.env`. A missing/empty `DJANGO_SECRET_KEY` or `POSTGRES_PASSWORD` prevents startup.
-4. Creates a certificate pair if neither file exists, or reuses an existing pair.
-   It refuses incomplete/empty/unreadable pairs and never overwrites certificates.
-5. Installs/checks your local CA trust with `mkcert -install`.
-6. Runs `docker compose up -d --build --wait --wait-timeout 120`, building both
+1. Checks local Docker and Compose access, the account mapping, and the resolved
+   private configuration. A missing/empty `DJANGO_SECRET_KEY` or
+   `POSTGRES_PASSWORD` prevents startup. Your `.env` is not overwritten or executed.
+2. Builds/reuses the dedicated certificate-tools image with verified mkcert.
+   No host Python, OpenSSL, mkcert, certutil or sudo installation is required.
+3. Reads the same resolved certificate paths, names and port Compose uses through
+   the tools container. Runtime helpers mount only the dedicated directories
+   they need; they do not mount your whole home, repository or Docker socket.
+4. Validates/preserves the local CA, or creates it if no identity exists. An
+   incomplete or invalid existing CA stops setup and needs restoration.
+5. Verifies the pair's current CA, matching key, server purpose, SANs/address
+   and expiry. It reuses a valid pair with more than 30 days remaining, otherwise
+   validates a new pair before saving old files in a protected backup and
+   replacing them. Symlink/nonregular paths stop preparation.
+6. Imports and verifies the public CA in the selected per-user Linux Chrome NSS
+   store. Under WSL it instead imports the public CA into Windows current-user
+   trust. Close Chrome before starting and fully reopen it afterward, including
+   incognito windows.
+7. Runs `docker compose up -d --build --wait --wait-timeout 120`, building both
    application images, starting all three services and waiting for container
-   health before printing the website address.
+   health. When a changed certificate must be loaded by an existing Nginx,
+   it recreates only the frontend before printing the website address. A pending
+   reload marker keeps this requirement across an interrupted/failed startup.
 
 Missing base images and app dependencies are downloaded by the image builds.
-Repeated runs reuse installed tools, certificates, and Docker's build cache.
-Existing certificates still need to be valid for your address and signed by a CA
-your browser trusts; the launcher does not renew or verify an existing pair.
-Restart your browser after first-time trust setup. The health wait does not check
-browser trust or every API. On failure, inspect the error and service logs; a
-timeout can leave started containers running and is not automatic rollback.
+Repeated runs reuse the tools image, verified certificates, and Docker's build cache.
+Run one launcher at a time. Keep certificate backups private; their keys remain
+inside protected backup directories and are not copied into the image. The
+launcher does not rotate the local root CA. If its public certificate or signing
+key needs restoration, it stops rather than replacing that identity.
+
+The native Linux launcher writes only your user Chrome store; it requests no
+administrator authentication. Your account must be allowed to write that store
+and Chrome must permit local trust. The launcher does not install system trust,
+so command-line HTTPS clients may need an explicit public CA file, for example
+`curl --cacert "$HOME/.local/share/mkcert/rootCA.pem" https://localhost:8443/`
+with default settings. A browser on another computer needs trust there.
+The health wait does not check browser trust or every API. On failure, inspect
+the error and service logs; a timeout can leave started containers running and
+is not automatic rollback.
 
 The subject's printed page 8 requires containerized deployment to run with a
 single command; printed page 27 also allows documented tool prerequisites.
-This launcher combines local setup and application startup, but cannot supply
-administrator rights or internet access on a locked-down evaluation machine.
-Confirm those prerequisites in advance rather than relying on a certificate
-warning bypass. It does not establish compliance for other unfinished tasks.
+This launcher combines user Chrome trust and application startup without host
+sudo. Docker access, network access and permission for local browser trust must
+already be available on the evaluation machine. It does not establish compliance
+for other unfinished tasks.
 
 All three services run in the background. Backend startup applies Django migrations
 to its selected database, then runs `collectstatic --noinput` before starting
@@ -477,9 +522,9 @@ the new deployment.
    sh scripts/start.sh
    ```
 
-   This installs missing host certificate tools where supported, sets up local
-   trust/certificates, rebuilds changed source/configuration, and recreates services
-   as needed. It removes the backend's old host-port mapping when that service is
+   Close Chrome first. This builds/reuses certificate tools inside Docker, sets
+   up user Chrome trust/certificates, rebuilds changed source/configuration, and
+   recreates services as needed. It removes the backend's old host-port mapping when that service is
    recreated.
    Backend startup still applies pending existing migrations to the mounted
    database. Existing database contents are not replaced by this configuration.
@@ -495,8 +540,9 @@ the new deployment.
    controlled by this project.
 
 3. Open `https://localhost:8443/`. Expect your website with no certificate warning.
-   If there is a warning, check mkcert trust installation, browser restart, and
-   that the requested hostname matches the certificate. Do not treat bypassing
+   Fully reopen Chrome first. If there is a warning, check the launcher's Chrome
+   trust-import output, browser restart, and that the requested hostname matches
+   the certificate. Do not treat bypassing
    the warning as successful browser-trust verification.
 
 4. Verify HTTP redirects to HTTPS with the same page and query string. This
@@ -527,10 +573,12 @@ Share the failing URL/status/message if anything fails, plus read-only logs:
 docker compose logs --tail=50 frontend backend
 ```
 
-If Chrome still reports a trust error after mkcert installation, ensure certutil
-was installed before `mkcert -install`, rerun that trust installation as the same
-user that generated the certificate, and restart Chrome. Do not share the CA
-private key. PostgreSQL transfer and broader deployment checks follow below.
+If Chrome still reports a trust error, close Chrome, rerun `sh scripts/start.sh`
+as the browser user, and fully restart Chrome. Host certutil is not required.
+Report the exact Chrome error and launcher output; connection refusal, certificate
+trust errors and HTTP 502 responses need different diagnoses. For a Windows
+browser with WSL, check the Windows import above. Do not share the CA private key.
+PostgreSQL transfer and broader deployment checks follow below.
 The complete root README is deferred until the finished version.
 
 ## User check for step four: backend settings and static serving
@@ -545,7 +593,8 @@ PostgreSQL activation; the assistant has not run them.
    `DJANGO_DB_ENGINE=sqlite` until the transfer has been compared.
 2. Run `sh scripts/start.sh` from the repository root. It rebuilds/recreates
    changed images/services, applies existing migrations to the selected database, and collects
-   Django assets. It can perform the documented host trust/tool setup.
+   Django assets. It performs the documented user Chrome trust setup with tools
+   inside Docker.
 3. Read `docker compose ps` and `docker compose logs --tail=50 backend frontend`.
    Expect healthy services and static-collection output before Gunicorn starts.
    Do not share `.env`, private keys or full resolved Compose configuration.
@@ -672,8 +721,10 @@ them rather than erase or overwrite them.
 Run these yourself after transfer/cutover passes. They cover deployment behavior;
 README, policy content and deferred application fixes remain separate.
 
-1. Run `sh scripts/start.sh` again. It should reuse the certificate pair and stored
-   databases, build changed source if needed, and leave all three services healthy.
+1. Run `sh scripts/start.sh` again. It should reuse a still-valid, matching pair
+   and stored databases, build changed source if needed, and leave all three
+   services healthy. An invalid or nearly expired pair is replaced with a
+   verified pair, with previous files retained in a protected backup.
 2. Check `docker compose ps`: only frontend HTTP/HTTPS ports are published;
    backend 8000 and PostgreSQL 5432 remain private. Confirm the connection vendor
    is still `postgresql` using the command above.
