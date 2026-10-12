@@ -95,6 +95,16 @@ def recipe_detail(request, recipe_name):
 			{"error": "Recipe not found"},
 			status=status.HTTP_404_NOT_FOUND
 		)
+	
+	if (
+		not recipe.approved
+		and not request.user.is_staff
+		and recipe.user_id != request.user.id
+	):
+		return Response(
+			{"error": "This recipe has not been approved."},
+			status=status.HTTP_403_FORBIDDEN
+		)
 
 	if request.method == "GET":
 		serializer = RecipeDetailedSerializer(recipe)
