@@ -46,15 +46,27 @@ def recipe_intake(request):
 def recipe_list(request):
 
 	# GET /api/recipes/
-	if request.method == "GET":
-		recipes = Recipe.objects.filter(approved=True)
+	recipes = Recipe.objects.filter(approved=True)
 
-		serializer = RecipeSummarySerializer(
-			recipes,
-			many=True
-		)
+	serializer = RecipeSummarySerializer(
+		recipes,
+		many=True
+	)
 
-		return Response(serializer.data)
+	return Response(serializer.data)
+
+
+@api_view(["GET"])
+def pending_approval(request):
+	recipes = Recipe.objects.filter(approved=False)
+
+	serializer = RecipeSummarySerializer(
+		recipes,
+		many=True
+	)
+
+	return Response(serializer.data)
+	
 
 @api_view(["GET"])
 def recipe_landing_page(request):
