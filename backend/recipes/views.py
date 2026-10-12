@@ -46,21 +46,60 @@ def recipe_intake(request):
 def recipe_list(request):
 
 	# GET /api/recipes/
-	if request.method == "GET":
-		recipes = Recipe.objects.all()
+	recipes = Recipe.objects.filter(approved=True)
 
-		serializer = RecipeSummarySerializer(
-			recipes,
-			many=True
+	serializer = RecipeSummarySerializer(
+		recipes,
+		many=True
+	)
+
+	return Response(serializer.data)
+
+
+@api_view(["GET"])
+def pending_approval(request):
+	if not request.user.is_staff:
+		return Response(
+			{"error": "You do not have permission to approve recipes."},
+			status=status.HTTP_403_FORBIDDEN
+		)
+	recipes = Recipe.objects.filter(approved=False)
+
+	serializer = RecipeSummarySerializer(
+		recipes,
+		many=True
+	)
+
+	return Response(serializer.data)
+	
+
+@api_view(["POST"])
+def recipe_approve(request, recipe_name):
+	if not request.user.is_staff:
+		return Response(
+			{"error": "You do not have permission to approve recipes."},
+			status=status.HTTP_403_FORBIDDEN
 		)
 
-		return Response(serializer.data)
+	try:
+		recipe = Recipe.objects.get(title=recipe_name)
+	except Recipe.DoesNotExist:
+		return Response(
+			{"error": "Recipe not found"},
+			status=status.HTTP_404_NOT_FOUND
+		)
+
+	recipe.approved = True
+	recipe.save(update_fields=["approved"])
+
+	return Response(RecipeSummarySerializer(recipe).data)
+	
 
 @api_view(["GET"])
 def recipe_landing_page(request):
 	cutoff = timezone.now() - timedelta(days=30)
 	recent_reviews = Q(reviews__timestamp__gte=cutoff)
-	recipes = Recipe.objects.annotate(
+	recipes = Recipe.objects.filter(approved=True).annotate(
 		recent_average_score=Avg("reviews__grade", filter=recent_reviews),
 		recent_number_of_reviews=Count("reviews", filter=recent_reviews),
 	)
@@ -94,6 +133,16 @@ def recipe_detail(request, recipe_name):
 		return Response(
 			{"error": "Recipe not found"},
 			status=status.HTTP_404_NOT_FOUND
+		)
+	
+	if (
+		not recipe.approved
+		and not request.user.is_staff
+		and recipe.user_id != request.user.id
+	):
+		return Response(
+			{"error": "This recipe has not been approved."},
+			status=status.HTTP_403_FORBIDDEN
 		)
 
 	if request.method == "GET":

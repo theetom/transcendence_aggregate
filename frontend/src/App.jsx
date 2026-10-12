@@ -13,7 +13,6 @@ import NotFoundPage from './pages/NotFoundPage'
 import PrivacyPage from './pages/PrivacyPage'
 import ProfilePage from './pages/ProfilePage'
 import RecipePage from './pages/RecipePage'
-import ReviewRequestPage from './pages/ReviewRequestPage'
 import SearchResultsPage from './pages/SearchResultsPage'
 import SignupPage from './pages/SignupPage'
 import TermsPage from './pages/TermsPage'
@@ -38,7 +37,7 @@ function PublicOnlyRoute({ children }) {
 function AppShell() {
   const location = useLocation()
   const isHomePage = location.pathname === '/'
-  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+|\/results\/search|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile(?:\/recipes)?|\/staff(?:\/review\/[^/]+)?|\/privacy|\/terms)$/
+  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+|\/results\/search|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile(?:\/recipes)?|\/staff|\/privacy|\/terms)$/
   const hideShell = !knownPathPattern.test(location.pathname)
   const mainClassName = isHomePage ? 'page-main page-main--home' : 'page-main'
 
@@ -52,7 +51,7 @@ function AppShell() {
           <Route path="/home" element={<Navigate replace to="/" />} />
           <Route path="/category" element={<Navigate replace to="/" />} />
           <Route path="/category/:slug" element={<CategoryPage />} />
-          <Route path="/recipe/:slug" element={<RecipePage />} />
+          <Route path="/recipe/:recipeName" element={<RecipePage />} />
           <Route path="/results/search" element={<SearchResultsPage />} />
           <Route
             path="/connect"
@@ -104,7 +103,6 @@ function AppShell() {
             }
           />
           <Route path="/staff" element={<AdminPage />} />
-          <Route path="/staff/review/:submissionId" element={<ReviewRequestPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="*" element={<NotFoundPage />} />

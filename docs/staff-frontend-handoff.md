@@ -1,67 +1,89 @@
-**The frontend is now prepared for API integration.** Your partner still needs to implement the proposed APIs before real submissions or saved decisions can work.
+# Frontend recipe approval handoff
 
-I changed four frontend files, added an API/testing guide, and updated the work log. Backend files, styling, and dependencies were untouched.
+The website now connects the existing staff frontend to Tomaz's recipe API.
 
-[moderationApi.js](/home/roh7891/projects/transcendence_aggregate/frontend/src/data/moderationApi.js:7) is the new helper. It reuses your login token and handles these proposed requests:
+An admin logs in normally, opens Profile, clicks **Pending Approval**, and sees
+a simple list at `/staff`. Each recipe name opens the full recipe at
+`/recipe/{URL-encoded exact title}`. **Approve** is on that recipe page, so the
+admin can read the ingredients and instructions before deciding.
+
+The profile button is shown only when `profile.user.is_staff === true`.
+The staff page checks the current profile before loading pending data.
+The regular top-bar Profile link remains `/profile`; Django's `/admin/`
+is a separate management page using the same saved accounts and recipes.
+
+## Connected requests
 
 | Action | Request |
-|---|---|
-| Load pending submissions | `GET /api/staff/submissions/?status=pending` |
-| Load one submission | `GET /api/staff/submissions/{id}/` |
-| Save a decision | `POST /api/staff/submissions/{id}/decision/` |
+| --- | --- |
+| Read current account | `GET /api/me/` |
+| List pending recipes | `GET /api/recipes/all_recipes/pending/` |
+| Read recipe detail | `GET /api/recipes/{URL-encoded exact title}/` |
+| Approve | `POST /api/recipes/{URL-encoded exact title}/approve/` |
 
-The decision request sends:
+Approval sends no request body. Existing tokens identify signed-in accounts.
+An approved public detail can load without a token. Both recipe response
+serializers include the read-only `approved` boolean.
 
-```js
-method: 'POST',
-body: JSON.stringify({ status, feedback }),
+The Approve button is disabled while saving. Success requires a matching
+`id`/`title` and `approved: true` in the POST response, followed by a confirming
+detail GET for that same ID. An uncertain result locks repeat approval until
+**Reload recipe** checks the saved record. **Back to pending recipes** loads
+the queue again.
+
+The old submission-ID review route, proposed status/feedback API and simulated
+browser preview have been removed. **Reject remains disabled** until the
+backend provides rejection/deletion.
+
+## Backend import and limits
+
+Selectively imported `backend/recipes/models.py`, migration
+`0004_recipe_approved.py`, `urls.py` and `views.py` from
+`backend_admin_logic`. Added the read-only response flag while preserving
+quantity validation. Existing PostgreSQL settings and account/login/profile
+code were preserved.
+
+**Tomaz's pending-list admin check is imported from commit `71a1b8b`.**
+The backend now refuses signed-out and valid nonstaff pending-list requests
+with HTTP 403 before reading recipe data. Approval and pending detail retain
+their backend checks. The frontend's role gate is an additional presentation
+check; verify the actual backend restriction in user-run tests after rebuilding.
+
+Recipe lookup still uses exact titles, so duplicate/renamed titles remain a
+backend limitation. The profile now has Favorites, Approved recipes and Pending
+Approval below its general information and picture. Admins get the `/staff`
+button in the third panel; normal users get their own pending-submission list.
+
+The frontend supports private `submitted_recipes` and `favorite_recipes` arrays
+in `/api/me/`, but the backend addition remains pending. Current responses still
+support approved-recipe ownership lookup and saved-favorite ID display where
+available. Missing own-pending data is labeled unavailable, never loaded through
+the admin list. Favorites are display-only; saving/removing favorites, editing,
+notifications and feedback remain deferred.
+
+## User-run next steps
+
+With the existing PostgreSQL service running, deploy from the repository root:
+
+```sh
+docker compose up -d --build --no-deps --wait --wait-timeout 120 backend frontend
 ```
 
-It also checks responses and displays plain authentication, permission, connection, and unavailable messages.
+Backend startup applies migration `0004`, setting existing recipes'
+`approved` field to false. Those recipes remain saved and enter the pending
+queue; they appear publicly again after approval. No old record is
+automatically approved and no database reset is needed.
 
-[AdminPage.jsx](/home/roh7891/projects/transcendence_aggregate/frontend/src/pages/AdminPage.jsx:14) now fetches the queue instead of receiving an empty demonstration list:
+Use a staff account to check Profile → Pending Approval → full recipe → Approve.
+Refresh the full recipe, confirm the POST and confirmation GET, then return to
+the pending list. Check an approved recipe while signed out and check that a
+normal account opening `/staff` sees only the centered bold denial message and
+**Back to main page** button. Direct pending-API security must
+be verified against the imported guard: signed-out and valid nonstaff requests
+should receive HTTP 403, while staff receives the pending list.
 
-```js
-const submissions = await getPendingSubmissions(controller.signal)
-if (!controller.signal.aborted) setPendingRecipes(submissions)
-```
-
-The page distinguishes loading, failed loading, and a genuinely empty queue. Cards link to submissions by ID.
-
-[ReviewRequestPage.jsx](/home/roh7891/projects/transcendence_aggregate/frontend/src/pages/ReviewRequestPage.jsx:33) now loads details and connects Approve/Reject. After a confirmed response:
-
-```js
-const updatedSubmission = await saveSubmissionDecision(
-  submissionId, decision, feedback
-)
-setRequest(updatedSubmission)
-setModeratorReply(updatedSubmission.feedback)
-```
-
-This updates the displayed status and saved feedback. Rejection requires feedback. Controls are disabled while saving, after a decision, or after an already-reviewed conflict. Returning to the dashboard fetches the queue again.
-
-[App.jsx](/home/roh7891/projects/transcendence_aggregate/frontend/src/App.jsx:107) has one route change:
-
-```jsx
-<Route path="/staff/review/:submissionId" element={<ReviewRequestPage />} />
-```
-
-The address remains `/staff/review/...`; the parameter now represents an ID.
-
-**To test it yourself:**
-
-1. Keep the backend and PostgreSQL running. Rebuild only the frontend:
-
-   ```sh
-   docker compose up -d --build --no-deps --wait --wait-timeout 120 frontend
-   ```
-
-2. Open `https://localhost:8443/staff` in a private, signed-out window. Expect **“Sign in with a staff account to continue.”**
-
-3. Sign in normally and open `/staff`. Since the API is missing, expect a controlled unavailable message. Repeat with `/staff/review/42` and check the back link.
-
-4. To test the buttons **before the backend exists**, follow the [browser preview instructions](/home/roh7891/projects/transcendence_aggregate/docs/staff-api.md:130). They let you check loading, recipe details, rejection feedback, approval, disabled controls, and queue removal using data held only in that browser tab.
-
-5. Give your partner the [proposed API contract](/home/roh7891/projects/transcendence_aggregate/docs/staff-api.md:14). After agreement and implementation, run the [real integration checks](/home/roh7891/projects/transcendence_aggregate/docs/staff-api.md:231).
-
-I reviewed the source and had it independently reviewed. **No builds or browser tests were run**, so runtime success remains for your checks.
+See [staff-api.md](staff-api.md) for the precise behavior and complete checks.
+Source review is complete; frontend builds and browser/API/persistence checks
+remain user-run and have not been performed by the assistant. The requested
+admin account was created through an authorized management operation; its
+login has not been tested. Credentials are not stored in these guides.

@@ -74,6 +74,7 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 class RecipeDetailedSerializer(serializers.ModelSerializer):
 	user = serializers.PrimaryKeyRelatedField(read_only=True)
+	approved = serializers.BooleanField(read_only=True)
 
 	ingredients = RecipeIngredientSerializer(
 		source="recipe_ingredients",
@@ -99,6 +100,7 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 		fields = [
 			"id",
 			"title",
+			"approved",
 			"description",
 			"date_created",
 			"user",
@@ -207,6 +209,7 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
 
 
 class RecipeSummarySerializer(serializers.ModelSerializer):
+	approved = serializers.BooleanField(read_only=True)
 	ingredients = RecipeIngredientNameSerializer(
 		source="recipe_ingredients",
 		many=True,
@@ -224,6 +227,7 @@ class RecipeSummarySerializer(serializers.ModelSerializer):
 		fields = [
 			"id",
 			"title",
+			"approved",
 			"ingredients",
 			"categories",
 			"average_score",

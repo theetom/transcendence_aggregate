@@ -300,7 +300,8 @@ Requests arriving on the HTTPS frontend address follow these rules:
   pages such as `/login`, `/privacy`, and `/profile/recipes` after direct navigation
   or a refresh. React's existing login and route rules still apply.
 - The website's staff dashboard is `/staff`, and individual recipe reviews use
-  `/staff/review/<slug>`. These use the React page fallback. `/admin/` belongs to
+  the full recipe page at `/recipe/<URL-encoded-title>`. These use the React
+  page fallback. `/admin/` belongs to
   Django's built-in database administration panel, so the two interfaces no
   longer claim the same address.
 
@@ -623,11 +624,14 @@ The route separation is implemented in source; browser checks remain user-run.
    This loads the new routes and the saved friendly login-message change. The
    running backend/PostgreSQL services are not rebuilt by this command.
 2. Directly open `https://localhost:8443/staff` and refresh. Expect the website's
-   existing recipe-review dashboard with its normal header/footer and empty
-   queue message, rather than Django's administration interface.
-3. Open `https://localhost:8443/staff/review/route-check` and refresh. Expect the
-   website's existing submission-not-loaded page. Its **Back to staff page** link
-   should return to `/staff`.
+   pending-recipe page with its normal header/footer, rather than Django's
+   administration interface. Staff accounts can load the queue; other accounts
+   should see the sign-in or admin-only message.
+3. As staff, open an actual pending recipe from that list and refresh its
+   `/recipe/<URL-encoded-title>` address. Expect the full recipe and its
+   **Back to pending recipes** link to `/staff`. The connected approval flow
+   also requires the backend rebuild/migration described in
+   [staff-api.md](staff-api.md).
 4. Open `https://localhost:8443/admin/login/` in a private browser window. Expect
    Django's administration login page and working `/static/admin/` assets.
 
@@ -748,7 +752,8 @@ README, policy content and deferred application fixes remain separate.
 
 Fresh-machine/school startup still requires confirmed Docker, installation/network
 and browser-trust permissions. The website staff routes now use `/staff` and
-`/staff/review/<slug>`, while Django keeps `/admin/`; verify this separation after
+the full `/recipe/<URL-encoded-title>` page, while Django keeps `/admin/`;
+verify this separation after
 the frontend rebuild. These pending checks prevent claiming the whole deployment
 is fully verified merely because source preparation is complete.
 

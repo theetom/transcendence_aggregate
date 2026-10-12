@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { getRecipePath } from '../data/recipeApi'
 import {
   getCategoryPath,
   landingRecipeCategories,
@@ -68,14 +69,17 @@ function HomePage() {
               const recipeTitle = item.title
               const ingredients = Array.isArray(item.ingredients) ? item.ingredients.map((entry) => entry.name).join(', ') : ''
               const categories = Array.isArray(item.categories) ? item.categories.map((entry) => entry.name).join(', ') : ''
-              const Card = item.slug ? Link : 'article'
+              const recipePath = typeof recipeTitle === 'string' && recipeTitle.trim()
+                ? getRecipePath(recipeTitle)
+                : null
+              const Card = recipePath ? Link : 'article'
 
               return (
                 <Card
                   key={item.id ?? recipeTitle}
-                  {...(item.slug ? { to: `/recipe/${item.slug}` } : {})}
+                  {...(recipePath ? { to: recipePath } : {})}
                   className="landing-plain__popular-card landing-plain__card-button"
-                  data-recipe-slug={item.slug}
+                  data-recipe-title={recipeTitle}
                 >
                   <div className="landing-plain__image-placeholder" aria-hidden="true">
                     {categories}
@@ -110,14 +114,17 @@ function HomePage() {
             {mostReviewedRecipes.map((item) => {
               const recipeTitle = item.title
               const ingredients = Array.isArray(item.ingredients) ? item.ingredients.map((entry) => entry.name).join(', ') : ''
-              const Card = item.slug ? Link : 'article'
+              const recipePath = typeof recipeTitle === 'string' && recipeTitle.trim()
+                ? getRecipePath(recipeTitle)
+                : null
+              const Card = recipePath ? Link : 'article'
 
               return (
                 <Card
                   key={item.id ?? recipeTitle}
-                  {...(item.slug ? { to: `/recipe/${item.slug}` } : {})}
+                  {...(recipePath ? { to: recipePath } : {})}
                   className="landing-plain__latest-card landing-plain__card-button"
-                  data-recipe-slug={item.slug}
+                  data-recipe-title={recipeTitle}
                 >
                   <div className="landing-plain__latest-image" aria-hidden="true" />
 

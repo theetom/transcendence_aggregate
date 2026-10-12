@@ -1,9 +1,12 @@
 import { Link } from 'react-router-dom'
+import { getRecipePath } from '../data/recipeApi'
 
 function RecipeCard({ recipe, variant = 'default' }) {
   const cardClassName =
     variant === 'compact' ? 'recipe-card recipe-card--compact' : 'recipe-card'
-  const recipePath = recipe?.slug ? `/recipe/${recipe.slug}` : null
+  const recipePath = typeof recipe?.title === 'string' && recipe.title.trim()
+    ? getRecipePath(recipe.title)
+    : null
 
   return (
     <article className={cardClassName} style={{ '--recipe-accent': recipe.accent }}>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { authTokenStorageKey, formatDate } from '../data/siteData'
+import { getCurrentProfile, getRecipeDetails, getRecipePath, readRecipeSummary, requestRecipeApi } from '../data/recipeApi'
+import { formatDate } from '../data/siteData'
 
 const recipePreviewLimit = 3
 
@@ -11,11 +12,10 @@ function ProfileRecipeCard({ recipe }) {
   const categories = Array.isArray(recipe.categories)
     ? recipe.categories.map((category) => category.name).join(', ')
     : ''
-  const Card = recipe.slug ? Link : 'article'
 
   return (
-    <Card
-      {...(recipe.slug ? { to: `/recipe/${recipe.slug}` } : {})}
+    <Link
+      to={getRecipePath(recipe.title)}
       className="landing-plain__popular-card landing-plain__card-button"
     >
       <div className="landing-plain__image-placeholder" aria-hidden="true">
@@ -36,140 +36,185 @@ function ProfileRecipeCard({ recipe }) {
           ? `${recipe.number_of_reviews} reviews`
           : 'Review count unavailable'}
       </div>
-    </Card>
+    </Link>
   )
 }
 
-async function requestProfileApi(path, token) {
-  let details = `GET ${path}`
-
-  try {
-    const response = await fetch(path, {
-      headers: {
-        Authorization: `Token ${token}`,
-      },
-    })
-
-    details += `\nHTTP ${response.status} ${response.statusText}`
-    const body = await response.text()
-    details += `\n\n${body}`
-
-    if (!response.ok) {
-      return { ok: false, details }
-    }
-
-    return { ok: true, data: JSON.parse(body) }
-  } catch (error) {
-    return { ok: false, details: `${details}\n\n${error.name}: ${error.message}` }
+function ProfileRecipeList({ recipes, status, emptyMessage }) {
+  if (!recipes) {
+    return (
+      <p className="status-banner" role="status" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+        {status}
+      </p>
+    )
   }
+
+  return (
+    <>
+      {recipes.length > 0 ? (
+        <div className="landing-plain__popular-grid profile-page__recipe-grid">
+          {recipes.map((recipe) => <ProfileRecipeCard key={recipe.id} recipe={recipe} />)}
+        </div>
+      ) : (
+        <p className="profile-page__section-note">{status || emptyMessage}</p>
+      )}
+      {recipes.length > 0 && status ? (
+        <p className="profile-page__section-note" role="status">{status}</p>
+      ) : null}
+    </>
+  )
+}
+
+function readProfileRecipes(data) {
+  if (!Array.isArray(data)) {
+    throw new Error('Your recipe list could not be read. Reload to try again.')
+  }
+
+  const recipes = data.map(readRecipeSummary)
+  if (new Set(recipes.map((recipe) => recipe.id)).size !== recipes.length
+    || recipes.some((recipe) =>
+      ['ingredients', 'categories'].some((field) =>
+        recipe[field] !== undefined && (
+          !Array.isArray(recipe[field])
+          || recipe[field].some((item) => typeof item?.name !== 'string')
+        ),
+      ),
+    )) {
+    throw new Error('Your recipe list could not be read. Reload to try again.')
+  }
+
+  return recipes
 }
 
 function ProfilePage({ showAllRecipes = false }) {
   const [profile, setProfile] = useState(null)
   const [status, setStatus] = useState('Loading profile...')
   const [recipes, setRecipes] = useState(null)
-  const [recipeStatus, setRecipeStatus] = useState('Loading uploaded recipes...')
+  const [recipeStatus, setRecipeStatus] = useState('Loading approved recipes...')
+  const [favorites, setFavorites] = useState(null)
+  const [favoriteStatus, setFavoriteStatus] = useState('Loading favorites...')
+  const [pendingRecipes, setPendingRecipes] = useState(null)
+  const [pendingStatus, setPendingStatus] = useState('Loading pending recipes...')
   const [pictureFailed, setPictureFailed] = useState(false)
 
   useEffect(() => {
-    const token = window.sessionStorage.getItem(authTokenStorageKey)
-    let cancelled = false
-
-    if (!token) {
-      setStatus('GET /api/me/\n\nFrontend: No saved login token was found.')
-      return undefined
-    }
+    const controller = new AbortController()
 
     async function loadProfile() {
-      const result = await requestProfileApi('/api/me/', token)
-
-      if (cancelled) {
+      let currentProfile
+      try {
+        currentProfile = await getCurrentProfile(controller.signal)
+      } catch (error) {
+        if (!controller.signal.aborted) setStatus(error.message)
         return
       }
 
-      if (!result.ok) {
-        setStatus(result.details)
-        return
-      }
-
-      if (typeof result.data?.user?.username !== 'string') {
-        setStatus('The profile response is missing account details.')
-        return
-      }
-
-      setProfile(result.data)
+      if (controller.signal.aborted) return
+      setProfile(currentProfile)
       setStatus('')
 
-      const recipeList = await requestProfileApi('/api/recipes/all_recipes/', token)
+      const needsApprovedLookup = currentProfile.submitted_recipes === undefined
+      if (!needsApprovedLookup) {
+        try {
+          const submitted = readProfileRecipes(currentProfile.submitted_recipes)
+          setRecipes(submitted.filter((recipe) => recipe.approved === true))
+          setPendingRecipes(submitted.filter((recipe) => recipe.approved === false))
+          setRecipeStatus('')
+          setPendingStatus('')
+        } catch (error) {
+          setRecipeStatus(error.message)
+          setPendingStatus(error.message)
+        }
+      } else {
+        setPendingStatus('Your pending recipes are not available yet.')
+      }
 
-      if (cancelled) {
+      let favoriteIds = null
+      if (currentProfile.favorite_recipes !== undefined) {
+        try {
+          setFavorites(readProfileRecipes(currentProfile.favorite_recipes))
+          setFavoriteStatus('')
+        } catch (error) {
+          setFavoriteStatus(error.message)
+        }
+      } else if (Array.isArray(currentProfile.favorites)
+        && currentProfile.favorites.every((id) => Number.isInteger(id) && id > 0)) {
+        if (currentProfile.favorites.length === 0) {
+          setFavorites([])
+          setFavoriteStatus('')
+        } else {
+          favoriteIds = currentProfile.favorites
+        }
+      } else {
+        setFavoriteStatus('Your saved favorites are not available yet.')
+      }
+
+      if (!needsApprovedLookup && !favoriteIds) return
+
+      let approvedSummaries
+      try {
+        approvedSummaries = readProfileRecipes(await requestRecipeApi('/api/recipes/all_recipes/', {
+          signal: controller.signal,
+          requiresAuth: true,
+        }))
+        if (approvedSummaries.some((recipe) => recipe.approved !== true)) {
+          throw new Error('The approved recipe list could not be read. Reload to try again.')
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          if (needsApprovedLookup) setRecipeStatus(error.message)
+          if (favoriteIds) setFavoriteStatus(error.message)
+        }
         return
       }
 
-      if (!recipeList.ok) {
-        setRecipeStatus(recipeList.details)
+      if (controller.signal.aborted) return
+      if (favoriteIds) {
+        const savedIds = new Set(favoriteIds)
+        const availableFavorites = approvedSummaries.filter((recipe) => savedIds.has(recipe.id))
+        setFavorites(availableFavorites)
+        setFavoriteStatus(availableFavorites.length === savedIds.size
+          ? ''
+          : 'Some saved favorites are unavailable here.')
+      }
+
+      if (!needsApprovedLookup) return
+      if (!Number.isInteger(currentProfile.user.id) || currentProfile.user.id < 1) {
+        setRecipeStatus('Your account details could not be read. Reload to try again.')
         return
       }
 
-      if (!Array.isArray(recipeList.data)) {
-        setRecipeStatus('The recipe response did not contain a recipe list.')
-        return
+      // Older profile responses omit submissions. Details identify the author
+      // of each approved recipe; never use the admin pending list for this view.
+      try {
+        const details = await Promise.all(approvedSummaries.map(async (summary) => {
+          const recipe = await getRecipeDetails(summary.title, controller.signal)
+          if (recipe.id !== summary.id || !Number.isInteger(recipe.user) || recipe.user < 1) {
+            throw new Error('Recipe ownership could not be confirmed. Reload to try again.')
+          }
+          return recipe
+        }))
+        if (controller.signal.aborted) return
+        setRecipes(details.filter((recipe) =>
+          recipe.user === currentProfile.user.id && recipe.approved === true,
+        ))
+        setRecipeStatus('')
+      } catch (error) {
+        if (!controller.signal.aborted) setRecipeStatus(error.message)
       }
-
-      if (recipeList.data.some((recipe) => typeof recipe?.title !== 'string')) {
-        setRecipeStatus('The recipe list is missing a recipe title.')
-        return
-      }
-
-      // The summary endpoint omits authors. Read each existing detail response
-      // to match saved recipes to this account without displaying account IDs.
-      const recipeDetails = await Promise.all(
-        recipeList.data.map((recipe) =>
-          requestProfileApi(`/api/recipes/${encodeURIComponent(recipe.title)}/`, token),
-        ),
-      )
-
-      if (cancelled) {
-        return
-      }
-
-      const failedRequests = recipeDetails.filter((recipe) => !recipe.ok)
-
-      if (failedRequests.length > 0) {
-        setRecipeStatus(failedRequests.map((recipe) => recipe.details).join('\n\n'))
-        return
-      }
-
-      if (
-        !Number.isInteger(result.data.user.id) ||
-        recipeDetails.some(
-          (recipe) => !Number.isInteger(recipe.data?.user) || typeof recipe.data?.title !== 'string',
-        )
-      ) {
-        setRecipeStatus('The recipe responses are missing account or author details.')
-        return
-      }
-
-      setRecipes(
-        recipeDetails
-          .map((recipe) => recipe.data)
-          .filter((recipe) => recipe.user === result.data.user.id),
-      )
-      setRecipeStatus('')
     }
 
     loadProfile()
-
-    return () => {
-      cancelled = true
-    }
+    return () => controller.abort()
   }, [])
 
-  const joinedDate = profile?.user.date_joined?.split('T')[0]
-  const pageLabel = showAllRecipes ? 'recipes' : 'profile'
+  const joinedDate = typeof profile?.user.date_joined === 'string'
+    ? profile.user.date_joined.split('T')[0]
+    : null
+  const pageLabel = showAllRecipes ? 'approved recipes' : 'profile'
   const pageTitle = profile
     ? `${profile.user.username}'s ${pageLabel}`
-    : showAllRecipes ? 'Uploaded recipes' : 'Profile'
+    : showAllRecipes ? 'Approved recipes' : 'Profile'
   const visibleRecipes = showAllRecipes ? recipes : recipes?.slice(0, recipePreviewLimit)
 
   return (
@@ -193,32 +238,8 @@ function ProfilePage({ showAllRecipes = false }) {
               <section className="page-section">
                 <article className="detail-panel detail-panel--profile-section">
                   <div className="profile-page__information">
-                    <div className="profile-page__picture-controls">
-                      <div className="profile-page__picture-box">
-                        {profile.profile_picture && !pictureFailed ? (
-                          <img
-                            src={profile.profile_picture}
-                            alt={`${profile.user.username}'s profile picture`}
-                            onError={() => setPictureFailed(true)}
-                          />
-                        ) : (
-                          <p className="profile-page__section-note profile-page__picture-empty">
-                            {pictureFailed
-                              ? 'Profile picture could not be loaded.'
-                              : 'No profile picture added yet.'}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        className="button button--ghost"
-                        type="button"
-                        disabled
-                      >
-                        {profile.profile_picture ? 'Change profile picture' : 'Upload picture'}
-                      </button>
-                    </div>
-
                     <div className="detail-panel__stack profile-page__details">
+                      <h2 className="profile-page__section-title">General information</h2>
                       <p className="profile-page__section-note">
                         <strong>First name:</strong> {profile.user.first_name || 'Not provided'}
                       </p>
@@ -237,6 +258,27 @@ function ProfilePage({ showAllRecipes = false }) {
                         )}
                       </p>
                     </div>
+
+                    <div className="profile-page__picture-controls">
+                      <div className="profile-page__picture-box">
+                        {profile.profile_picture && !pictureFailed ? (
+                          <img
+                            src={profile.profile_picture}
+                            alt={`${profile.user.username}'s profile picture`}
+                            onError={() => setPictureFailed(true)}
+                          />
+                        ) : (
+                          <p className="profile-page__section-note profile-page__picture-empty">
+                            {pictureFailed
+                              ? 'Profile picture could not be loaded.'
+                              : 'No profile picture added yet.'}
+                          </p>
+                        )}
+                      </div>
+                      <button className="button button--ghost" type="button" disabled>
+                        {profile.profile_picture ? 'Change profile picture' : 'Upload picture'}
+                      </button>
+                    </div>
                   </div>
                 </article>
               </section>
@@ -245,27 +287,24 @@ function ProfilePage({ showAllRecipes = false }) {
             <section
               className={showAllRecipes ? 'page-section' : 'page-section profile-page__recipe-sections'}
             >
+              {!showAllRecipes ? (
+                <article className="detail-panel detail-panel--profile-section">
+                  <h2 className="profile-page__section-title">Favorites</h2>
+                  <ProfileRecipeList
+                    recipes={favorites}
+                    status={favoriteStatus}
+                    emptyMessage="No saved favorites yet."
+                  />
+                </article>
+              ) : null}
+
               <article className="detail-panel detail-panel--profile-section">
-                <h2 className="profile-page__section-title">Uploaded recipes</h2>
-                {recipes ? (
-                  recipes.length > 0 ? (
-                    <div className="landing-plain__popular-grid profile-page__recipe-grid">
-                      {visibleRecipes.map((recipe) => (
-                        <ProfileRecipeCard key={recipe.id} recipe={recipe} />
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="profile-page__section-note">No recipes uploaded yet.</p>
-                  )
-                ) : (
-                  <p
-                    className="status-banner"
-                    role="status"
-                    style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
-                  >
-                    {recipeStatus}
-                  </p>
-                )}
+                <h2 className="profile-page__section-title">Approved recipes</h2>
+                <ProfileRecipeList
+                  recipes={visibleRecipes}
+                  status={recipeStatus}
+                  emptyMessage="No approved recipes yet."
+                />
                 {!showAllRecipes && recipes?.length > recipePreviewLimit ? (
                   <div className="profile-page__add-recipe-row">
                     <Link className="button button--ghost" to="/profile/recipes">
@@ -276,12 +315,23 @@ function ProfilePage({ showAllRecipes = false }) {
               </article>
 
               {!showAllRecipes ? (
-                <aside className="detail-panel detail-panel--profile-section">
-                  <h2 className="profile-page__section-title">Pending recipe submissions</h2>
-                  <p className="profile-page__section-note">
-                    Recipe approval status is not available yet.
-                  </p>
-                </aside>
+                profile.user.is_staff === true ? (
+                  <Link
+                    className="button button--ghost profile-page__section-title profile-page__pending-button"
+                    to="/staff"
+                  >
+                    Pending Approval
+                  </Link>
+                ) : (
+                  <aside className="detail-panel detail-panel--profile-section">
+                    <h2 className="profile-page__section-title">Pending Approval</h2>
+                    <ProfileRecipeList
+                      recipes={pendingRecipes}
+                      status={pendingStatus}
+                      emptyMessage="No recipes waiting for approval."
+                    />
+                  </aside>
+                )
               ) : null}
             </section>
 
@@ -290,16 +340,11 @@ function ProfilePage({ showAllRecipes = false }) {
                 Add recipe
               </Link>
             </div>
-
           </>
         ) : (
           <section className="page-section">
             <article className="detail-panel detail-panel--profile-section">
-              <p
-                className="status-banner"
-                role="status"
-                style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}
-              >
+              <p className="status-banner" role="status" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
                 {status}
               </p>
             </article>
