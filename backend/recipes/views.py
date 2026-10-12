@@ -60,7 +60,7 @@ def recipe_list(request):
 def recipe_landing_page(request):
 	cutoff = timezone.now() - timedelta(days=30)
 	recent_reviews = Q(reviews__timestamp__gte=cutoff)
-	recipes = Recipe.objects.annotate(
+	recipes = Recipe.objects.filter(approved=True).annotate(
 		recent_average_score=Avg("reviews__grade", filter=recent_reviews),
 		recent_number_of_reviews=Count("reviews", filter=recent_reviews),
 	)
