@@ -23,6 +23,11 @@ function SignupPage() {
       return
     }
 
+    if (password.trim().length < 8) {
+      setStatus('Use at least 8 characters for your password.')
+      return
+    }
+
     if (password !== passwordConfirm) {
       setStatus('Passwords do not match.')
       return
@@ -116,6 +121,7 @@ function SignupPage() {
             name="password"
             type="password"
             autoComplete="new-password"
+            minLength={8}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder="Create a password"

@@ -1,10 +1,32 @@
+import re
+from decimal import Decimal, InvalidOperation
+
 from rest_framework import serializers
 from django.db import transaction
 from .models import Recipe, RecipeIngredient, RecipeStep, Category, Ingredient
 from reviews.serializers import ReviewSerializer
 
+def validate_positive_quantity(value):
+	message = "Enter a number greater than zero."
+	if not re.fullmatch(r"[0-9]*\.?[0-9]*", value):
+		raise serializers.ValidationError(message)
+	try:
+		quantity = Decimal(value)
+	except InvalidOperation:
+		raise serializers.ValidationError(message)
+	if not quantity.is_finite() or quantity <= 0:
+		raise serializers.ValidationError(message)
+	return value
+
+
 class RecipeIngredientSerializer(serializers.ModelSerializer):
 	name = serializers.CharField(source="ingredient.name")
+	quantity = serializers.CharField(max_length=50, validators=[validate_positive_quantity])
+
+	def validate(self, attrs):
+		if "quantity" not in attrs:
+			raise serializers.ValidationError({"quantity": ["This field is required."]})
+		return attrs
 
 	class Meta:
 		model = RecipeIngredient
@@ -27,8 +49,13 @@ class RecipeStepSerializer(serializers.ModelSerializer):
 
 class RecipeUpdateIngredientSerializer(serializers.Serializer):
 	name = serializers.CharField(max_length=100)
-	quantity = serializers.CharField(max_length=50)
+	quantity = serializers.CharField(max_length=50, validators=[validate_positive_quantity])
 	unit = serializers.CharField(max_length=50)
+
+	def validate(self, attrs):
+		if "quantity" not in attrs:
+			raise serializers.ValidationError({"quantity": ["This field is required."]})
+		return attrs
 
 
 class RecipeUpdateCategorySerializer(serializers.Serializer):
