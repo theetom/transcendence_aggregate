@@ -47,7 +47,7 @@ def recipe_list(request):
 
 	# GET /api/recipes/
 	if request.method == "GET":
-		recipes = Recipe.objects.all()
+		recipes = Recipe.objects.filter(approved=True)
 
 		serializer = RecipeSummarySerializer(
 			recipes,
