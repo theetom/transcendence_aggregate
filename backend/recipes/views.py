@@ -68,6 +68,28 @@ def pending_approval(request):
 	return Response(serializer.data)
 	
 
+@api_view(["POST"])
+def recipe_approve(request, recipe_name):
+	if not request.user.is_staff:
+		return Response(
+			{"error": "You do not have permission to approve recipes."},
+			status=status.HTTP_403_FORBIDDEN
+		)
+
+	try:
+		recipe = Recipe.objects.get(title=recipe_name)
+	except Recipe.DoesNotExist:
+		return Response(
+			{"error": "Recipe not found"},
+			status=status.HTTP_404_NOT_FOUND
+		)
+
+	recipe.approved = True
+	recipe.save(update_fields=["approved"])
+
+	return Response(RecipeSummarySerializer(recipe).data)
+	
+
 @api_view(["GET"])
 def recipe_landing_page(request):
 	cutoff = timezone.now() - timedelta(days=30)
