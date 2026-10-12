@@ -3,6 +3,7 @@ from django.db import models
 class Recipe(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True)
+    approved = models.BooleanField(default=False)
     ingredients = models.ManyToManyField('Ingredient', through='RecipeIngredient')
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     date_created = models.DateTimeField(auto_now_add=True)
