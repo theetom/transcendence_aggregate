@@ -58,6 +58,11 @@ def recipe_list(request):
 
 @api_view(["GET"])
 def pending_approval(request):
+	if not request.user.is_staff:
+		return Response(
+			{"error": "You do not have permission to approve recipes."},
+			status=status.HTTP_403_FORBIDDEN
+		)
 	recipes = Recipe.objects.filter(approved=False)
 
 	serializer = RecipeSummarySerializer(
