@@ -32,7 +32,13 @@ def recipe_intake(request):
 				status=status.HTTP_401_UNAUTHORIZED,
 			)
 
-		data = request.data.copy()
+		# data = request.data.copy()
+
+		data = {
+			key: request.data.get(key)
+			for key in request.data
+		}
+
 		image_files = request.FILES.getlist("images")
 		ingredient_image_files = [
 			image_file
