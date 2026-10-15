@@ -6,6 +6,11 @@ import { formatDate } from '../data/siteData'
 const recipePreviewLimit = 3
 
 function ProfileRecipeCard({ recipe }) {
+  const [failedImage, setFailedImage] = useState('')
+  const imageSource = Array.isArray(recipe.images)
+    ? recipe.images.find((image) => typeof image?.image === 'string' && image.image.trim())?.image
+    : null
+  const hasImage = Boolean(imageSource) && failedImage !== imageSource
   const ingredients = Array.isArray(recipe.ingredients)
     ? recipe.ingredients.map((ingredient) => ingredient.name).join(', ')
     : ''
@@ -18,16 +23,29 @@ function ProfileRecipeCard({ recipe }) {
       to={getRecipePath(recipe.title)}
       className="landing-plain__popular-card landing-plain__card-button"
     >
-      <div className="landing-plain__image-placeholder" aria-hidden="true">
-        {categories}
+      <div className="landing-plain__image-placeholder profile-page__recipe-image" aria-hidden="true">
+        {hasImage ? (
+          <img
+            className="profile-page__recipe-thumbnail"
+            src={imageSource}
+            alt=""
+            loading="lazy"
+            onError={() => setFailedImage(imageSource)}
+          />
+        ) : (categories || 'No image available.')}
       </div>
       <div className="landing-plain__caption">{recipe.title}</div>
+      {hasImage && categories ? (
+        <div className="landing-plain__caption profile-page__recipe-meta">
+          {categories}
+        </div>
+      ) : null}
       {ingredients ? (
-        <div className="landing-plain__caption" style={{ fontSize: '0.8rem' }}>
+        <div className="landing-plain__caption profile-page__recipe-meta">
           {ingredients}
         </div>
       ) : null}
-      <div className="landing-plain__caption" style={{ fontSize: '0.8rem' }}>
+      <div className="landing-plain__caption profile-page__recipe-meta">
         {typeof recipe.average_score === 'number'
           ? `Avg: ${recipe.average_score.toFixed(1)}`
           : 'Avg: n/a'}
@@ -40,7 +58,7 @@ function ProfileRecipeCard({ recipe }) {
   )
 }
 
-function ProfileRecipeList({ recipes, status, emptyMessage }) {
+function ProfileRecipeList({ recipes, status, emptyMessage, compact = false }) {
   if (!recipes) {
     return (
       <p className="status-banner" role="status" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
@@ -52,7 +70,7 @@ function ProfileRecipeList({ recipes, status, emptyMessage }) {
   return (
     <>
       {recipes.length > 0 ? (
-        <div className="landing-plain__popular-grid profile-page__recipe-grid">
+        <div className={`landing-plain__popular-grid profile-page__recipe-grid${compact ? ' profile-page__recipe-grid--pending' : ''}`}>
           {recipes.map((recipe) => <ProfileRecipeCard key={recipe.id} recipe={recipe} />)}
         </div>
       ) : (
@@ -324,11 +342,14 @@ function ProfilePage({ showAllRecipes = false }) {
                   </Link>
                 ) : (
                   <aside className="detail-panel detail-panel--profile-section">
-                    <h2 className="profile-page__section-title">Pending Approval</h2>
+                    <h2 className="profile-page__section-title">
+                      Pending Approval{pendingRecipes ? ` (${pendingRecipes.length})` : ''}
+                    </h2>
                     <ProfileRecipeList
                       recipes={pendingRecipes}
                       status={pendingStatus}
                       emptyMessage="No recipes waiting for approval."
+                      compact
                     />
                   </aside>
                 )

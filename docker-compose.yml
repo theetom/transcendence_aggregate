@@ -35,6 +35,7 @@ services:
     volumes:
       - ./data:/data
       - django_static:/srv/django/static
+      - django_media:/app/media
     depends_on:
       postgres:
         condition: service_healthy
@@ -67,6 +68,7 @@ services:
       - "127.0.0.1:${HTTPS_PORT:-8443}:443"
     volumes:
       - django_static:/srv/django/static:ro
+      - django_media:/srv/django/media:ro
       - type: bind
         source: "${TLS_CERT_DIR:-./certs}"
         target: /etc/nginx/certs
@@ -93,3 +95,4 @@ services:
 volumes:
   postgres_data:
   django_static:
+  django_media:

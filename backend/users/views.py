@@ -15,6 +15,8 @@ from .serializers import (
     UserProfileSerializer,
     UsernameOrEmailAuthTokenSerializer,
 )
+from recipes.models import Recipe
+from recipes.serializers import RecipeSummarySerializer
 
 
 User = get_user_model()
@@ -66,7 +68,14 @@ def logout(request):
 def user_me(request):
     profile = get_object_or_404(UserProfile, user=request.user)
     serializer = UserProfileSerializer(profile)
-    return Response(serializer.data)
+    submitted_recipes = (
+        Recipe.objects.filter(user=request.user)
+        .prefetch_related("images")
+        .order_by("-date_created", "-id")
+    )
+    data = serializer.data
+    data["submitted_recipes"] = RecipeSummarySerializer(submitted_recipes, many=True).data
+    return Response(data)
 
 @api_view(["GET"])
 def user_detail(request, user_name):

@@ -1,17 +1,24 @@
-from urllib import request
+import json
+import logging
 from datetime import timedelta
+from uuid import uuid4
 
+from django.db import transaction
 from django.db.models import Avg, Count, Q
 from django.utils import timezone
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, parser_classes
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import serializers, status
 
-from .models import Recipe, Category, Ingredient
+from .models import Recipe, Category, Ingredient, RecipeImage
 from .serializers import RecipeSummarySerializer, RecipeDetailedSerializer, RecipeUpdateSerializer, CategorySerializer, IngredientSerializer
 from reviews.serializers import ReviewSerializer
 
+logger = logging.getLogger(__name__)
+
 @api_view(["GET", "POST"])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
 def recipe_intake(request):
 	if request.method == "GET":
 		categories = Category.objects.all()
@@ -23,24 +30,100 @@ def recipe_intake(request):
 		})
 	
 	if request.method == "POST":
-
-		serializer = RecipeDetailedSerializer(
-			data=request.data
-		)
-
-		if serializer.is_valid():
-
-			serializer.save(user=request.user)
-
+		if not request.user.is_authenticated:
 			return Response(
-				serializer.data,
-				status=status.HTTP_201_CREATED
+				{"error": "You must be logged in to add a recipe."},
+				status=status.HTTP_401_UNAUTHORIZED,
 			)
 
-		return Response(
-			serializer.errors,
-			status=status.HTTP_400_BAD_REQUEST
-		)
+		raw_data = request.data
+		if not isinstance(raw_data, dict):
+			return Response(
+				{"non_field_errors": ["Recipe data must be an object."]},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		image_files = request.FILES.getlist("images")
+		if not image_files:
+			return Response(
+				{"images": "Add at least one photo before submitting."},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+		if sum(image_file.size for image_file in image_files) > 20 * 1024 * 1024:
+			return Response(
+				{"images": "Photos must total 20 MiB or smaller."},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		image_field = serializers.ImageField(allow_empty_file=False)
+		image_extensions = {
+			"JPEG": ".jpg", "PNG": ".png", "GIF": ".gif",
+			"WEBP": ".webp",
+		}
+		for index, image_file in enumerate(image_files, start=1):
+			if image_file.size > 5 * 1024 * 1024:
+				return Response(
+					{"images": f"Photo {index} must be 5 MiB or smaller."},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			try:
+				image_field.run_validation(image_file)
+			except serializers.ValidationError as error:
+				return Response(
+					{"images": {str(index): error.detail}},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			extension = image_extensions.get(image_file.image.format)
+			if extension is None:
+				return Response(
+					{"images": f"Photo {index} must be JPEG, PNG, GIF or WebP."},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			# Match the served extension to verified bytes, not the original filename.
+			image_file.name = f"{uuid4().hex}{extension}"
+			image_file.seek(0)
+
+		# Keep uploaded files separate and give nested serializers a plain dict.
+		data = {
+			key: raw_data.get(key)
+			for key in raw_data
+			if key not in request.FILES
+		}
+		for field in ("ingredients", "categories", "steps"):
+			if field in data and isinstance(data[field], str):
+				try:
+					data[field] = json.loads(data[field])
+				except json.JSONDecodeError:
+					return Response(
+						{field: "This field must contain a valid JSON array."},
+						status=status.HTTP_400_BAD_REQUEST,
+					)
+
+		serializer = RecipeDetailedSerializer(data=data)
+		if not serializer.is_valid():
+			return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+		created_files = []
+		try:
+			with transaction.atomic():
+				recipe = serializer.save(user=request.user)
+				for image_file in image_files:
+					photo = RecipeImage(recipe=recipe)
+					photo.image.save(image_file.name, image_file, save=False)
+					created_files.append((photo.image.storage, photo.image.name))
+					photo.save()
+
+				# Serialize before committing so a response-data failure rolls back.
+				response = Response(serializer.data, status=status.HTTP_201_CREATED)
+		except Exception:
+			for storage, name in created_files:
+				try:
+					storage.delete(name)
+				except Exception:
+					logger.exception("Could not remove recipe photo %s after failed creation.", name)
+			raise
+
+		return response
 
 @api_view(["GET"])
 def recipe_list(request):

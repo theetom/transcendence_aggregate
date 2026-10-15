@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { authTokenStorageKey } from '../data/siteData'
+
+const maxPictureSize = 5 * 1024 * 1024
+const maxPicturesTotalSize = 20 * 1024 * 1024
+const supportedPictureTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
 async function requestRecipeApi(method, payload) {
   const endpoint = '/api/recipes/add_recipe/'
@@ -10,14 +15,17 @@ async function requestRecipeApi(method, payload) {
     headers.Authorization = `Token ${token}`
   }
 
-  if (payload !== undefined) {
+  if (!(payload instanceof FormData) && payload !== undefined) {
     headers['Content-Type'] = 'application/json'
   }
 
   const response = await fetch(endpoint, {
     method,
     headers,
-    body: payload === undefined ? undefined : JSON.stringify(payload),
+    body:
+      payload instanceof FormData || payload === undefined
+        ? payload
+        : JSON.stringify(payload),
   })
 
   const body = await response.text()
@@ -37,6 +45,7 @@ function FieldError({ id, message }) {
 }
 
 function AddRecipePage() {
+  const navigate = useNavigate()
   const [ingredientOptions, setIngredientOptions] = useState([])
   const [recipeCategories, setRecipeCategories] = useState([])
   const [recipeName, setRecipeName] = useState('')
@@ -57,8 +66,15 @@ function AddRecipePage() {
   }
 
   ingredients.forEach((ingredient, index) => {
-    if (!ingredient.name) {
-      validationErrors[`ingredient-${index + 1}`] = 'Select an ingredient.'
+    const isEmpty =
+      !ingredient.name.trim() &&
+      !ingredient.quantity.trim() &&
+      !ingredient.unit.trim()
+
+    if (index > 0 && isEmpty) return
+
+    if (!ingredient.name.trim()) {
+      validationErrors[`ingredient-${index + 1}`] = 'Enter an ingredient name.'
     }
     if (!ingredient.quantity.trim()) {
       validationErrors[`quantity-${index + 1}`] = 'Enter a quantity for this ingredient.'
@@ -71,13 +87,13 @@ function AddRecipePage() {
   })
 
   categories.forEach((category, index) => {
-    if (!category) {
-      validationErrors[`category-${index + 1}`] = 'Select a category.'
+    if (index === 0 && !category.trim()) {
+      validationErrors[`category-${index + 1}`] = 'Enter a category name.'
     }
   })
 
   steps.forEach((step, index) => {
-    if (!step.trim()) {
+    if (index === 0 && !step.trim()) {
       validationErrors[`step-${index + 1}`] = 'Enter instructions for this step.'
     }
   })
@@ -87,10 +103,16 @@ function AddRecipePage() {
   }
 
   pictures.forEach((picture, index) => {
-    if (picture && (!picture.type.startsWith('image/') || picture.size === 0)) {
-      validationErrors[`picture-${index + 1}`] = 'Choose a nonempty image file.'
+    if (picture && (!supportedPictureTypes.includes(picture.type) || picture.size === 0)) {
+      validationErrors[`picture-${index + 1}`] = 'Choose a nonempty JPEG, PNG, GIF or WebP photo.'
+    } else if (picture && picture.size > maxPictureSize) {
+      validationErrors[`picture-${index + 1}`] = 'Each photo must be 5 MiB or smaller.'
     }
   })
+
+  if (pictures.reduce((total, picture) => total + (picture?.size ?? 0), 0) > maxPicturesTotalSize) {
+    validationErrors['picture-1'] = 'The selected photos must total 20 MiB or less.'
+  }
 
   function fieldError(id) {
     return hasAttemptedSubmit ? validationErrors[id] : undefined
@@ -156,23 +178,17 @@ function AddRecipePage() {
       return
     }
 
-    // The current intake endpoint cannot save images. Keep selected photos local
-    // and prevent recipe creation until the backend supports photo uploads.
-    if (pictures.some(Boolean)) {
-      setStatus('Photo upload is not available yet. Your recipe has not been submitted.')
-      return
-    }
-
-    const payload = {
+    const recipeData = {
       title: recipeName.trim(),
       ingredients: ingredients
-        .filter((ingredient) => ingredient.name)
+        .filter((ingredient) => ingredient.name.trim())
         .map((ingredient) => ({
-          name: ingredient.name,
+          name: ingredient.name.trim(),
           quantity: ingredient.quantity.trim(),
           unit: ingredient.unit.trim(),
         })),
       categories: categories
+        .map((name) => name.trim())
         .filter(Boolean)
         .map((name) => ({ name })),
       steps: steps
@@ -184,12 +200,26 @@ function AddRecipePage() {
         })),
     }
 
+    const payload = new FormData()
+    payload.append('title', recipeData.title)
+    payload.append('ingredients', JSON.stringify(recipeData.ingredients))
+    payload.append('categories', JSON.stringify(recipeData.categories))
+    payload.append('steps', JSON.stringify(recipeData.steps))
+
+    pictures.filter(Boolean).forEach((picture) => {
+      payload.append('images', picture)
+    })
+
     setIsSubmitting(true)
     setStatus('Submitting recipe...')
 
     try {
       const result = await requestRecipeApi('POST', payload)
-      setStatus(result.ok ? 'Recipe added successfully.' : result.details)
+      if (result.ok) {
+        navigate('/add-recipe/submitted', { replace: true })
+      } else {
+        setStatus(result.details)
+      }
     } catch (error) {
       setStatus(
         `POST /api/recipes/add_recipe/\n\n${error.name}: ${error.message}`,
@@ -279,32 +309,29 @@ function AddRecipePage() {
           <div className="split-grid">
             <article className="form-panel">
               <h3>Ingredients</h3>
+              <datalist id="ingredient-suggestions">
+                {ingredientOptions.map((option) => (
+                  <option key={option.id} value={option.name} />
+                ))}
+              </datalist>
               <div className="form-panel__body dynamic-list">
                 {ingredients.map((ingredient, index) => (
                   <div key={`ingredient-${index + 1}`} className="dynamic-card field-list">
                     <div className="field">
                       <label htmlFor={`ingredient-${index + 1}`}>{`Ingredient ${index + 1}`}</label>
-                      <select
+                      <input
                         id={`ingredient-${index + 1}`}
+                        type="text"
+                        list="ingredient-suggestions"
+                        maxLength={100}
+                        placeholder="Type or choose an ingredient"
                         value={ingredient.name}
                         onChange={(event) =>
                           updateIngredient(index, 'name', event.target.value)
                         }
-                        disabled={ingredientOptions.length === 0}
                         aria-invalid={Boolean(fieldError(`ingredient-${index + 1}`))}
                         aria-describedby={fieldError(`ingredient-${index + 1}`) ? `ingredient-${index + 1}-error` : undefined}
-                      >
-                        <option value="">
-                          {ingredientOptions.length > 0
-                            ? 'Select ingredient'
-                            : 'Ingredient list not available yet'}
-                        </option>
-                        {ingredientOptions.map((option) => (
-                          <option key={option.id} value={option.name}>
-                            {option.name}
-                          </option>
-                        ))}
-                      </select>
+                      />
                       <FieldError id={`ingredient-${index + 1}-error`} message={fieldError(`ingredient-${index + 1}`)} />
                     </div>
                     <div className="field">
@@ -352,30 +379,27 @@ function AddRecipePage() {
 
             <article className="form-panel">
               <h3>Categories</h3>
+              <datalist id="category-suggestions">
+                {recipeCategories.map((option) => (
+                  <option key={option.id} value={option.name} />
+                ))}
+              </datalist>
               <div className="form-panel__body dynamic-list">
                 {categories.map((category, index) => (
                   <div key={`category-${index + 1}`} className="dynamic-card field-list">
                     <div className="field">
                       <label htmlFor={`category-${index + 1}`}>{`Category ${index + 1}`}</label>
-                      <select
+                      <input
                         id={`category-${index + 1}`}
+                        type="text"
+                        list="category-suggestions"
+                        maxLength={100}
+                        placeholder="Type or choose a category"
                         value={category}
                         onChange={(event) => updateCategory(index, event.target.value)}
-                        disabled={recipeCategories.length === 0}
                         aria-invalid={Boolean(fieldError(`category-${index + 1}`))}
                         aria-describedby={fieldError(`category-${index + 1}`) ? `category-${index + 1}-error` : undefined}
-                      >
-                        <option value="">
-                          {recipeCategories.length > 0
-                            ? 'Select category'
-                            : 'Category list not available yet'}
-                        </option>
-                        {recipeCategories.map((option) => (
-                          <option key={option.id} value={option.name}>
-                            {option.name}
-                          </option>
-                        ))}
-                      </select>
+                      />
                       <FieldError id={`category-${index + 1}-error`} message={fieldError(`category-${index + 1}`)} />
                     </div>
                   </div>
@@ -423,8 +447,8 @@ function AddRecipePage() {
           <article className="form-panel">
             <h3>Pictures</h3>
             <p id="recipe-pictures-notice">
-              At least one photo is required. Photo upload is not available yet,
-              so recipes cannot be submitted at the moment.
+              Add at least one JPEG, PNG, GIF or WebP photo. Each photo can be up to 5 MiB,
+              with a total of up to 20 MiB.
             </p>
             <div className="form-panel__body dynamic-list">
               {pictures.map((_, index) => (
@@ -434,7 +458,7 @@ function AddRecipePage() {
                     <input
                       id={`picture-${index + 1}`}
                       type="file"
-                      accept="image/*"
+                      accept={supportedPictureTypes.join(',')}
                       onChange={(event) => updatePicture(index, event.target.files?.[0] ?? null)}
                       aria-invalid={Boolean(fieldError(`picture-${index + 1}`))}
                       aria-describedby={fieldError(`picture-${index + 1}`)

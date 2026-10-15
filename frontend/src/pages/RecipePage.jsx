@@ -5,7 +5,7 @@ import { getCurrentProfile, getRecipeDetails } from '../data/recipeApi'
 import { authTokenStorageKey, formatDate } from '../data/siteData'
 
 function getImageSource(imageRecord) {
-  const candidates = [imageRecord?.src, imageRecord?.url, imageRecord?.imageUrl]
+  const candidates = [imageRecord?.image, imageRecord?.src, imageRecord?.url, imageRecord?.imageUrl]
 
   return candidates.find((value) => typeof value === 'string' && value.trim()) ?? ''
 }
@@ -60,7 +60,9 @@ function getRecordDate(value) {
 }
 
 function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requiresReload, onApprove, onReload }) {
-  const gallery = Array.isArray(recipe?.gallery) ? recipe.gallery : []
+  const gallery = Array.isArray(recipe?.images)
+    ? recipe.images
+    : Array.isArray(recipe?.gallery) ? recipe.gallery : []
   const ingredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : []
   const steps = Array.isArray(recipe?.steps)
     ? [...recipe.steps].sort((first, second) => first.step_number - second.step_number)

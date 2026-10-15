@@ -294,6 +294,9 @@ Requests arriving on the HTTPS frontend address follow these rules:
 - `/static/` serves collected Django files from the shared static volume.
   Missing files return a real 404 rather than the React page. Nginx mounts this
   volume read-only.
+- `/media/` serves uploaded recipe pictures from the shared media volume,
+  mounted read-only in Nginx. Missing pictures return a real 404; this does not
+  depend on Django debug mode.
 - Existing files are served from the generated frontend output. Requests under
   `/assets/` return 404 if the requested compiled file does not exist.
 - Other page paths fall back to `index.html`, allowing React Router to display
@@ -380,9 +383,73 @@ survives container recreation and ordinary `docker compose down`. Static assets
 are separate from the database at host `data/db.sqlite3` and can be recollected
 from the backend image.
 
-Upload functionality and image-storage decisions remain with the backend partners.
-The step-four media-root, media-volume and media-serving configuration was removed
-at the user's request. User-led static-serving checks remain pending.
+User-led static-serving checks remain pending.
+
+## Recipe photo uploads
+
+The recipe-photo integration selectively reuses the picture-feature upload code
+while retaining the current database, HTTPS setup, staff approval controls,
+manual ingredient/category names and optional empty extra rows. It includes
+recipe pictures only; ingredient pictures and their new model/migration are not
+imported. The existing RecipeImage table stores the recipe relationship and file
+path; picture bytes are saved separately in the media volume.
+
+| Volume | Backend path | Nginx path | HTTPS URL |
+| --- | --- | --- | --- |
+| `django_media` | `/app/media` | `/srv/django/media` (read-only) | `/media/` |
+
+Django writes uploaded files and Nginx serves them through the same HTTPS site.
+The volume survives ordinary container recreation and `docker compose down`.
+It is separate from PostgreSQL, the original SQLite backup and collected static
+assets. No existing database, uploaded picture or certificate is copied from the
+partner branch. Media URLs are publicly retrievable by anyone who knows the URL;
+the recipe-detail API retains its separate pending-recipe access checks.
+
+The form sends multipart data to `POST /api/recipes/add_recipe/`: `title` text,
+JSON-string `ingredients`, `categories` and `steps`, and repeated `images` file
+fields. At least one valid, nonempty JPEG, PNG, GIF or WebP image is required.
+The form and backend allow at most 5 MiB per picture and 20 MiB of pictures combined; Nginx
+allows a 25 MiB total request to include the recipe text and multipart overhead.
+No fixed photo-count limit is introduced. Existing step saving remains a separate
+backend task; accepting the request does not establish that steps are persisted.
+
+These changes are prepared in source. Run the following checks yourself:
+
+1. Close Chrome and run `sh scripts/start.sh` from the repository root. This
+   rebuilds changed images and recreates services with the media volume; it uses
+   the existing certificate/database setup and applies existing migrations during
+   backend startup. No new recipe-photo migration is included.
+2. Sign in over `https://localhost:8443/` (or your configured address). Create a
+   recipe with a distinctive title, valid first ingredient/category/step and a
+   small picture. Leave extra rows blank to check the optional-row behavior.
+   After a successful POST, expect a redirect to `/add-recipe/submitted`, showing
+   Recipe submitted successfully and explaining that admin approval is pending.
+   In Network tools, the POST response should include an `images` list with image
+   URLs. Validation, server and network errors should keep you on the form.
+   With an ordinary account, choose Go back to profile and confirm Pending
+   Approval shows the actual pending count and your submitted recipe cards.
+   This list comes from the signed-in user's `/api/me/` response, including each
+   recipe's saved `images` URLs. Profile cards should show the first uploaded
+   image; missing or failed images keep a placeholder. On a wider screen, three
+   compact pending cards should share a row, and adding pending rows should not
+   stretch the Favorites or Approved recipes panels. Check the narrower-screen
+   layout too. If a photo is absent, inspect its summary `images` entry and open
+   that `/media/` URL to distinguish missing response data from a missing file.
+3. As staff, open it from the pending queue; alternatively, its author can open
+   `/recipe/<URL-encoded-title>`. Confirm the picture displays. Open its `/media/`
+   URL and confirm it returns an image rather than the React page. Approval
+   remains a separate staff action; ordinary users must still be denied access
+   to other authors' pending recipe details.
+4. Confirm missing, empty, invalid and oversized pictures are rejected clearly.
+   Try a valid picture between 3 and 5 MiB and multiple pictures within the limits
+   to check forwarding, saving and display. Check a missing `/media/` filename
+   returns 404. API-level validation needs a direct multipart request if the form
+   rejects a file before sending; do not count frontend validation as a backend
+   test.
+5. Use the normal container removal/recreation procedure below without `-v`,
+   then confirm the saved recipe and its image URL still work. Preserve the
+   database, media volume and credentials. Share the failing URL, HTTP status and
+   relevant redacted logs if a check fails.
 
 ## Inspect, rebuild, and stop
 
@@ -673,7 +740,8 @@ SQLite file and certificate pair. Do not run `docker compose down -v`.
    database is untouched. Nothing is flushed, automatically cleaned or silently
    skipped. The comparison checks Django-exported records, not unknown legacy
    SQLite tables or uploaded-file bytes; the original and full SQLite backup
-   preserve all SQLite tables too. Upload storage remains partner-owned.
+   preserve all SQLite tables too. Uploaded pictures are stored separately in
+   `django_media`; this helper does not transfer those file bytes.
 
 3. Continue only if the helper prints **All exported records, application IDs and
    relationships match** and **Transfer comparison passed**. Frontend/backend
@@ -765,8 +833,9 @@ To stop and remove this project's containers and network:
 docker compose down
 ```
 
-The host `data/` directory, `postgres_data` and the static named volume remain.
-Do not add `-v`: it would remove named volumes, including PostgreSQL data.
+The host `data/` directory and the `postgres_data`, `django_static` and
+`django_media` named volumes remain. Do not add `-v`: it would remove named
+volumes, including PostgreSQL data and uploaded recipe pictures.
 Runtime completion depends on the user-run checks above.
 
 ## References

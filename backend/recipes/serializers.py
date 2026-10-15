@@ -3,7 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 from rest_framework import serializers
 from django.db import transaction
-from .models import Recipe, RecipeIngredient, RecipeStep, Category, Ingredient
+from .models import Recipe, RecipeIngredient, RecipeStep, Category, Ingredient, RecipeImage
 from reviews.serializers import ReviewSerializer
 
 def validate_positive_quantity(value):
@@ -72,6 +72,12 @@ class IngredientSerializer(serializers.ModelSerializer):
 		model = Ingredient
 		fields = ["id", "name"]
 
+class RecipeImageSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = RecipeImage
+		fields = ["id", "image"]
+
+
 class RecipeDetailedSerializer(serializers.ModelSerializer):
 	user = serializers.PrimaryKeyRelatedField(read_only=True)
 	approved = serializers.BooleanField(read_only=True)
@@ -86,12 +92,13 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 	)
 	steps = RecipeStepSerializer(
 		many=True,
-		read_only=True
+		allow_empty=False
 	)
 	reviews = ReviewSerializer(
 		many=True,
 		read_only=True
 	)
+	images = RecipeImageSerializer(many=True, read_only=True)
 	average_score = serializers.SerializerMethodField()
 	number_of_reviews = serializers.SerializerMethodField()
 
@@ -108,6 +115,7 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 			"steps",
 			"categories",
 			"reviews",
+			"images",
 			"average_score",
 			"number_of_reviews",
 		]
@@ -122,10 +130,23 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 	def get_number_of_reviews(self, recipe):
 		return recipe.reviews.count()
 
+	def validate_steps(self, steps):
+		step_numbers = [step["step_number"] for step in steps]
+		if any(number < 1 for number in step_numbers):
+			raise serializers.ValidationError(
+				"Step numbers must be greater than zero."
+			)
+		if len(step_numbers) != len(set(step_numbers)):
+			raise serializers.ValidationError(
+				"Step numbers must be unique."
+			)
+		return steps
+
 	@transaction.atomic
 	def create(self, validated_data):
 		ingredient_data = validated_data.pop("recipe_ingredients", [])
 		category_data = validated_data.pop("categories", [])
+		step_data = validated_data.pop("steps")
 		validated_data.pop("reviews", [])
 
 		recipe = Recipe.objects.create(**validated_data)
@@ -144,6 +165,10 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 				ingredient=ingredient_object,
 				**item,
 			)
+
+		RecipeStep.objects.bulk_create(
+			[RecipeStep(recipe=recipe, **step) for step in step_data]
+		)
 
 		return recipe
 
@@ -219,6 +244,7 @@ class RecipeSummarySerializer(serializers.ModelSerializer):
 		many=True,
 		read_only=True
 	)
+	images = RecipeImageSerializer(many=True, read_only=True)
 	average_score = serializers.SerializerMethodField()
 	number_of_reviews = serializers.SerializerMethodField()
 
@@ -230,6 +256,7 @@ class RecipeSummarySerializer(serializers.ModelSerializer):
 			"approved",
 			"ingredients",
 			"categories",
+			"images",
 			"average_score",
 			"number_of_reviews",
 		]
