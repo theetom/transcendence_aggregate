@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { approveRecipe } from '../data/moderationApi'
-import { getCurrentProfile, getRecipeDetails } from '../data/recipeApi'
+import { getCurrentProfile, getRecipeDetails, getRecipePath } from '../data/recipeApi'
 import { authTokenStorageKey, formatDate } from '../data/siteData'
 
 function getImageSource(imageRecord) {
@@ -60,6 +60,7 @@ function getRecordDate(value) {
 }
 
 function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requiresReload, onApprove, onReload }) {
+  const [failedAuthorPhoto, setFailedAuthorPhoto] = useState('')
   const gallery = Array.isArray(recipe?.images)
     ? recipe.images
     : Array.isArray(recipe?.gallery) ? recipe.gallery : []
@@ -75,6 +76,11 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
     : 'recipe-shell__image-grid recipe-shell__image-grid--empty'
   const authorName = getAuthorName(recipe)
   const authorSummary = getAuthorSummary(recipe)
+  const author = recipe.author && typeof recipe.author === 'object' ? recipe.author : null
+  const authorPhoto = typeof author?.profile_picture === 'string' ? author.profile_picture : ''
+  const authorRecipes = Array.isArray(author?.approved_recipes)
+    ? author.approved_recipes.filter((item) => Number.isInteger(item?.id) && typeof item.title === 'string' && item.title.trim())
+    : []
   const title = recipe?.title ?? 'Recipe'
   const lead = recipe?.description
   const ratingValue = getRatingValue(recipe)
@@ -150,12 +156,12 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
 
       <section className="page-section recipe-shell__media-section" aria-labelledby="recipe-media-title">
         <h2 id="recipe-media-title" className="sr-only">
-          Pictures carousel
+          Recipe pictures
         </h2>
 
         <div className="recipe-shell__media-stack">
-          <article className="gallery-card recipe-shell__carousel-stage">
-            <h3 className="recipe-shell__media-title">Recipe image</h3>
+          <article className="detail-panel recipe-shell__carousel-stage">
+            <p className="eyebrow recipe-shell__section-label">Recipe image</p>
 
             <div className={imageGridClassName}>
               {previewImages.map((item, index) => {
@@ -235,9 +241,15 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
           </div>
 
           <div className="recipe-shell__author-header">
-            <div className="recipe-shell__author-mark" aria-hidden="true" />
+            <div className="recipe-shell__author-mark" aria-hidden="true">
+              {authorPhoto && failedAuthorPhoto !== authorPhoto ? (
+                <img src={authorPhoto} alt="" onError={() => setFailedAuthorPhoto(authorPhoto)} />
+              ) : (authorName.charAt(0).toUpperCase() || '?')}
+            </div>
             <div className="recipe-shell__author-copy">
               <h3>{authorName || 'Author information is unavailable.'}</h3>
+              {author?.username ? <p>@{author.username}</p> : null}
+              {author ? <p><strong>Email:</strong> {author.email || 'Not provided'}</p> : null}
               {authorSummary ? <p>{authorSummary}</p> : null}
             </div>
           </div>
@@ -245,12 +257,21 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
           <div className="card-meta-strip">
             {submittedOn ? <span>{`Submitted ${submittedOn}`}</span> : null}
           </div>
+          {author ? (
+            <div className="recipe-shell__author-recipes">
+              <h3>Other recipes by this author</h3>
+              {authorRecipes.length > 0 ? (
+                <ul>
+                  {authorRecipes.map((item) => (
+                    <li key={item.id}><Link to={getRecipePath(item.title)}>{item.title}</Link></li>
+                  ))}
+                </ul>
+              ) : <p>No other approved recipes yet.</p>}
+            </div>
+          ) : null}
         </article>
 
         <div className="recipe-detail__actions recipe-shell__actions">
-          <button type="button" className="button button--ghost" disabled>
-            Share recipe
-          </button>
           <button type="button" className="button button--ghost" disabled>
             Add to favorites
           </button>

@@ -60,6 +60,17 @@ submission-status/feedback API proposal and browser preview are obsolete.
 The current backend identifies recipes by their exact titles. Duplicate titles
 or title changes remain a backend limitation.
 
+## Recipe author information
+
+Recipe details include a read-only `author` object alongside the existing
+numeric `user` ID. It contains the author's ID, username, display name, public
+email, bio, profile-picture URL and `approved_recipes` links (`id`/`title`).
+The recipe page displays these fields from the author's current account/profile.
+The other-recipe list contains only that author's approved recipes, excludes the
+current recipe and exposes no pending submissions or favorites. Accounts without
+a profile still return their account name, username and email. Email is public
+on visible recipe pages by the user's explicit October 15 decision.
+
 ## Profile sections
 
 The profile shows general information on the left and the picture on the right,
@@ -67,21 +78,49 @@ with Favorites, Approved recipes and Pending Approval panels underneath.
 The panels stack on small screens. An admin's Pending Approval panel links to
 `/staff`; a normal user's panel is reserved for their own pending submissions.
 
-Profile can read `submitted_recipes` and `favorite_recipes` summary arrays from
-the authenticated `/api/me/` response. Submitted recipes are split by the
-read-only `approved` value. These response lists are not supplied by the current
-backend yet; adding them is a separate backend task. They must be returned only
-for the logged-in account, without exposing private pending recipes through
-public profile serialization. Favorite summaries must follow recipe visibility:
-normal users may read approved recipes and their own pending recipes, while
-staff may read all their saved favorites.
+Authenticated `GET /api/me/` returns the signed-in account's
+`submitted_recipes` summaries, split into approved and pending lists by the
+read-only `approved` value. These private submissions are added only to the
+own-account response. The ordinary-user profile never requests the admin's
+pending list. An approved-recipe ownership lookup remains as a fallback for
+older responses that omit submissions.
 
-With existing responses, the profile retains its approved-recipe ownership
-lookup and resolves saved favorite IDs against the available approved list.
-Unresolved favorites are identified as unavailable rather than removed or
-counted as an empty collection. Missing own-submission data shows unavailable;
-the ordinary-user page never requests the admin's pending list. Adding/removing
-favorites and recipe creation remain separate features.
+The profile also supports `favorite_recipes` summaries, but the current backend
+returns saved `favorites` IDs instead. Those IDs are resolved against the
+available approved list; unresolved favorites are shown as unavailable rather
+than removed or counted as an empty collection. Saving/removing favorites is
+not implemented. Future favorite summaries must respect recipe visibility.
+
+## Editing your own profile
+
+Authenticated `PATCH /api/me/` accepts these optional fields:
+
+| Field | Behavior |
+| --- | --- |
+| `first_name` | Updates the current account's first name, up to 150 characters |
+| `last_name` | Updates the current account's last name, up to 150 characters |
+| `bio` | Updates the profile biography |
+| `profile_picture` | Replaces the photo with a valid nonempty JPEG, PNG, GIF or WebP image, at most 5 MiB |
+
+Text-only requests can use JSON. Photo requests use multipart form data with
+the file field named `profile_picture`; the browser supplies the multipart
+boundary. Omitted fields remain unchanged, and blank names/bio clear those
+text fields. A new photo is not required when editing text. Other fields are
+rejected, including account IDs, usernames, email addresses, passwords,
+permissions and favorites.
+
+The server selects the profile using `request.user`, updates the related
+account/profile records in one transaction, and returns the same full response
+shape as GET. A failed update preserves the existing photo; newly stored files
+are cleaned up on failure, and a replaced old file is deleted only after commit
+if no profile still references it. File cleanup failures are logged separately.
+The existing media volume serves uploaded profile pictures as well as recipe
+photos; this does not change media URL visibility or public-user serializers.
+
+On `/profile`, Edit profile opens the name/bio/photo form. Choosing a picture
+shows a local preview; Save sends the update and refreshes the displayed
+information/photo, while Cancel discards the draft. Email and date joined
+remain displayed. Runtime checks are user-led and still pending.
 
 ## Confirming an approval
 

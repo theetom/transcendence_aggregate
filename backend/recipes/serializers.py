@@ -3,6 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 from rest_framework import serializers
 from django.db import transaction
+from django.core.exceptions import ObjectDoesNotExist
 from .models import Recipe, RecipeIngredient, RecipeStep, Category, Ingredient, RecipeImage
 from reviews.serializers import ReviewSerializer
 
@@ -80,6 +81,7 @@ class RecipeImageSerializer(serializers.ModelSerializer):
 
 class RecipeDetailedSerializer(serializers.ModelSerializer):
 	user = serializers.PrimaryKeyRelatedField(read_only=True)
+	author = serializers.SerializerMethodField()
 	approved = serializers.BooleanField(read_only=True)
 
 	ingredients = RecipeIngredientSerializer(
@@ -111,6 +113,7 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 			"description",
 			"date_created",
 			"user",
+			"author",
 			"ingredients",
 			"steps",
 			"categories",
@@ -119,6 +122,29 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 			"average_score",
 			"number_of_reviews",
 		]
+
+	def get_author(self, recipe):
+		user = recipe.user
+		try:
+			profile = user.profile
+		except ObjectDoesNotExist:
+			profile = None
+		photo = profile.profile_picture if profile is not None else None
+		other_recipes = (
+			Recipe.objects.filter(user_id=recipe.user_id, approved=True)
+			.exclude(pk=recipe.pk)
+			.order_by("-date_created", "-id")
+			.values("id", "title")
+		)
+		return {
+			"id": user.id,
+			"username": user.username,
+			"name": user.get_full_name().strip() or user.username,
+			"email": user.email,
+			"bio": profile.bio if profile is not None else "",
+			"profile_picture": photo.url if photo else None,
+			"approved_recipes": list(other_recipes),
+		}
 
 	#  for all reviews
 	def get_average_score(self, recipe):

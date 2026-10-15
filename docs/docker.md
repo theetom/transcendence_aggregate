@@ -410,8 +410,9 @@ JSON-string `ingredients`, `categories` and `steps`, and repeated `images` file
 fields. At least one valid, nonempty JPEG, PNG, GIF or WebP image is required.
 The form and backend allow at most 5 MiB per picture and 20 MiB of pictures combined; Nginx
 allows a 25 MiB total request to include the recipe text and multipart overhead.
-No fixed photo-count limit is introduced. Existing step saving remains a separate
-backend task; accepting the request does not establish that steps are persisted.
+No fixed photo-count limit is introduced. Recipe creation now validates and
+saves submitted cooking steps through the existing RecipeStep model; verify
+their saved contents when reopening the recipe as part of the checks below.
 
 These changes are prepared in source. Run the following checks yourself:
 
@@ -420,8 +421,9 @@ These changes are prepared in source. Run the following checks yourself:
    the existing certificate/database setup and applies existing migrations during
    backend startup. No new recipe-photo migration is included.
 2. Sign in over `https://localhost:8443/` (or your configured address). Create a
-   recipe with a distinctive title, valid first ingredient/category/step and a
-   small picture. Leave extra rows blank to check the optional-row behavior.
+   recipe with a distinctive title, valid first ingredient/category, two
+   instructions and a small picture. Leave extra rows blank to check the
+   optional-row behavior.
    After a successful POST, expect a redirect to `/add-recipe/submitted`, showing
    Recipe submitted successfully and explaining that admin approval is pending.
    In Network tools, the POST response should include an `images` list with image
@@ -436,7 +438,9 @@ These changes are prepared in source. Run the following checks yourself:
    layout too. If a photo is absent, inspect its summary `images` entry and open
    that `/media/` URL to distinguish missing response data from a missing file.
 3. As staff, open it from the pending queue; alternatively, its author can open
-   `/recipe/<URL-encoded-title>`. Confirm the picture displays. Open its `/media/`
+   `/recipe/<URL-encoded-title>`. Confirm the complete picture displays at its
+   compact size, centered inside a full-width section, and both instructions
+   appear in order. Open its `/media/`
    URL and confirm it returns an image rather than the React page. Approval
    remains a separate staff action; ordinary users must still be denied access
    to other authors' pending recipe details.
@@ -450,6 +454,51 @@ These changes are prepared in source. Run the following checks yourself:
    then confirm the saved recipe and its image URL still work. Preserve the
    database, media volume and credentials. Share the failing URL, HTTP status and
    relevant redacted logs if a check fails.
+
+## Profile editing and profile-photo uploads
+
+The own-profile editor uses authenticated `PATCH /api/me/` for first name,
+last name, bio and an optional `profile_picture` file. Pictures use the same
+`django_media` volume and HTTPS `/media/` serving as recipe photos, under
+`profile_pictures/`. No new model, migration, volume or server configuration is
+required. Photos must be nonempty JPEG, PNG, GIF or WebP files, no larger than
+5 MiB; verified format and UUID filenames determine the saved extension.
+
+The following checks are for the user to run after loading the updated backend
+and frontend with the normal rebuild/start procedure. They have not been run
+by the assistant.
+
+1. Sign in and open `/profile`. Choose Edit profile, change first/last name and
+   bio without selecting a new photo, and Save. Confirm the displayed values
+   change, existing photo and recipe lists remain, and the saved values survive
+   a reload. Check that Cancel discards unsaved text.
+2. Choose Edit profile at the bottom right of the information card, select a
+   small valid photo in the editor and check the preview. Save, reload, and
+   confirm the current account's saved picture loads from
+   `/media/profile_pictures/`. Canceling a selected photo
+   must leave the stored picture unchanged.
+3. Check invalid, empty and oversized pictures show errors without losing the
+   existing saved photo or text. A direct authenticated API request is needed
+   to check backend validation when the browser form rejects the file first.
+   Repeat with a valid replacement photo and with blank names/bio to confirm
+   replacement and text clearing are supported.
+4. Confirm anonymous updates are rejected. A request attempting to change an
+   account ID, username, email, password, staff flag or favorites should receive
+   a validation error. The endpoint must update only the account identified by
+   its authentication token, regardless of which profile is displayed elsewhere.
+5. Check the profile and editor on a narrow screen. The profile picture should
+   be vertically centered beside the information on wider screens and centered
+   horizontally when stacked. Edit profile should sit at the card's bottom
+   right, and Add recipe at the bottom right of the page content. Photo
+   selection remains inside Edit profile, with no separate change-photo button.
+   Navigate away while previewing or
+   saving; no preview should be reported as a confirmed saved upload. After the
+   normal service recreation procedure without `-v`, confirm the saved profile
+   photo still loads. Preserve existing database/media volumes and credentials.
+
+Photo URLs retain the existing public media-serving policy. This feature adds
+owner-only editing; the separate public-user serializer/privacy discussion and
+favorites/comment submission remain outside its scope.
 
 ## Inspect, rebuild, and stop
 

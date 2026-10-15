@@ -1,3 +1,6 @@
+from collections.abc import Mapping
+from uuid import uuid4
+
 from rest_framework import serializers
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from django.contrib.auth import get_user_model
@@ -41,6 +44,59 @@ class UserProfileSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = UserProfile
 		fields = "__all__"
+
+
+class ProfilePictureField(serializers.ImageField):
+    def to_internal_value(self, data):
+        if getattr(data, "size", 0) > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Profile photo must be 5 MiB or smaller.")
+
+        image_file = super().to_internal_value(data)
+        extensions = {
+            "JPEG": ".jpg", "PNG": ".png", "GIF": ".gif", "WEBP": ".webp",
+        }
+        extension = extensions.get(image_file.image.format)
+        if extension is None:
+            raise serializers.ValidationError("Choose a JPEG, PNG, GIF or WebP photo.")
+        image_file.name = f"{uuid4().hex}{extension}"
+        image_file.seek(0)
+        return image_file
+
+
+class UserProfileUpdateSerializer(serializers.Serializer):
+    first_name = serializers.CharField(
+        source="user.first_name", max_length=150, required=False, allow_blank=True,
+    )
+    last_name = serializers.CharField(
+        source="user.last_name", max_length=150, required=False, allow_blank=True,
+    )
+    bio = serializers.CharField(required=False, allow_blank=True)
+    profile_picture = ProfilePictureField(required=False, allow_empty_file=False)
+
+    def to_internal_value(self, data):
+        if isinstance(data, Mapping):
+            unsupported = set(data) - set(self.fields)
+            if unsupported:
+                raise serializers.ValidationError({
+                    field: ["This field cannot be edited."]
+                    for field in sorted(unsupported)
+                })
+        return super().to_internal_value(data)
+
+    def update(self, instance, validated_data):
+        # The caller groups both model updates in one transaction.
+        user_data = validated_data.pop("user", {})
+        if user_data:
+            user = instance.user
+            for field, value in user_data.items():
+                setattr(user, field, value)
+            user.save(update_fields=list(user_data))
+
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        if validated_data:
+            instance.save(update_fields=list(validated_data))
+        return instance
 
 
 class SignupSerializer(serializers.Serializer):

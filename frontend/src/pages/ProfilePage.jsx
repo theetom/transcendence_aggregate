@@ -1,9 +1,233 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getCurrentProfile, getRecipeDetails, getRecipePath, readRecipeSummary, requestRecipeApi } from '../data/recipeApi'
+import { getCurrentProfile, getRecipeDetails, getRecipePath, readRecipeSummary, requestRecipeApi, updateCurrentProfile } from '../data/recipeApi'
 import { formatDate } from '../data/siteData'
 
 const recipePreviewLimit = 3
+const profilePhotoTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+const maxProfilePhotoSize = 5 * 1024 * 1024
+
+function profilePhotoError(file) {
+  if (!file) return ''
+  if (!profilePhotoTypes.includes(file.type) || file.size === 0) {
+    return 'Choose a nonempty JPEG, PNG, GIF or WebP photo.'
+  }
+  return file.size > maxProfilePhotoSize ? 'The photo must be 5 MiB or smaller.' : ''
+}
+
+function profileErrorMessage(value) {
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) return value.map(profileErrorMessage).filter(Boolean).join(' ')
+  if (value && typeof value === 'object') return Object.values(value).map(profileErrorMessage).filter(Boolean).join(' ')
+  return ''
+}
+
+function ProfileFieldError({ field, message }) {
+  return message ? (
+    <p id={`profile-${field}-error`} className="status-banner signup-field-error" role="alert">
+      {message}
+    </p>
+  ) : null
+}
+
+function ProfileEditor({ profile, onSaved, onCancel }) {
+  const [draft, setDraft] = useState({
+    first_name: profile.user.first_name ?? '',
+    last_name: profile.user.last_name ?? '',
+    bio: profile.bio ?? '',
+  })
+  const [pictureFile, setPictureFile] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [failedPreviewUrl, setFailedPreviewUrl] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
+  const [saveStatus, setSaveStatus] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const saving = useRef(false)
+  const mounted = useRef(false)
+  const saveController = useRef(null)
+  const pictureInput = useRef(null)
+  const firstNameInput = useRef(null)
+  const previewFailed = Boolean(previewUrl) && failedPreviewUrl === previewUrl
+  const pictureError = fieldErrors.profile_picture
+    || (previewFailed ? 'The photo preview could not be loaded. Choose another image.' : '')
+
+  useEffect(() => {
+    mounted.current = true
+    firstNameInput.current?.focus()
+    return () => {
+      mounted.current = false
+      saveController.current?.abort()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!pictureFile || profilePhotoError(pictureFile)) {
+      setPreviewUrl('')
+      return undefined
+    }
+    const url = URL.createObjectURL(pictureFile)
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [pictureFile])
+
+  function updateDraft(field, value) {
+    if (saving.current) return
+    setDraft((current) => ({ ...current, [field]: value }))
+    setFieldErrors((current) => ({ ...current, [field]: '' }))
+    setSaveStatus('')
+  }
+
+  function choosePicture(event) {
+    if (saving.current) return
+    const file = event.target.files?.[0] ?? null
+    const message = profilePhotoError(file)
+    setPictureFile(file)
+    setFieldErrors((current) => ({ ...current, profile_picture: message }))
+    setSaveStatus('')
+  }
+
+  function clearPicture() {
+    if (saving.current) return
+    setPictureFile(null)
+    if (pictureInput.current) pictureInput.current.value = ''
+    setFieldErrors((current) => ({ ...current, profile_picture: '' }))
+    setSaveStatus('')
+  }
+
+  async function handleSave(event) {
+    event.preventDefault()
+    if (saving.current) return
+    const errors = {}
+    for (const field of ['first_name', 'last_name']) {
+      if (draft[field].length > 150) errors[field] = 'Use 150 characters or fewer.'
+    }
+    const photoError = profilePhotoError(pictureFile)
+      || (pictureFile && previewFailed ? 'Choose a photo your browser can display.' : '')
+      || fieldErrors.profile_picture
+    if (photoError) errors.profile_picture = photoError
+    setFieldErrors(errors)
+    setSaveStatus('')
+    if (Object.keys(errors).length > 0) {
+      document.getElementById(`profile-${Object.keys(errors)[0]}`)?.focus()
+      return
+    }
+
+    const payload = new FormData()
+    payload.append('first_name', draft.first_name.trim())
+    payload.append('last_name', draft.last_name.trim())
+    payload.append('bio', draft.bio)
+    if (pictureFile) payload.append('profile_picture', pictureFile)
+    const controller = new AbortController()
+    saveController.current = controller
+    saving.current = true
+    setIsSaving(true)
+    setSaveStatus('Saving profile...')
+
+    try {
+      const updatedProfile = await updateCurrentProfile(payload, controller.signal)
+      if (!mounted.current || controller.signal.aborted) return
+      if (!Number.isInteger(profile.user.id) || profile.user.id < 1
+        || updatedProfile.user.id !== profile.user.id) {
+        throw new Error('Your account details could not be confirmed. Reload your profile before editing again.')
+      }
+      onSaved(updatedProfile)
+    } catch (error) {
+      if (!mounted.current || controller.signal.aborted || error.name === 'AbortError') return
+      const messages = {}
+      for (const field of ['first_name', 'last_name', 'bio', 'profile_picture']) {
+        messages[field] = profileErrorMessage(error.fieldErrors?.[field] ?? error.fieldErrors?.user?.[field])
+      }
+      setFieldErrors(messages)
+      setSaveStatus(profileErrorMessage(error.fieldErrors?.non_field_errors)
+        || error.message || 'Unable to save your profile. Try again.')
+    } finally {
+      saving.current = false
+      saveController.current = null
+      if (mounted.current && !controller.signal.aborted) setIsSaving(false)
+    }
+  }
+
+  return (
+    <form className="profile-page__editor" onSubmit={handleSave} noValidate aria-busy={isSaving}>
+      <h3>Edit profile</h3>
+      <fieldset className="profile-page__editor-fields" disabled={isSaving}>
+        <legend className="sr-only">Your profile details</legend>
+        {['first_name', 'last_name'].map((field) => (
+          <div className="field" key={field}>
+            <label htmlFor={`profile-${field}`}>{field === 'first_name' ? 'First name' : 'Last name'}</label>
+            <input
+              id={`profile-${field}`}
+              ref={field === 'first_name' ? firstNameInput : null}
+              type="text"
+              autoComplete={field === 'first_name' ? 'given-name' : 'family-name'}
+              maxLength={150}
+              value={draft[field]}
+              onChange={(event) => updateDraft(field, event.target.value)}
+              aria-invalid={Boolean(fieldErrors[field])}
+              aria-describedby={fieldErrors[field] ? `profile-${field}-error` : undefined}
+            />
+            <ProfileFieldError field={field} message={fieldErrors[field]} />
+          </div>
+        ))}
+        <div className="field profile-page__editor-full">
+          <label htmlFor="profile-bio">Bio</label>
+          <textarea
+            id="profile-bio"
+            rows={4}
+            value={draft.bio}
+            onChange={(event) => updateDraft('bio', event.target.value)}
+            aria-invalid={Boolean(fieldErrors.bio)}
+            aria-describedby={fieldErrors.bio ? 'profile-bio-error' : undefined}
+          />
+          <ProfileFieldError field="bio" message={fieldErrors.bio} />
+        </div>
+        <div className="profile-page__editor-photo profile-page__editor-full">
+          <div className="field">
+            <label htmlFor="profile-profile_picture">Profile photo (optional)</label>
+            <input
+              id="profile-profile_picture"
+              ref={pictureInput}
+              type="file"
+              accept={profilePhotoTypes.join(',')}
+              onChange={choosePicture}
+              aria-invalid={Boolean(pictureError)}
+              aria-describedby={`profile-photo-help${pictureError ? ' profile-profile_picture-error' : ''}`}
+            />
+            <p id="profile-photo-help" className="profile-page__section-note">
+              JPEG, PNG, GIF or WebP, up to 5 MiB. Without a new photo, your current picture stays unchanged.
+            </p>
+            <ProfileFieldError field="profile_picture" message={pictureError} />
+            {pictureFile || fieldErrors.profile_picture ? (
+              <button type="button" className="button button--ghost" onClick={clearPicture}>
+                Clear selected photo
+              </button>
+            ) : null}
+          </div>
+          <div className="profile-page__picture-box profile-page__editor-preview">
+            {previewUrl && !previewFailed ? (
+              <img src={previewUrl} alt="Selected profile photo preview" onError={() => setFailedPreviewUrl(previewUrl)} />
+            ) : (
+              <p className="profile-page__section-note profile-page__picture-empty">
+                {previewFailed ? 'Preview could not be loaded.' : 'No new photo selected.'}
+              </p>
+            )}
+          </div>
+        </div>
+      </fieldset>
+      {saveStatus ? <p className="status-banner" role={isSaving ? 'status' : 'alert'}>{saveStatus}</p> : null}
+      <div className="profile-page__editor-actions">
+        <button type="submit" className="button button--primary" disabled={isSaving}>
+          {isSaving ? 'Saving...' : 'Save profile'}
+        </button>
+        <button type="button" className="button button--ghost" disabled={isSaving} onClick={() => {
+          if (!saving.current) onCancel()
+        }}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  )
+}
 
 function ProfileRecipeCard({ recipe }) {
   const [failedImage, setFailedImage] = useState('')
@@ -114,6 +338,8 @@ function ProfilePage({ showAllRecipes = false }) {
   const [pendingRecipes, setPendingRecipes] = useState(null)
   const [pendingStatus, setPendingStatus] = useState('Loading pending recipes...')
   const [pictureFailed, setPictureFailed] = useState(false)
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [profileMessage, setProfileMessage] = useState('')
 
   useEffect(() => {
     const controller = new AbortController()
@@ -235,6 +461,18 @@ function ProfilePage({ showAllRecipes = false }) {
     : showAllRecipes ? 'Approved recipes' : 'Profile'
   const visibleRecipes = showAllRecipes ? recipes : recipes?.slice(0, recipePreviewLimit)
 
+  function startEditingProfile() {
+    setProfileMessage('')
+    setIsEditingProfile(true)
+  }
+
+  function handleProfileSaved(updatedProfile) {
+    setProfile(updatedProfile)
+    setPictureFailed(false)
+    setIsEditingProfile(false)
+    setProfileMessage('Profile updated successfully.')
+  }
+
   return (
     <div className="profile-page">
       <div className="content-frame">
@@ -263,6 +501,9 @@ function ProfilePage({ showAllRecipes = false }) {
                       </p>
                       <p className="profile-page__section-note">
                         <strong>Last name:</strong> {profile.user.last_name || 'Not provided'}
+                      </p>
+                      <p className="profile-page__section-note profile-page__bio">
+                        <strong>Bio:</strong> {profile.bio || 'Not provided'}
                       </p>
                       <p className="profile-page__section-note">
                         <strong>Email:</strong> {profile.user.email || 'Not provided'}
@@ -293,11 +534,23 @@ function ProfilePage({ showAllRecipes = false }) {
                           </p>
                         )}
                       </div>
-                      <button className="button button--ghost" type="button" disabled>
-                        {profile.profile_picture ? 'Change profile picture' : 'Upload picture'}
-                      </button>
                     </div>
                   </div>
+                  {isEditingProfile ? (
+                    <ProfileEditor
+                      profile={profile}
+                      onSaved={handleProfileSaved}
+                      onCancel={() => setIsEditingProfile(false)}
+                    />
+                  ) : null}
+                  {profileMessage ? <p className="status-banner" role="status">{profileMessage}</p> : null}
+                  {!isEditingProfile ? (
+                    <div className="profile-page__profile-actions">
+                      <button className="button button--ghost" type="button" onClick={startEditingProfile}>
+                        Edit profile
+                      </button>
+                    </div>
+                  ) : null}
                 </article>
               </section>
             ) : null}
@@ -356,7 +609,7 @@ function ProfilePage({ showAllRecipes = false }) {
               ) : null}
             </section>
 
-            <div className="profile-page__add-recipe-row">
+            <div className="profile-page__add-recipe-row profile-page__add-recipe-row--end">
               <Link className="button button--ghost" to="/add-recipe">
                 Add recipe
               </Link>
