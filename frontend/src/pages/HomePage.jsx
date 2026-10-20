@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { getRecipePath } from '../data/recipeApi'
+import RecipePreviewCard from '../components/RecipePreviewCard'
+import { getRecipePath, readRecipeSummary } from '../data/recipeApi'
 import {
   getCategoryPath,
   landingRecipeCategories,
@@ -10,30 +11,44 @@ function HomePage() {
   const location = useLocation()
   const [bestAverageRecipes, setBestAverageRecipes] = useState([])
   const [mostReviewedRecipes, setMostReviewedRecipes] = useState([])
+  const [recentlyAddedRecipes, setRecentlyAddedRecipes] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    const controller = new AbortController()
+
     async function loadHomePageData() {
       try {
-        const response = await fetch('/api/recipes/')
+        const response = await fetch('/api/recipes/', { signal: controller.signal })
 
         if (!response.ok) {
           throw new Error(`Request failed with status ${response.status}`)
         }
 
         const data = await response.json()
+        if (controller.signal.aborted) return
+        if (!Array.isArray(data.recently_added)) {
+          throw new Error('Recently added recipes could not be read.')
+        }
+        const recentlyAdded = data.recently_added.map(readRecipeSummary)
+        if (recentlyAdded.some((recipe) => recipe.approved !== true)) {
+          throw new Error('Recently added recipes could not be read.')
+        }
         setBestAverageRecipes(Array.isArray(data.best_average) ? data.best_average : [])
         setMostReviewedRecipes(Array.isArray(data.most_reviews) ? data.most_reviews : [])
+        setRecentlyAddedRecipes(recentlyAdded)
       } catch (loadError) {
+        if (controller.signal.aborted || loadError.name === 'AbortError') return
         console.error('Failed to load homepage data:', loadError)
         setError('Unable to load recipes right now.')
       } finally {
-        setIsLoading(false)
+        if (!controller.signal.aborted) setIsLoading(false)
       }
     }
 
     loadHomePageData()
+    return () => controller.abort()
   }, [])
 
   useEffect(() => {
@@ -143,6 +158,27 @@ function HomePage() {
           </div>
         )}
 
+      </section>
+
+      <section className="landing-plain__section" aria-labelledby="recently-added-section-title">
+        <div className="landing-plain__titlebar">
+          <h2 id="recently-added-section-title">Recently Added Recipes</h2>
+          <p>The five newest approved recipes, including recipes without reviews.</p>
+        </div>
+
+        {isLoading ? (
+          <p role="status">Loading recently added recipes...</p>
+        ) : error ? (
+          <p role="alert">{error}</p>
+        ) : recentlyAddedRecipes.length > 0 ? (
+          <div className="landing-plain__popular-grid landing-plain__recent-grid">
+            {recentlyAddedRecipes.map((recipe) => (
+              <RecipePreviewCard key={recipe.id} recipe={recipe} />
+            ))}
+          </div>
+        ) : (
+          <p>No approved recipes yet.</p>
+        )}
       </section>
 
       <section

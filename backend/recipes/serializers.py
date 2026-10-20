@@ -134,7 +134,7 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 			Recipe.objects.filter(user_id=recipe.user_id, approved=True)
 			.exclude(pk=recipe.pk)
 			.order_by("-date_created", "-id")
-			.values("id", "title")
+			.prefetch_related("images", "categories", "recipe_ingredients__ingredient", "reviews")
 		)
 		return {
 			"id": user.id,
@@ -143,7 +143,7 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 			"email": user.email,
 			"bio": profile.bio if profile is not None else "",
 			"profile_picture": photo.url if photo else None,
-			"approved_recipes": list(other_recipes),
+			"approved_recipes": RecipeSummarySerializer(other_recipes, many=True, context=self.context).data,
 		}
 
 	#  for all reviews

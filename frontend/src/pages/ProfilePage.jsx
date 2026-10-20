@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getCurrentProfile, getRecipeDetails, getRecipePath, readRecipeSummary, requestRecipeApi, updateCurrentProfile } from '../data/recipeApi'
+import RecipePreviewCard from '../components/RecipePreviewCard'
+import { getCurrentProfile, getRecipeDetails, readRecipeSummary, requestRecipeApi, updateCurrentProfile } from '../data/recipeApi'
 import { formatDate } from '../data/siteData'
 
 const recipePreviewLimit = 3
@@ -229,59 +230,6 @@ function ProfileEditor({ profile, onSaved, onCancel }) {
   )
 }
 
-function ProfileRecipeCard({ recipe }) {
-  const [failedImage, setFailedImage] = useState('')
-  const imageSource = Array.isArray(recipe.images)
-    ? recipe.images.find((image) => typeof image?.image === 'string' && image.image.trim())?.image
-    : null
-  const hasImage = Boolean(imageSource) && failedImage !== imageSource
-  const ingredients = Array.isArray(recipe.ingredients)
-    ? recipe.ingredients.map((ingredient) => ingredient.name).join(', ')
-    : ''
-  const categories = Array.isArray(recipe.categories)
-    ? recipe.categories.map((category) => category.name).join(', ')
-    : ''
-
-  return (
-    <Link
-      to={getRecipePath(recipe.title)}
-      className="landing-plain__popular-card landing-plain__card-button"
-    >
-      <div className="landing-plain__image-placeholder profile-page__recipe-image" aria-hidden="true">
-        {hasImage ? (
-          <img
-            className="profile-page__recipe-thumbnail"
-            src={imageSource}
-            alt=""
-            loading="lazy"
-            onError={() => setFailedImage(imageSource)}
-          />
-        ) : (categories || 'No image available.')}
-      </div>
-      <div className="landing-plain__caption">{recipe.title}</div>
-      {hasImage && categories ? (
-        <div className="landing-plain__caption profile-page__recipe-meta">
-          {categories}
-        </div>
-      ) : null}
-      {ingredients ? (
-        <div className="landing-plain__caption profile-page__recipe-meta">
-          {ingredients}
-        </div>
-      ) : null}
-      <div className="landing-plain__caption profile-page__recipe-meta">
-        {typeof recipe.average_score === 'number'
-          ? `Avg: ${recipe.average_score.toFixed(1)}`
-          : 'Avg: n/a'}
-        {' · '}
-        {typeof recipe.number_of_reviews === 'number'
-          ? `${recipe.number_of_reviews} reviews`
-          : 'Review count unavailable'}
-      </div>
-    </Link>
-  )
-}
-
 function ProfileRecipeList({ recipes, status, emptyMessage, compact = false }) {
   if (!recipes) {
     return (
@@ -294,8 +242,8 @@ function ProfileRecipeList({ recipes, status, emptyMessage, compact = false }) {
   return (
     <>
       {recipes.length > 0 ? (
-        <div className={`landing-plain__popular-grid profile-page__recipe-grid${compact ? ' profile-page__recipe-grid--pending' : ''}`}>
-          {recipes.map((recipe) => <ProfileRecipeCard key={recipe.id} recipe={recipe} />)}
+        <div className={`recipe-preview-grid${compact ? ' recipe-preview-grid--compact' : ' profile-page__recipe-grid'}`}>
+          {recipes.map((recipe) => <RecipePreviewCard key={recipe.id} recipe={recipe} />)}
         </div>
       ) : (
         <p className="profile-page__section-note">{status || emptyMessage}</p>
@@ -575,6 +523,7 @@ function ProfilePage({ showAllRecipes = false }) {
                   recipes={visibleRecipes}
                   status={recipeStatus}
                   emptyMessage="No approved recipes yet."
+                  compact={!showAllRecipes}
                 />
                 {!showAllRecipes && recipes?.length > recipePreviewLimit ? (
                   <div className="profile-page__add-recipe-row">

@@ -64,6 +64,17 @@ export function readRecipeSummary(data) {
   return data
 }
 
+export async function getApprovedRecipes(signal) {
+  const data = await requestRecipeApi('/api/recipes/all_recipes/', { signal })
+  if (!Array.isArray(data)) throw new Error(invalidDataMessage)
+  const recipes = data.map(readRecipeSummary)
+  if (recipes.some((recipe) => recipe.approved !== true)
+    || new Set(recipes.map((recipe) => recipe.id)).size !== recipes.length) {
+    throw new Error(invalidDataMessage)
+  }
+  return recipes
+}
+
 export async function getCurrentProfile(signal) {
   const profile = await requestRecipeApi('/api/me/', { signal, requiresAuth: true })
   if (typeof profile?.user?.username !== 'string' || typeof profile.user.is_staff !== 'boolean') {

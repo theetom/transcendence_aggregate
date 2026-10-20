@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import RecipePreviewCard from '../components/RecipePreviewCard'
 import { approveRecipe } from '../data/moderationApi'
-import { getCurrentProfile, getRecipeDetails, getRecipePath } from '../data/recipeApi'
+import { getCurrentProfile, getRecipeDetails } from '../data/recipeApi'
 import { authTokenStorageKey, formatDate } from '../data/siteData'
 
 function getImageSource(imageRecord) {
@@ -79,7 +80,13 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
   const author = recipe.author && typeof recipe.author === 'object' ? recipe.author : null
   const authorPhoto = typeof author?.profile_picture === 'string' ? author.profile_picture : ''
   const authorRecipes = Array.isArray(author?.approved_recipes)
-    ? author.approved_recipes.filter((item) => Number.isInteger(item?.id) && typeof item.title === 'string' && item.title.trim())
+    ? author.approved_recipes.filter((item) => (
+      item?.approved === true
+      && Number.isInteger(item.id)
+      && item.id !== recipe.id
+      && typeof item.title === 'string'
+      && item.title.trim()
+    ))
     : []
   const title = recipe?.title ?? 'Recipe'
   const lead = recipe?.description
@@ -261,11 +268,11 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
             <div className="recipe-shell__author-recipes">
               <h3>Other recipes by this author</h3>
               {authorRecipes.length > 0 ? (
-                <ul>
+                <div className="recipe-preview-grid recipe-preview-grid--compact recipe-preview-grid--large-photos">
                   {authorRecipes.map((item) => (
-                    <li key={item.id}><Link to={getRecipePath(item.title)}>{item.title}</Link></li>
+                    <RecipePreviewCard key={item.id} recipe={item} />
                   ))}
-                </ul>
+                </div>
               ) : <p>No other approved recipes yet.</p>}
             </div>
           ) : null}

@@ -194,10 +194,14 @@ def recipe_landing_page(request):
 	most_reviews = reviewed_recipes.order_by(
 		"-recent_number_of_reviews", "-recent_average_score", "id"
 	)[:5]
+	recently_added = Recipe.objects.filter(approved=True).order_by(
+		"-date_created", "-id"
+	)[:5]
 
 	return Response({
 		"best_average": RecipeSummarySerializer(best_average, many=True).data,
 		"most_reviews": RecipeSummarySerializer(most_reviews, many=True).data,
+		"recently_added": RecipeSummarySerializer(recently_added, many=True).data,
 	})
 
 @api_view(["GET", "POST", "PUT"])
