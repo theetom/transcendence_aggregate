@@ -187,20 +187,13 @@ def recipe_landing_page(request):
 		recent_number_of_reviews=Count("reviews", filter=recent_reviews),
 	)
 	reviewed_recipes = recipes.filter(recent_number_of_reviews__gt=0)
-	unreviewed_recipes = recipes.filter(recent_number_of_reviews=0)
 
 	best_average = reviewed_recipes.order_by(
 		"-recent_average_score", "-recent_number_of_reviews", "id"
 	)[:5]
-	best_average_ids = best_average.values_list("id", flat=True)
-	most_reviews = reviewed_recipes.exclude(id__in=best_average_ids).order_by(
+	most_reviews = reviewed_recipes.order_by(
 		"-recent_number_of_reviews", "-recent_average_score", "id"
 	)[:5]
-	remaining_slots = 5 - len(most_reviews)
-	if remaining_slots > 0:
-		most_reviews = list(most_reviews) + list(
-			unreviewed_recipes.order_by("-date_created")[:remaining_slots]
-		)
 
 	return Response({
 		"best_average": RecipeSummarySerializer(best_average, many=True).data,
