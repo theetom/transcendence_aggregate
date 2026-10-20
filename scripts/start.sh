@@ -9,7 +9,7 @@ fail() {
 usage() {
     printf '%s\n' \
         'Usage: sh scripts/start.sh' \
-        'Load shared updates, retain local recipes, start the project and export its data.' \
+        'Load shared records/photos, retain local recipes, start the project and export both.' \
         'Optional: --import SNAPSHOT_ID_OR_PATH explicitly loads a shared copy.'
 }
 
@@ -255,7 +255,7 @@ if [ -e "$reload_marker" ]; then
     rm -f "$reload_marker"
 fi
 
-printf '%s\n' 'Saving the running website database to the shared data file.'
+printf '%s\n' 'Saving the running website database and referenced photos to the shared folder.'
 python3 scripts/share-postgres.py export
 printf '%s\n' 'Share updates with Git commit/push; other computers load them on startup after Git pull.'
 

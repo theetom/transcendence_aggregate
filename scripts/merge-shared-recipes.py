@@ -2,7 +2,8 @@
 
 The previous local database is read only. Existing matching records keep the
 downloaded version. Match recipes by author, title and original creation time because
-numeric IDs can differ between computers. Uploaded image bytes are separate.
+numeric IDs can differ between computers. The photo helper installs incoming
+files and adjusts incoming references before this merger copies local-only rows.
 """
 
 import copy

@@ -4,21 +4,25 @@
 Run from the host with the existing backend and postgres services running.
 Shared files are unencrypted and require no sharing key. Startup combines local
 recipes with a downloaded copy before selecting it; previous databases remain.
-Photo files and Git push/pull are separate from database transfer.
+Referenced recipe/profile photos travel with the database. Git push/pull remain
+manual; previous local databases and photo files are preserved.
 """
 
 import argparse
 import datetime
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
 import re
+import runpy
 import secrets
 import shutil
 import stat
 import subprocess
 import sys
+import tarfile
 import tempfile
 
 
@@ -30,6 +34,9 @@ EXCLUSIONS = ["public.django_session", "public.authtoken_token"]
 SNAPSHOT_NAME = re.compile(r"\d{8}T\d{6}Z_[0-9a-f]{12}")
 HEX_DIGEST = re.compile(r"[0-9a-f]{64}")
 DATABASE_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,62}")
+PHOTO_BLOB = re.compile(r"[0-9a-f]{64}\.[a-z0-9]{1,10}")
+MAX_MANIFEST_BYTES = 17 * 1024 * 1024
+PHOTO_TOOLS = None
 
 # The image copies each application's migration files into /app. Use exactly
 # the same relative paths and raw bytes on the host and inside that image.
@@ -258,11 +265,170 @@ def records_fingerprint(operation):
     return value
 
 
+def photo_script():
+    path = ROOT / "scripts/shared-photos.py"
+    if path.is_symlink() or not path.is_file():
+        fail("The photo-sharing helper is missing; no database was selected.")
+    return path
+
+
+def photo_tools():
+    # This module has only stdlib imports at load time. Its Django entry points
+    # are used separately inside the backend, never by this host process.
+    global PHOTO_TOOLS
+    if PHOTO_TOOLS is None:
+        PHOTO_TOOLS = runpy.run_path(str(photo_script()))
+    return PHOTO_TOOLS
+
+
+def validated_photo_index(index):
+    try:
+        return photo_tools()["validate_index"](index)
+    except (ValueError, TypeError, KeyError):
+        fail("The shared photo index is invalid; existing photos were preserved.")
+
+
+def photo_index_bytes(index):
+    return photo_tools()["index_bytes"](index)
+
+
+def photo_command(*arguments, from_image=False):
+    if from_image:
+        command = ["docker", "compose", "run", "--rm", "--no-deps", "-T",
+                   "-e", "DJANGO_DB_ENGINE=postgresql", "--entrypoint", "python", "backend"]
+    else:
+        command = ["docker", "compose", "exec", "-T", "backend", "python"]
+    return [*command, "-c", photo_script().read_text(encoding="utf-8"), *arguments]
+
+
+def verify_photo_files(directory, index):
+    files = index["files"]
+    if not directory.exists() and not directory.is_symlink() and not files:
+        return
+    safe_directory(directory)
+    present = list(directory.iterdir())
+    if any(path.is_symlink() or not path.is_file() or not PHOTO_BLOB.fullmatch(path.name)
+           for path in present):
+        fail("The shared photo folder contains an unsafe file; it was left unchanged.")
+    # An interrupted export may have added new blobs before publishing its
+    # manifest. Keep accepting the complete prior set until publication finishes.
+    if not set(files).issubset({path.name for path in present}):
+        fail("The shared photo folder is incomplete; download the complete folder.")
+    for name, metadata in files.items():
+        path = directory / name
+        if (path.is_symlink() or not path.is_file()
+                or path.stat().st_size != metadata["bytes"]
+                or digest(path) != metadata["sha256"]):
+            fail("A shared photo is missing or damaged; existing photos were preserved.")
+
+
+def collect_photos(operation):
+    archive = operation.directory / "photos-export.tar"
+    with private_file(archive) as stream:
+        operation.run(photo_command("export"), output=stream)
+    directory = operation.directory / "photos"
+    directory.mkdir(mode=0o700)
+    try:
+        with tarfile.open(archive, mode="r|") as stream:
+            first = stream.next()
+            if (first is None or first.name != "photo-index.json" or not first.isfile()
+                    or first.type not in {tarfile.REGTYPE, tarfile.AREGTYPE}
+                    or first.size < 0 or first.size > photo_tools()["MAX_INDEX_BYTES"]):
+                fail("The backend did not provide a valid photo index.")
+            with stream.extractfile(first) as source:
+                index = validated_photo_index(json.loads(source.read()))
+            remaining = set(index["files"])
+            while True:
+                member = stream.next()
+                if member is None:
+                    break
+                name = member.name.removeprefix("photos/")
+                if (member.name != "photos/" + name or name not in remaining
+                        or not member.isfile() or member.type not in {tarfile.REGTYPE, tarfile.AREGTYPE}
+                        or member.size != index["files"][name]["bytes"]):
+                    fail("The exported photo stream contains an unexpected file.")
+                with stream.extractfile(member) as source, private_file(directory / name) as target:
+                    shutil.copyfileobj(source, target)
+                remaining.remove(name)
+            if remaining:
+                fail("The exported photo stream is incomplete.")
+    except (tarfile.TarError, EOFError):
+        fail("The exported photo stream is damaged; nothing was published.")
+    verify_photo_files(directory, index)
+    return index, directory
+
+
+def publish_photos(directory, index):
+    destination = SHARED / "photos"
+    safe_directory(destination, create=True)
+    existing = list(destination.iterdir())
+    if any(path.is_symlink() or not path.is_file() or not PHOTO_BLOB.fullmatch(path.name)
+           for path in existing):
+        fail("The shared photo folder contains unexpected files; it was not replaced.")
+    for name, metadata in index["files"].items():
+        target = destination / name
+        if target.exists() and target.stat().st_size == metadata["bytes"] and digest(target) == metadata["sha256"]:
+            continue
+        (directory / name).replace(target)
+    # Leave the previous manifest's photos in place until the new data and
+    # manifest are published. A failed copy can then be retried normally.
+
+
+def prune_photos(index):
+    destination = SHARED / "photos"
+    verify_photo_files(destination, index)
+    if not destination.exists():
+        return
+    # Only completed Git exports are pruned. Live media and its original files
+    # are kept for local-only recipes and the preserved older databases.
+    for path in destination.iterdir():
+        if path.name not in index["files"]:
+            path.unlink()
+
+
+def restore_photos(operation, manifest, directory, *, database=None, from_image=False, originals=False):
+    if manifest["format_version"] == 2:
+        print("This older shared copy has database records only; the next export includes local photos.")
+        return
+    index = manifest["photos"]
+    verify_photo_files(directory / "photos", index)
+    archive = operation.directory / "photos-import.tar"
+    encoded = photo_index_bytes(index)
+    with private_file(archive) as target:
+        with tarfile.open(fileobj=target, mode="w", format=tarfile.USTAR_FORMAT) as stream:
+            member = tarfile.TarInfo("photo-index.json")
+            member.size = len(encoded)
+            stream.addfile(member, io.BytesIO(encoded))
+            for name, metadata in sorted(index["files"].items()):
+                member = tarfile.TarInfo("photos/" + name)
+                member.size = metadata["bytes"]
+                with (directory / "photos" / name).open("rb") as source:
+                    stream.addfile(member, source)
+    arguments = ["install", "--originals"] if originals else ["install"]
+    with archive.open("rb") as source:
+        raw = operation.run(photo_command(*arguments, from_image=from_image), input_stream=source)
+    try:
+        counts = json.loads(raw)
+    except (ValueError, UnicodeError):
+        fail("The photo installer did not return valid results; no database was selected.")
+    if not isinstance(counts, dict) or any(type(value) is not int or value < 0 for value in counts.values()):
+        fail("The photo installer returned invalid counts; no database was selected.")
+    if database is not None:
+        metadata = operation.directory / "photo-index.json"
+        with private_file(metadata) as target:
+            target.write(encoded)
+        with metadata.open("rb") as source:
+            operation.run(photo_command("relink", database, from_image=from_image), input_stream=source)
+    print("Shared recipe and profile photo files are ready.")
+
+
 def export_snapshot(operation):
     migration_hash = fingerprint()
     database = operation.backend(migration_hash)
     major = operation.postgres_version()
     before = records_fingerprint(operation)
+    photos, photo_directory = collect_photos(operation)
+    media_hash = hashlib.sha256(photo_index_bytes(photos)).hexdigest()
     state = startup_state()
     current_pair = [SHARED / "shared-data", SHARED / "manifest.json"]
     if any(path.exists() or path.is_symlink() for path in current_pair):
@@ -270,8 +436,13 @@ def export_snapshot(operation):
         if (state and state["database"] == database
                 and state["source_snapshot_id"] == current["snapshot_id"]
                 and current["migration_fingerprint"] == migration_hash
-                and current.get("records_sha256") == before):
-            print("The shared file already contains the current records; no files changed.")
+                and current.get("records_sha256") == before
+                and current["format_version"] == 3
+                and current.get("media_sha256") == media_hash):
+            if records_fingerprint(operation) != before:
+                fail("Records changed while collecting photos; finish editing and run export again.")
+            prune_photos(photos)
+            print("The shared folder already contains the current records and photos.")
             shutil.rmtree(operation.directory)
             return
     revision = operation.run(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
@@ -291,8 +462,10 @@ def export_snapshot(operation):
         if stream.read(5) != b"PGDMP":
             fail("PostgreSQL did not produce the expected shared data format.")
     after = records_fingerprint(operation)
+    if before != after:
+        fail("Records changed during export; nothing was published. Finish editing and run export again.")
     manifest = {
-        "format_version": 2,
+        "format_version": 3,
         "snapshot_id": snapshot_id,
         "created_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "source_git_revision": revision,
@@ -303,19 +476,26 @@ def export_snapshot(operation):
         "data_sha256": digest(data),
         "data_bytes": data.stat().st_size,
         "excluded_table_data": EXCLUSIONS,
-        "media_included": False,
+        "media_included": True,
+        "media_sha256": media_hash,
+        "photos": photos,
+        "records_sha256": after,
     }
-    if before == after:
-        manifest["records_sha256"] = after
     staged_manifest = operation.directory / "manifest.json"
+    encoded_manifest = (json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode()
+    if len(encoded_manifest) > MAX_MANIFEST_BYTES:
+        fail("The complete photo manifest is too large; nothing was published.")
     with private_file(staged_manifest) as stream:
-        stream.write((json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode())
+        stream.write(encoded_manifest)
     safe_directory(SHARED, create=True)
     public_pair = [SHARED / "shared-data", SHARED / "manifest.json"]
     present = [path for path in public_pair if path.exists() or path.is_symlink()]
     if present:
         if len(present) != 2 or any(path.is_symlink() or not path.is_file() for path in present):
             fail("The existing shared data pair is incomplete or unsafe; it was left unchanged.")
+    # All files are content-named. Prepare the complete photo set before
+    # advancing the source marker or replacing the database/manifest pair.
+    publish_photos(photo_directory, photos)
     # Mark this source as initialized before publication, so an interrupted
     # export cannot make its next startup import its own just-saved data.
     record_initialized(database, manifest)
@@ -323,12 +503,12 @@ def export_snapshot(operation):
     # Publish matching metadata last. An import racing this two-file update
     # refuses a checksum mismatch rather than importing incomplete data.
     staged_manifest.replace(public_pair[1])
+    prune_photos(photos)
     # These files belong only to this completed export. Keep the current shared
     # pair, initialization marker and all import receipts outside this tree.
     shutil.rmtree(operation.directory)
-    print("Shared data saved: data/shared-database/shared-data")
-    print("Git needs that file and data/shared-database/manifest.json. No sharing key is needed.")
-    print("Photos are separate; shared data does not include uploaded image files.")
+    print("Shared records and photos saved: data/shared-database/")
+    print("Git needs the whole folder, including photos and manifest.json. No sharing key is needed.")
 
 
 def read_manifest(snapshot_argument, *, check_migrations=True):
@@ -350,7 +530,7 @@ def read_manifest(snapshot_argument, *, check_migrations=True):
     for path in (manifest_path, data):
         if path.is_symlink() or not path.is_file():
             fail("Snapshot files must be regular files, not symbolic links.")
-    if manifest_path.stat().st_size > 65536:
+    if manifest_path.stat().st_size > MAX_MANIFEST_BYTES:
         fail("The snapshot manifest is unexpectedly large.")
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -364,14 +544,24 @@ def read_manifest(snapshot_argument, *, check_migrations=True):
     if not stable and snapshot_id != relative.name:
         fail("The shared data identifier does not match its directory.")
     fixed = {
-        "format_version": 2, "postgres_major": PG_MAJOR,
+        "postgres_major": PG_MAJOR,
         "archive_format": "postgresql-custom",
-        "excluded_table_data": EXCLUSIONS, "media_included": False,
+        "excluded_table_data": EXCLUSIONS,
     }
     if any(manifest.get(key) != value for key, value in fixed.items()):
         fail("The snapshot format, PostgreSQL version, or exclusions are incompatible.")
-    if type(manifest.get("format_version")) is not int:
-        fail("The snapshot format version must be an integer.")
+    version = manifest.get("format_version")
+    if type(version) is not int or version not in (2, 3):
+        fail("The snapshot format version is unsupported.")
+    if manifest.get("media_included") is not (version == 3):
+        fail("The snapshot photo settings are incompatible.")
+    if version == 3:
+        index = validated_photo_index(manifest.get("photos"))
+        media_hash = manifest.get("media_sha256")
+        if (not isinstance(media_hash, str) or not HEX_DIGEST.fullmatch(media_hash)
+                or hashlib.sha256(photo_index_bytes(index)).hexdigest() != media_hash):
+            fail("The shared photo index checksum does not match its manifest.")
+        verify_photo_files(supplied / "photos", index)
     if not isinstance(manifest.get("source_database"), str) or not DATABASE_NAME.fullmatch(manifest["source_database"]):
         fail("The snapshot source database name is invalid.")
     revision = manifest.get("source_git_revision")
@@ -516,6 +706,7 @@ def restore_snapshot(operation, snapshot_argument, *, from_image=False):
     operation.postgres_version()
     database = prior_import(operation, manifest)
     if database:
+        restore_photos(operation, manifest, data.parent, database=database, from_image=from_image)
         return manifest, database
     plaintext = operation.directory / "shared-data"
     with data.open("rb") as source, private_file(plaintext) as target:
@@ -555,6 +746,7 @@ def restore_snapshot(operation, snapshot_argument, *, from_image=False):
         os.fsync(stream.fileno())
     # Publish the completed receipt without replacing a concurrently created one.
     os.link(metadata_path, receipt_path(manifest))
+    restore_photos(operation, manifest, data.parent, database=database, from_image=from_image)
     return manifest, database
 
 
@@ -567,7 +759,7 @@ def import_snapshot(operation, snapshot_argument, startup=False):
     print("The website database selection was not changed.")
     print("To combine this copy with the local website, run:")
     print("sh scripts/start.sh --import " + snapshot_argument)
-    print("Uploaded photo files must be transferred separately.")
+    print("Any photos included in this shared copy were installed with the database.")
 
 
 def combine_recipes(operation, local_database, imported_database):
@@ -622,6 +814,7 @@ def prepare_startup(operation, snapshot_argument=None, *, force=False):
             return
     manifest, data = read_manifest(supplied, check_migrations=False)
     if state and state["source_snapshot_id"] == manifest["snapshot_id"] and not force:
+        restore_photos(operation, manifest, data.parent, from_image=True, originals=True)
         print("This computer already has the current shared copy; preserving its local database.")
         return
     if manifest["migration_fingerprint"] != fingerprint():
@@ -640,24 +833,28 @@ def prepare_startup(operation, snapshot_argument=None, *, force=False):
     environment_selection(database, write=True)
     record_initialized(database, manifest)
     print("Shared data is ready; the website will use: " + database)
-    print("Previous databases remain stored separately. Uploaded photo files are separate.")
+    print("Previous databases and existing local photo files remain intact.")
 
 
 def remove_operation_plaintext(operation):
-    path = operation.directory / "shared-data"
-    try:
-        details = path.lstat()
-    except FileNotFoundError:
-        return
-    if (stat.S_ISREG(details.st_mode) and details.st_uid == os.getuid()
-            and details.st_nlink == 1):
-        path.unlink()
+    for name in ("shared-data", "photos-export.tar", "photos-import.tar", "photo-index.json"):
+        path = operation.directory / name
+        try:
+            details = path.lstat()
+        except FileNotFoundError:
+            continue
+        if (stat.S_ISREG(details.st_mode) and details.st_uid == os.getuid()
+                and details.st_nlink == 1):
+            path.unlink()
+    photos = operation.directory / "photos"
+    if not photos.is_symlink() and photos.is_dir() and photos.stat().st_uid == os.getuid():
+        shutil.rmtree(photos)
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("export", help="Save the database as Git-shareable data without encryption.")
+    commands.add_parser("export", help="Save the database and referenced photos for Git without encryption.")
     commands.add_parser("prepare-startup", help="Automatically load shared updates and retain local recipes.")
     importer = commands.add_parser("import", help="Restore into a new database without selecting it.")
     importer.add_argument("snapshot_directory")
@@ -680,7 +877,7 @@ def main():
             # The central receipt is a separate hard link outside this tree;
             # removing its operation-side link preserves idempotent reuse.
             shutil.rmtree(operation.directory)
-    except (Failure, OSError, ValueError, UnicodeError) as error:
+    except (Failure, OSError, ValueError, UnicodeError, tarfile.TarError) as error:
         print(str(error) if isinstance(error, Failure) else "A local file operation failed.", file=sys.stderr)
         if operation is not None:
             print("Private operation files retained: " + str(operation.directory.relative_to(ROOT)), file=sys.stderr)

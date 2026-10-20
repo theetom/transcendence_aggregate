@@ -219,15 +219,17 @@ This one command:
    trust. Close Chrome before starting and fully reopen it afterward, including
    incognito windows.
 7. Builds the backend, starts PostgreSQL, and checks for downloaded shared data.
-   A new copy is imported automatically and local-only recipes are retained in
-   it before the website switches databases. The previous database is preserved.
+   A new copy and its recipe/profile photos are imported automatically, and
+   local-only recipes and their files are retained before the website switches
+   databases. The previous database is preserved.
 8. Runs `docker compose up -d --build --wait --wait-timeout 120`, building both
    application images, starting all three services and waiting for container
    health. When a changed certificate must be loaded by an existing Nginx,
    it recreates only the frontend before printing the website address. A pending
    reload marker keeps this requirement across an interrupted/failed startup.
-9. Saves the current database to `data/shared-database/shared-data` and its
-   `manifest.json`, ready for an explicit Git commit/push.
+9. Saves the current database to `data/shared-database/shared-data`, referenced
+   recipe/profile pictures under `data/shared-database/photos/`, and the matching
+   `manifest.json`, ready for an explicit Git commit/push of that whole folder.
 
 Missing base images and app dependencies are downloaded by the image builds.
 Repeated runs reuse the tools image, verified certificates, and Docker's build cache.
@@ -369,7 +371,7 @@ database recorded in `DJANGO_POSTGRES_DB`. New databases receive the existing
 Django migrations during startup. Without a shared copy, no recipe/account
 seeding is performed automatically.
 
-The host `data/` directory holds the Git-shareable database copy and ignored
+The host `data/` directory holds the Git-shareable database/photo copy and ignored
 local helper state. It is not mounted into the backend or used as the live
 database. On the computer where the old SQLite file was retired, it is preserved
 privately under `data/database-private/retired-db.sqlite3`; current startup does
@@ -385,24 +387,33 @@ Standalone Django configuration rejects any engine value other than
 `sh scripts/start.sh` automatically loads a newly downloaded
 `data/shared-database/shared-data` and retains local-only recipes, their authors,
 ingredients, steps, categories and image references. It also retains local
-reviews and favorites, then saves the combined database into the same shared
-file after startup. Matching recipes are identified by author username, title and
+reviews and favorites. The same process loads referenced recipe/profile picture
+files into the local media volume and saves the combined database and photos
+after startup. Matching recipes are identified by author username, title and
 original creation time; the downloaded version wins for an existing match.
 Previous local databases remain stored separately. The companion `manifest.json`
-checks completeness and project compatibility. There is one current shared data
-file; older exported copies are not retained.
+checks completeness, project compatibility and file checksums. The shared folder
+contains one current `shared-data`, `manifest.json`, and actual picture files
+under `photos/<content-hash>.<extension>`; older exported copies are not retained.
+The format-3 manifest lists those files. An older format-2 copy remains readable
+as database-only data. Run normal startup or export on the main computer once
+to produce the first photo-inclusive copy, then commit/push that whole folder.
 
 Python 3 is required. The shared data is unencrypted: no GPG, sharing key or
-`--import` argument is needed. Commit/push the shared pair after exporting;
-other computers pull it and run the same startup command. Git commit/push/pull
-remain manual. An unchanged shared copy preserves the selected local database.
-Once a copy includes the record comparison, unchanged records also leave the
-shared files untouched rather than producing needless Git changes on startup.
+`--import` argument is needed. Commit/push the shared folder after exporting;
+other computers pull it and run the same startup command. Include the entire
+`data/shared-database/` folder so added and removed photo files travel with the
+database and manifest. Git commit/push/pull remain manual. An unchanged shared
+copy preserves the selected local database, and startup restores any missing
+downloaded picture files into the media volume. Unchanged records and referenced
+photo contents leave the shared files untouched rather than producing needless
+Git changes on startup.
 Renames, deletions and conflicting edits are not reconciled as a live sync system.
-Uploaded photo files still need a separate transfer; approval rules are unchanged.
-Automatic startup import/export, recipe combination and unchanged-record handling
-remain pending user-run verification. Saved-file checksum checks and source
-review do not establish that this complete workflow has passed.
+Approval rules are unchanged. There is no separate manual photo-transfer step.
+Automatic startup import/export, recipe combination, picture transfer and
+unchanged-content handling remain pending user-run verification. Saved-file
+checksum checks and source review do not establish that this complete workflow
+has passed.
 
 ## Django static assets
 
@@ -436,10 +447,17 @@ path; picture bytes are saved separately in the media volume.
 Django writes uploaded files and Nginx serves them through the same HTTPS site.
 The volume survives ordinary container recreation and `docker compose down`.
 It is separate from PostgreSQL and collected static assets. Database exports
-contain image paths, not the uploaded photo files in this volume, so Git sharing
-of the current database pair does not yet transfer pictures between computers.
-No existing database, uploaded picture or certificate is copied from the
-partner branch. Media URLs are publicly retrievable by anyone who knows the URL;
+contain image paths; the sharing helper copies their referenced files from this
+volume into `data/shared-database/photos/` alongside the export. Both travel
+through the same export, Git delivery and startup/import process. Downloaded
+pictures use content-derived paths under `shared/recipes/` and
+`shared/profiles/` inside the receiving media volume. Only references in the
+separately restored incoming database are adjusted before local recipes are
+combined. Existing files are never overwritten, so a local picture with the
+same original filename remains intact. Recipe and profile paths are separate
+so replacing a profile picture cannot remove an identically pictured recipe.
+Local `.env` files and certificates are not part of the shared data folder.
+Media URLs are publicly retrievable by anyone who knows the URL;
 the recipe-detail API retains its separate pending-recipe access checks.
 
 The form sends multipart data to `POST /api/recipes/add_recipe/`: `title` text,
@@ -797,20 +815,25 @@ because those addresses now belong to Django.
 
 ## User check: PostgreSQL and sharing between computers
 
-These are user-run checks, not completed results. The automatic shared-database
+These are user-run checks, not completed results. The automatic database/photo
 workflow remains runtime-unverified. Keep both computers' `.env`, databases,
 media volumes and certificate pairs. Do not delete a volume or discard a local
 shared file to resolve a failed check.
 
-1. On the main computer, note an existing recipe's title and author, then run:
+1. On the main computer, note an existing recipe's title, author and pictures,
+   plus a profile picture if available, then run:
 
    ```sh
    sh scripts/start.sh
    ```
 
    This loads the current configuration, starts the services, applies existing
-   migrations and exports the selected PostgreSQL database. Confirm the website
-   opens, an existing account can log in, and the expected recipes remain.
+   migrations and exports the selected PostgreSQL database and its referenced
+   photo files. The first run upgrades an older database-only saved copy. Confirm
+   the website opens, an existing account can log in, and the expected recipes
+   and pictures remain. Check that `data/shared-database/manifest.json` has
+   `format_version: 3` and `media_included: true`, with the expected picture files
+   under `data/shared-database/photos/` when saved records reference pictures.
 2. Confirm the actual Django database connection:
 
    ```sh
@@ -820,27 +843,28 @@ shared file to resolve a failed check.
    Expect `postgresql`. Read `docker compose ps` and
    `docker compose logs --tail=50 postgres backend frontend`; expect all three
    healthy and no startup/import errors.
-3. If records were created or edited after startup finished, save them before
+3. If records or pictures changed after startup finished, save them before
    sharing. With the app running, use:
 
    ```sh
    python3 scripts/share-postgres.py export
    ```
 
-   Startup exports once; it does not continuously update the shared file.
-4. Review and send the main computer's current pair through Git:
+   Startup exports once; it does not continuously update the shared folder.
+4. Review and send the main computer's current database and pictures through Git:
 
    ```sh
    git status --short
-   git add data/shared-database/shared-data data/shared-database/manifest.json
-   git commit -m "data: update shared database"
+   git add data/shared-database
+   git commit -m "data: update shared database and photos"
    git push origin frontend-side_Roh
    ```
 
-   Stage only intended files. If there are no staged changes, skip the commit;
-   no empty commit is needed. Git delivery is manual and separate from startup.
-5. On the receiving computer, note any existing local recipe's title and author,
-   keep its local configuration, and inspect `git status --short` before:
+   Stage the whole shared folder, including picture additions and deletions.
+   If there are no staged changes, skip the commit; no empty commit is needed.
+   Git delivery is manual and separate from startup.
+5. On the receiving computer, note any existing local recipe's title, author and
+   pictures, keep its local configuration, and inspect `git status --short` before:
 
    ```sh
    git switch frontend-side_Roh
@@ -854,18 +878,28 @@ shared file to resolve a failed check.
 6. Confirm both the main computer's recipe and the receiver's prior local recipe
    appear with their ingredients, steps and categories. Use an approved recipe
    for public-list checks; pending recipes require an existing owner/staff view.
-   Check an existing login and suitable reviews/favorites. Missing photo files
-   remain a separate sharing task, and approval rules are unchanged.
+   Check every picture in the main recipe's gallery, the receiver's existing
+   recipe pictures and a downloaded profile picture. Reload their pages and
+   open a picture URL directly to confirm actual images load. Check an existing
+   login and suitable reviews/favorites. Approval rules are unchanged.
 7. Run `sh scripts/start.sh` again and confirm recipes remain without added
-   duplicates. Compare the shared pair immediately before and after another
-   repeat run with no record changes or intervening logins: an already-upgraded,
-   unchanged pair should stay unchanged. The first merge may legitimately change
-   the pair and an older manifest may be upgraded once.
-8. To check sharing the combined result back, send the receiver's shared pair
+   duplicates and pictures still load after restart. Compare the whole shared
+   folder immediately before and after another repeat run with no record/photo
+   changes or intervening logins: an already-upgraded, unchanged copy should
+   stay unchanged. The first merge may legitimately change the folder and an
+   older manifest may be upgraded once.
+8. To check sharing the combined result back, send the receiver's shared folder
    with the same export-if-needed, review, commit and push steps. Then pull and
-   run startup on the main computer. Confirm both recipes remain there too.
+   run startup on the main computer. Confirm both recipes and pictures remain
+   there too.
    Work sequentially for this check. Conflicting edits/deletions and simultaneous
    Git changes to the database file are not resolved as live synchronization.
+9. To check a later picture change, replace a profile picture or create another
+   recipe with pictures on one computer. Run the same export, whole-folder
+   commit/push, receiving pull and normal startup steps. Confirm the changed
+   profile picture or new recipe gallery appears on the other computer while
+   the previous local-only recipe and its pictures remain. No separate photo
+   command is needed.
 
 If a check fails, keep both computers' current data. Record the failing command
 or URL and relevant redacted error; do not reset files or remove databases.
