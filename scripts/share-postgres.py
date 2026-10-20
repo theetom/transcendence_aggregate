@@ -43,7 +43,7 @@ for path in sorted(root.glob('*/migrations/*.py')):
         raise SystemExit('Migration sources must be regular files.')
     files[path.relative_to(root).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
 fingerprint = hashlib.sha256(json.dumps(files, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
-print(json.dumps({'engine': os.environ.get('DJANGO_DB_ENGINE', 'sqlite'),
+print(json.dumps({'engine': os.environ.get('DJANGO_DB_ENGINE', 'postgresql'),
                   'database': os.environ.get('POSTGRES_DB', 'recipes'),
                   'host': os.environ.get('POSTGRES_HOST', 'postgres'),
                   'user': os.environ.get('POSTGRES_USER', 'recipes'),

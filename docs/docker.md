@@ -13,7 +13,8 @@ and a complete deployment-readiness review remain separate work.
   `config --format json`, `up --wait`, and `--wait-timeout`.
 - Linux with Chrome as the evaluation browser, or WSL with Windows Chrome.
 - Run commands from the repository root.
-- Docker must be able to write to the host `data/` directory.
+- Your user must be able to write to the host `data/` directory.
+- Python 3 on the host for the database-sharing helper.
 - Network access for image downloads and build dependencies.
 - Permission to write your own Chrome certificate store and trust a local CA.
 
@@ -30,9 +31,10 @@ because browser-store mounts/ownership cannot be assumed in those configurations
 Keep the working private `.env` available; startup does not generate replacement
 credentials, change Docker permissions or bypass machine restrictions.
 
-Python and backend dependencies are installed inside the backend image. Node.js
-and frontend dependencies are used in the frontend build stage; the final
-frontend image contains Nginx and the generated website files.
+Python and backend dependencies are installed inside the backend image; the
+sharing helper also needs host Python 3. Node.js and frontend dependencies are
+used in the frontend build stage; the final frontend image contains Nginx and
+the generated website files.
 
 ## Local configuration
 
@@ -63,13 +65,14 @@ change account passwords or the recipe website's database-backed login tokens.
 The environment example contains six settings: `DJANGO_SECRET_KEY`,
 `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_DB_ENGINE`,
 `DJANGO_POSTGRES_DB` and `POSTGRES_PASSWORD`.
-Keep real secrets in ignored `.env`; the example leaves both blank. Preserve an
-existing PostgreSQL setup's `DJANGO_DB_ENGINE=postgresql`; the SQLite-to-PostgreSQL
-procedure below is only for a machine that has not completed that transition.
+Keep real secrets in ignored `.env`; the example leaves both blank.
+PostgreSQL is the only supported database. `DJANGO_DB_ENGINE=postgresql` remains
+in the example for compatibility with existing setup files. Compose sets the
+backend to PostgreSQL directly; this setting is no longer an engine switch.
 Port, server-name and certificate-directory settings use Compose defaults;
 add an override only when needed.
 
-Compose reads these values when preparing the service configuration:
+The configuration settings and defaults are:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -80,7 +83,7 @@ Compose reads these values when preparing the service configuration:
 | `DJANGO_SECRET_KEY` | Required; no default | Django signing secret passed only to the backend |
 | `DJANGO_DEBUG` | `False` | Enable or disable Django debug responses |
 | `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1,backend` | Comma-separated allowed hostnames/IPs, without ports or protocols |
-| `DJANGO_DB_ENGINE` | `sqlite` | Use `sqlite` before transfer; `postgresql` after successful comparison |
+| `DJANGO_DB_ENGINE` | `postgresql` | Compatibility marker in `.env`; Compose always selects PostgreSQL |
 | `DJANGO_POSTGRES_DB` | `recipes` | PostgreSQL database selected by the backend; can select a separately restored snapshot |
 | `POSTGRES_PASSWORD` | Required; no default | Private password for PostgreSQL, supplied to its service and Django |
 
@@ -354,31 +357,30 @@ after migrations and static collection finish.
 
 ## Database persistence
 
-The host directory `./data` is mounted at `/data` inside the backend container.
-With `DJANGO_DB_ENGINE=sqlite`, Django uses `/data/db.sqlite3`, corresponding to
-host `data/db.sqlite3`.
+PostgreSQL 17 is the only supported database. Docker keeps its live data in the
+named `postgres_data` volume. PostgreSQL sees that same storage at
+`/var/lib/postgresql/data` inside its container. This path is not a project
+directory: Docker manages the physical storage on this computer. The volume
+survives container recreation and ordinary `docker compose down`.
 
-- Existing data stays in this host directory when containers are recreated.
-- When the database file is absent and the directory is writable, migrations can
-  create the SQLite database and its tables.
-- Compose no longer depends on the deleted `backend/db.sqlite3` starter file.
-- Automatic catalog or account seeding is not part of this Compose setup. An empty
-  database needs its initial data supplied separately through the backend's
-  supported workflow.
-- Database-engine migration and database Git tracking remain separate work.
-  Preserve the current database when preparing those changes.
+PostgreSQL has no published host port; Django reaches it on Docker's private
+network. The backend selects `recipes` by default, or the separately restored
+database recorded in `DJANGO_POSTGRES_DB`. New databases receive the existing
+Django migrations during startup. Without a shared copy, no recipe/account
+seeding is performed automatically.
 
-The PostgreSQL service, Python driver and connection settings are implemented in
-source. PostgreSQL 17 stores data in the named `postgres_data` volume mounted at
-`/var/lib/postgresql/data`. It has no published host port; Django reaches it on
-Docker's private network. Normal startup starts PostgreSQL even while Django
-still selects SQLite. It does not transfer or replace the SQLite data.
+The host `data/` directory holds the Git-shareable database copy and ignored
+local helper state. It is not mounted into the backend or used as the live
+database. On the computer where the old SQLite file was retired, it is preserved
+privately under `data/database-private/retired-db.sqlite3`; current startup does
+not read it or require other computers to have that private file.
+SQLite selection, export and migration helpers have been removed.
 
 `POSTGRES_PASSWORD` initializes the database user on the first start with an
 empty volume. Changing `.env` afterward does not change that stored password.
 Keep it stable; do not delete the volume to solve a credential mismatch.
-Database selection rejects unknown values and does not fall back to SQLite
-when a PostgreSQL connection fails.
+Standalone Django configuration rejects any engine value other than
+`postgresql`; a connection failure stops startup.
 
 `sh scripts/start.sh` automatically loads a newly downloaded
 `data/shared-database/shared-data` and retains local-only recipes, their authors,
@@ -398,6 +400,9 @@ Once a copy includes the record comparison, unchanged records also leave the
 shared files untouched rather than producing needless Git changes on startup.
 Renames, deletions and conflicting edits are not reconciled as a live sync system.
 Uploaded photo files still need a separate transfer; approval rules are unchanged.
+Automatic startup import/export, recipe combination and unchanged-record handling
+remain pending user-run verification. Saved-file checksum checks and source
+review do not establish that this complete workflow has passed.
 
 ## Django static assets
 
@@ -410,7 +415,7 @@ project name:
 
 The backend writes collected assets to this volume; Nginx reads them. The volume
 survives container recreation and ordinary `docker compose down`. Static assets
-are separate from the database at host `data/db.sqlite3` and can be recollected
+are separate from PostgreSQL's `postgres_data` volume and can be recollected
 from the backend image.
 
 User-led static-serving checks remain pending.
@@ -430,8 +435,10 @@ path; picture bytes are saved separately in the media volume.
 
 Django writes uploaded files and Nginx serves them through the same HTTPS site.
 The volume survives ordinary container recreation and `docker compose down`.
-It is separate from PostgreSQL, the original SQLite backup and collected static
-assets. No existing database, uploaded picture or certificate is copied from the
+It is separate from PostgreSQL and collected static assets. Database exports
+contain image paths, not the uploaded photo files in this volume, so Git sharing
+of the current database pair does not yet transfer pictures between computers.
+No existing database, uploaded picture or certificate is copied from the
 partner branch. Media URLs are publicly retrievable by anyone who knows the URL;
 the recipe-detail API retains its separate pending-recipe access checks.
 
@@ -655,7 +662,8 @@ docker compose logs --tail=50 frontend backend
 
 These build/container/browser checks are user-led. The user reported the provided
 step-four checks working before PostgreSQL was added. The updated database
-configuration still needs the step-five and complete-infrastructure checks below.
+configuration still needs the shared-database and complete-infrastructure checks
+below.
 
 ## User check for step three: HTTPS, trust, and redirect
 
@@ -725,19 +733,21 @@ as the browser user, and fully restart Chrome. Host certutil is not required.
 Report the exact Chrome error and launcher output; connection refusal, certificate
 trust errors and HTTP 502 responses need different diagnoses. For a Windows
 browser with WSL, check the Windows import above. Do not share the CA private key.
-PostgreSQL transfer and broader deployment checks follow below.
+Shared-database and broader deployment checks follow below.
 The complete root README is deferred until the finished version.
 
 ## User check for step four: backend settings and static serving
 
-The user reported these checks passing before step five. Repeat them after
-PostgreSQL activation; the assistant has not run them.
+The user reported earlier versions of these checks passing before PostgreSQL
+was introduced. Repeat them with the current setup; the assistant has not run
+the updated checks.
 
 1. Keep the existing `.env` and database. Ensure the required example settings are
    present; this computer's file has been prepared without changing existing
    entries. On a new machine, copy `.env.example` to `.env`, then fill the blank
-   secrets in `.env`; keep the example free of real credentials. Keep
-   `DJANGO_DB_ENGINE=sqlite` until the transfer has been compared.
+   secrets in `.env`; keep the example free of real credentials.
+   PostgreSQL is selected automatically. An existing
+   `DJANGO_DB_ENGINE=postgresql` line may remain as a compatibility marker.
 2. Run `sh scripts/start.sh` from the repository root. It rebuilds/recreates
    changed images/services, applies existing migrations to the selected database, and collects
    Django assets. It performs the documented user Chrome trust setup with tools
@@ -754,8 +764,7 @@ PostgreSQL activation; the assistant has not run them.
    expect genuine 404s rather than React HTML.
    With `DJANGO_DEBUG=False`, API error pages should omit development tracebacks.
 Use your configured HTTPS port if different. Share any failing URL/status and
-the relevant service error. PostgreSQL activation and data transfer are next;
-the current startup continues using the existing SQLite database.
+the relevant service error. Shared-database and persistence checks follow below.
 
 ## User check: staff and Django admin addresses
 
@@ -786,63 +795,23 @@ queue loading, approval/rejection and staff permissions remain separate
 application work. No redirect from the old website `/admin` addresses is added,
 because those addresses now belong to Django.
 
-## Step five: transfer existing data and activate PostgreSQL
+## User check: PostgreSQL and sharing between computers
 
-Source preparation is complete; transfer and runtime checks are user-run and
-have not been executed by the assistant. Keep your current `.env`, Django key,
-SQLite file and certificate pair. Do not run `docker compose down -v`.
+These are user-run checks, not completed results. The automatic shared-database
+workflow remains runtime-unverified. Keep both computers' `.env`, databases,
+media volumes and certificate pairs. Do not delete a volume or discard a local
+shared file to resolve a failed check.
 
-1. Finish or stop any other program writing to `data/db.sqlite3`. The helper stops
-   this project's frontend/backend, but cannot stop external SQLite writers.
-   Keep `DJANGO_DB_ENGINE=sqlite` in `.env` and remove any exported shell override
-   for that variable. Do not create accounts or edit recipes until cutover finishes.
-2. From the repository root, run:
+1. On the main computer, note an existing recipe's title and author, then run:
 
    ```sh
-   sh scripts/migrate-postgres.sh
+   sh scripts/start.sh
    ```
 
-   This builds the backend with its PostgreSQL driver, starts PostgreSQL and checks
-   for existing application records before applying any migrations. A nonempty
-   target is refused. It then applies existing Django migrations and checks again
-   before importing. It stops the website, creates a SQLite backup including
-   committed WAL data, exports from that backup, imports the records, then exports
-   PostgreSQL and compares saved fields, application IDs and relationships.
-   Timestamps keep their full precision. Django content-type/permission registry
-   IDs may differ and are matched by their names; known unordered relationship
-   lists are compared without depending on order. No account passwords or recipe
-   values are printed by the comparison.
-
-   Private backup, exports and import/error logs are saved under a new
-   `data/postgres-transfer/transfer.*` directory ignored by Git. Those files
-   include account information and should stay private. The original SQLite
-   database is untouched. Nothing is flushed, automatically cleaned or silently
-   skipped. The comparison checks Django-exported records, not unknown legacy
-   SQLite tables or uploaded-file bytes; the original and full SQLite backup
-   preserve all SQLite tables too. Uploaded pictures are stored separately in
-   `django_media`; this helper does not transfer those file bytes.
-
-3. Continue only if the helper prints **All exported records, application IDs and
-   relationships match** and **Transfer comparison passed**. Frontend/backend
-   remain stopped and `.env` still selects SQLite. If anything fails, read the
-   indicated private logs locally and share only the relevant redacted error.
-   Do not retry by deleting data or suppressing invalid rows. PostgreSQL may
-   reject old SQLite values; that requires review, not automatic alteration.
-4. Change this one line in the existing `.env`:
-
-   ```dotenv
-   DJANGO_DB_ENGINE=postgresql
-   ```
-
-   Then recreate the backend/frontend with their updated configuration:
-
-   ```sh
-   docker compose up -d --wait --wait-timeout 120 backend frontend
-   ```
-
-   `docker compose restart` alone does not load changed environment values.
-   Keep the original SQLite and private backup after activation.
-5. Confirm the actual Django database connection:
+   This loads the current configuration, starts the services, applies existing
+   migrations and exports the selected PostgreSQL database. Confirm the website
+   opens, an existing account can log in, and the expected recipes remain.
+2. Confirm the actual Django database connection:
 
    ```sh
    docker compose exec -T backend python manage.py shell --verbosity 0 -c 'from django.db import connection; connection.ensure_connection(); print(connection.vendor)'
@@ -851,26 +820,61 @@ SQLite file and certificate pair. Do not run `docker compose down -v`.
    Expect `postgresql`. Read `docker compose ps` and
    `docker compose logs --tail=50 postgres backend frontend`; expect all three
    healthy and no startup/import errors.
-6. Open the website over HTTPS and sign in to an existing account. Check its
-   profile, existing recipes, categories/ingredients and recipe preparation data
-   against what worked before transfer. An already-incomplete application feature
-   is still a deferred application card. Then create one temporary account through
-   signup to confirm new records can be saved after importing IDs; keep its details
-   for the persistence check below.
+3. If records were created or edited after startup finished, save them before
+   sharing. With the app running, use:
 
-If transfer fails before cutover, `.env` remains SQLite; after reviewing the error,
-you can resume it with `docker compose up -d --wait --wait-timeout 120 backend frontend`.
-If activation fails before anyone writes to PostgreSQL, restore the selector to
-`sqlite` and run that same recreation command. After new PostgreSQL writes, returning
-to the old SQLite file would omit those new records: stop and reconcile/back up
-the PostgreSQL data before any rollback. A failed comparison after a successful
-import leaves PostgreSQL records present; the helper will refuse a new import over
-them rather than erase or overwrite them.
+   ```sh
+   python3 scripts/share-postgres.py export
+   ```
 
-## Complete Docker-infrastructure checks after step five
+   Startup exports once; it does not continuously update the shared file.
+4. Review and send the main computer's current pair through Git:
 
-Run these yourself after transfer/cutover passes. They cover deployment behavior;
-README, policy content and deferred application fixes remain separate.
+   ```sh
+   git status --short
+   git add data/shared-database/shared-data data/shared-database/manifest.json
+   git commit -m "data: update shared database"
+   git push origin frontend-side_Roh
+   ```
+
+   Stage only intended files. If there are no staged changes, skip the commit;
+   no empty commit is needed. Git delivery is manual and separate from startup.
+5. On the receiving computer, note any existing local recipe's title and author,
+   keep its local configuration, and inspect `git status --short` before:
+
+   ```sh
+   git switch frontend-side_Roh
+   git pull --ff-only origin frontend-side_Roh
+   sh scripts/start.sh
+   ```
+
+   Each computer needs its own valid `.env`, Docker and host Python 3. No sharing
+   key or `--import` flag is needed. If Git reports local changes or conflicts,
+   preserve those files and review the message before proceeding.
+6. Confirm both the main computer's recipe and the receiver's prior local recipe
+   appear with their ingredients, steps and categories. Use an approved recipe
+   for public-list checks; pending recipes require an existing owner/staff view.
+   Check an existing login and suitable reviews/favorites. Missing photo files
+   remain a separate sharing task, and approval rules are unchanged.
+7. Run `sh scripts/start.sh` again and confirm recipes remain without added
+   duplicates. Compare the shared pair immediately before and after another
+   repeat run with no record changes or intervening logins: an already-upgraded,
+   unchanged pair should stay unchanged. The first merge may legitimately change
+   the pair and an older manifest may be upgraded once.
+8. To check sharing the combined result back, send the receiver's shared pair
+   with the same export-if-needed, review, commit and push steps. Then pull and
+   run startup on the main computer. Confirm both recipes remain there too.
+   Work sequentially for this check. Conflicting edits/deletions and simultaneous
+   Git changes to the database file are not resolved as live synchronization.
+
+If a check fails, keep both computers' current data. Record the failing command
+or URL and relevant redacted error; do not reset files or remove databases.
+
+## Complete Docker-infrastructure checks
+
+Run these yourself after the PostgreSQL/startup checks above. They cover
+deployment behavior; README, policy content and deferred application fixes
+remain separate.
 
 1. Run `sh scripts/start.sh` again. It should reuse a still-valid, matching pair
    and stored databases, build changed source if needed, and leave all three
@@ -878,7 +882,7 @@ README, policy content and deferred application fixes remain separate.
    verified pair, with previous files retained in a protected backup.
 2. Check `docker compose ps`: only frontend HTTP/HTTPS ports are published;
    backend 8000 and PostgreSQL 5432 remain private. Confirm the connection vendor
-   is still `postgresql` using the command above.
+   is still `postgresql` using the connection command above.
 3. Repeat step three's HTTP 308/path/query redirect, browser trust, HTTPS API,
    login/profile and direct React reload checks. Repeat step four's Django admin
    login, static CSS and genuine missing API/static 404 checks. Browser console
@@ -892,8 +896,8 @@ README, policy content and deferred application fixes remain separate.
    ```
 
    Use no `-v`. Confirm all three services recover, old accounts/recipes remain,
-   and the temporary account from step five can still log in. Restarting containers
-   must not initialize a fresh database or replace your certificates.
+   and an existing account can still log in. Restarting containers must not
+   initialize a fresh database or replace your certificates.
 5. Review startup/service logs for errors. Record the command, URL, status and
    relevant redacted error if a check fails; do not share secrets or private exports.
 
@@ -939,5 +943,3 @@ Runtime completion depends on the user-run checks above.
 - [Official PostgreSQL image and persistent-data settings](https://hub.docker.com/_/postgres)
 - [PostgreSQL image initialization source](https://github.com/docker-library/postgres/blob/master/docker-entrypoint.sh)
 - [Django PostgreSQL requirements](https://docs.djangoproject.com/en/6.0/ref/databases/#postgresql-notes)
-- [Django serialization and natural keys](https://docs.djangoproject.com/en/6.0/topics/serialization/)
-- [Django JSON encoder source](https://github.com/django/django/blob/stable/6.0.x/django/core/serializers/json.py)

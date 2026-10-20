@@ -6,10 +6,10 @@ venv/
 .env.*
 !.env.example
 
-# Private SQLite backup and database-transfer fixtures.
+# Retired private database-transfer files; keep existing archives ignored.
 /data/postgres-transfer/
 
-# Local database setup state, import receipts and temporary operation files.
+# Local database setup state, import receipts, retired data and temporary files.
 /data/database-private/
 
 # Local TLS certificates and private keys are machine-specific.

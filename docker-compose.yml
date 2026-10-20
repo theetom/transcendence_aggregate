@@ -26,14 +26,13 @@ services:
       DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in the root .env file}"
       DJANGO_DEBUG: "${DJANGO_DEBUG:-False}"
       DJANGO_ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}"
-      DJANGO_DB_ENGINE: "${DJANGO_DB_ENGINE:-sqlite}"
+      DJANGO_DB_ENGINE: postgresql
       POSTGRES_DB: "${DJANGO_POSTGRES_DB:-recipes}"
       POSTGRES_USER: recipes
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}"
       POSTGRES_HOST: postgres
       POSTGRES_PORT: "5432"
     volumes:
-      - ./data:/data
       - django_static:/srv/django/static
       - django_media:/app/media
     depends_on:

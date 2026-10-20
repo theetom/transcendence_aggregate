@@ -103,31 +103,25 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-database_engine = os.environ.get('DJANGO_DB_ENGINE', 'sqlite').strip().lower()
-if database_engine == 'sqlite':
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': Path('/data/db.sqlite3'),
-        }
+database_engine = os.environ.get('DJANGO_DB_ENGINE', 'postgresql').strip().lower()
+if database_engine != 'postgresql':
+    raise ImproperlyConfigured('PostgreSQL is the only supported database; use DJANGO_DB_ENGINE=postgresql.')
+
+postgres_password = os.environ.get('POSTGRES_PASSWORD', '')
+if not postgres_password.strip():
+    raise ImproperlyConfigured('Set POSTGRES_PASSWORD in the backend environment.')
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('POSTGRES_DB', 'recipes'),
+        'USER': os.environ.get('POSTGRES_USER', 'recipes'),
+        'PASSWORD': postgres_password,
+        'HOST': os.environ.get('POSTGRES_HOST', 'postgres'),
+        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+        'OPTIONS': {'connect_timeout': 5},
     }
-elif database_engine == 'postgresql':
-    postgres_password = os.environ.get('POSTGRES_PASSWORD', '')
-    if not postgres_password.strip():
-        raise ImproperlyConfigured('Set POSTGRES_PASSWORD in the backend environment.')
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('POSTGRES_DB', 'recipes'),
-            'USER': os.environ.get('POSTGRES_USER', 'recipes'),
-            'PASSWORD': postgres_password,
-            'HOST': os.environ.get('POSTGRES_HOST', 'postgres'),
-            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
-            'OPTIONS': {'connect_timeout': 5},
-        }
-    }
-else:
-    raise ImproperlyConfigured('DJANGO_DB_ENGINE must be sqlite or postgresql.')
+}
 
 
 # Password validation
