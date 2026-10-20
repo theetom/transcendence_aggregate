@@ -79,6 +79,15 @@ def combine(local_database, imported_database):
         with transaction.atomic(using=LOCAL), transaction.atomic(using=TARGET):
             with connections[LOCAL].cursor() as cursor:
                 cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+                local_columns = {
+                    field.name for field in connections[LOCAL].introspection.get_table_description(
+                        cursor, Recipe._meta.db_table,
+                    )
+                }
+            rejection_fields = {"rejected", "rejection_reason"}
+            local_has_rejection = rejection_fields.issubset(local_columns)
+            if local_columns.intersection(rejection_fields) and not local_has_rejection:
+                raise ValueError("The local recipe rejection fields are incomplete.")
             with connections[TARGET].cursor() as cursor:
                 cursor.execute("SELECT pg_advisory_xact_lock(42424217)")
 
@@ -137,7 +146,12 @@ def combine(local_database, imported_database):
                 identity = (recipe.user.username, timestamp(recipe.date_created), recipe.title)
                 target_recipes.setdefault(identity, []).append(recipe.pk)
             local_positions = {}
-            for recipe in Recipe.objects.using(LOCAL).select_related("user").order_by("pk"):
+            local_recipes = Recipe.objects.using(LOCAL).select_related("user").order_by("pk")
+            if not local_has_rejection:
+                # Startup imports before normal migrations. Read older local
+                # recipes without requiring or changing their missing columns.
+                local_recipes = local_recipes.defer(*rejection_fields)
+            for recipe in local_recipes:
                 identity = (recipe.user.username, timestamp(recipe.date_created), recipe.title)
                 position = local_positions.get(identity, 0)
                 candidates = target_recipes.setdefault(identity, [])
@@ -146,6 +160,8 @@ def combine(local_database, imported_database):
                     created = Recipe.objects.using(TARGET).create(
                         title=recipe.title, description=recipe.description,
                         approved=recipe.approved, user_id=users[recipe.user_id],
+                        rejected=recipe.rejected if local_has_rejection else False,
+                        rejection_reason=recipe.rejection_reason if local_has_rejection else "",
                     )
                     # Preserve auto_now_add values so a recipe keeps the same
                     # identity when it travels to another computer and back.

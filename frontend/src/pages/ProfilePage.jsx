@@ -285,6 +285,7 @@ function ProfilePage({ showAllRecipes = false }) {
   const [favoriteStatus, setFavoriteStatus] = useState('Loading favorites...')
   const [pendingRecipes, setPendingRecipes] = useState(null)
   const [pendingStatus, setPendingStatus] = useState('Loading pending recipes...')
+  const [rejectedRecipes, setRejectedRecipes] = useState(null)
   const [pictureFailed, setPictureFailed] = useState(false)
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [profileMessage, setProfileMessage] = useState('')
@@ -310,7 +311,8 @@ function ProfilePage({ showAllRecipes = false }) {
         try {
           const submitted = readProfileRecipes(currentProfile.submitted_recipes)
           setRecipes(submitted.filter((recipe) => recipe.approved === true))
-          setPendingRecipes(submitted.filter((recipe) => recipe.approved === false))
+          setPendingRecipes(submitted.filter((recipe) => recipe.approved === false && recipe.rejected === false))
+          setRejectedRecipes(submitted.filter((recipe) => recipe.rejected === true))
           setRecipeStatus('')
           setPendingStatus('')
         } catch (error) {
@@ -380,7 +382,7 @@ function ProfilePage({ showAllRecipes = false }) {
       // of each approved recipe; never use the admin pending list for this view.
       try {
         const details = await Promise.all(approvedSummaries.map(async (summary) => {
-          const recipe = await getRecipeDetails(summary.title, controller.signal)
+          const recipe = await getRecipeDetails(summary.id, controller.signal)
           if (recipe.id !== summary.id || !Number.isInteger(recipe.user) || recipe.user < 1) {
             throw new Error('Recipe ownership could not be confirmed. Reload to try again.')
           }
@@ -555,6 +557,17 @@ function ProfilePage({ showAllRecipes = false }) {
                     />
                   </aside>
                 )
+              ) : null}
+              {!showAllRecipes && rejectedRecipes?.length > 0 ? (
+                <article className="detail-panel detail-panel--profile-section">
+                  <h2 className="profile-page__section-title">Rejected recipes ({rejectedRecipes.length})</h2>
+                  <ProfileRecipeList
+                    recipes={rejectedRecipes}
+                    status=""
+                    emptyMessage="No rejected recipes."
+                    compact
+                  />
+                </article>
               ) : null}
             </section>
 

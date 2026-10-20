@@ -19,7 +19,7 @@ function RecipePreviewCard({ recipe }) {
 
   return (
     <Link
-      to={getRecipePath(recipe.title)}
+      to={getRecipePath(recipe.id)}
       className="landing-plain__popular-card landing-plain__card-button recipe-preview-card"
     >
       <div className="landing-plain__image-placeholder recipe-preview-card__image" aria-hidden="true">
@@ -34,6 +34,12 @@ function RecipePreviewCard({ recipe }) {
         ) : (categories || 'No image available.')}
       </div>
       <div className="landing-plain__caption">{recipe.title}</div>
+      {recipe.rejected === true ? (
+        <div className="landing-plain__caption recipe-preview-card__feedback">
+          <strong>Rejected</strong>
+          {recipe.rejection_reason}
+        </div>
+      ) : null}
       {hasImage && categories ? (
         <div className="landing-plain__caption recipe-preview-card__meta">{categories}</div>
       ) : null}

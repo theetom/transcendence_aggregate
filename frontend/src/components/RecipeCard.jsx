@@ -4,8 +4,8 @@ import { getRecipePath } from '../data/recipeApi'
 function RecipeCard({ recipe, variant = 'default' }) {
   const cardClassName =
     variant === 'compact' ? 'recipe-card recipe-card--compact' : 'recipe-card'
-  const recipePath = typeof recipe?.title === 'string' && recipe.title.trim()
-    ? getRecipePath(recipe.title)
+  const recipePath = Number.isSafeInteger(recipe?.id) && recipe.id > 0
+    ? getRecipePath(recipe.id)
     : null
 
   return (

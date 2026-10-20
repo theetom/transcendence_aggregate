@@ -4,10 +4,27 @@ class Recipe(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     approved = models.BooleanField(default=False)
+    rejected = models.BooleanField(default=False)
+    rejection_reason = models.TextField(blank=True, default="")
     ingredients = models.ManyToManyField('Ingredient', through='RecipeIngredient')
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     date_created = models.DateTimeField(auto_now_add=True)
     categories = models.ManyToManyField('Category', related_name='recipes', blank=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(approved=False) | models.Q(rejected=False),
+                name="recipe_approval_rejection_exclusive",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    models.Q(rejected=False, rejection_reason="")
+                    | (models.Q(rejected=True) & ~models.Q(rejection_reason=""))
+                ),
+                name="recipe_rejection_reason_matches_status",
+            ),
+        ]
 
     def __str__(self):
         return self.title

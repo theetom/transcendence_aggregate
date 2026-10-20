@@ -51,7 +51,7 @@ function AppShell() {
           <Route path="/home" element={<Navigate replace to="/" />} />
           <Route path="/category" element={<Navigate replace to="/" />} />
           <Route path="/category/:slug" element={<CategoryPage />} />
-          <Route path="/recipe/:recipeName" element={<RecipePage />} />
+          <Route path="/recipe/:recipeId" element={<RecipePage />} />
           <Route path="/results/search" element={<SearchResultsPage />} />
           <Route
             path="/connect"

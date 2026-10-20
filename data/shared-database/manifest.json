@@ -1,16 +1,16 @@
 {
   "archive_format": "postgresql-custom",
-  "created_at_utc": "2026-10-20T13:14:16.942350+00:00",
-  "data_bytes": 62218,
-  "data_sha256": "309ebd26122f7349536105d3d2e3b1cafbb424e50e696276ac0e9a031fe97aa2",
+  "created_at_utc": "2026-10-20T14:05:20.557144+00:00",
+  "data_bytes": 62677,
+  "data_sha256": "4a24565dfa71eb0610a0f3c64720bb9a8152900cce1fd4827570a7167496131b",
   "excluded_table_data": [
     "public.django_session",
     "public.authtoken_token"
   ],
   "format_version": 3,
   "media_included": true,
-  "media_sha256": "7d120c518648d31b6607d7f837190471c8112e894dc1f668781588cdf8a7ee9f",
-  "migration_fingerprint": "c6834d0e43b1c94e9600b8f27674a37d3f13409e34da4549637611228fb0fe55",
+  "media_sha256": "5fee8ba3c40129285f46754d24c5670b595bd2d444308337c3cb73f6a08da652",
+  "migration_fingerprint": "6be0b27fd4928f405f3b83171cc6cbf2e7290e9fbdde274be871b2937930769a",
   "photos": {
     "files": {
       "0b36935d9b322a59c0cab8ad8fa97a3a73096ee091630c62771769abc6a9f026.jpg": {
@@ -32,6 +32,10 @@
       "89fdb7dcffefc4b0554e70b5bbb1e873bd3bdab2094d9c254685a68acfb6a717.jpg": {
         "bytes": 19562,
         "sha256": "89fdb7dcffefc4b0554e70b5bbb1e873bd3bdab2094d9c254685a68acfb6a717"
+      },
+      "fe3102ed10c95a1378202a74e505dbc94b6519cb062c4c9fdd0a6ca1cf9e5df4.webp": {
+        "bytes": 1339680,
+        "sha256": "fe3102ed10c95a1378202a74e505dbc94b6519cb062c4c9fdd0a6ca1cf9e5df4"
       }
     },
     "profiles": {
@@ -60,12 +64,16 @@
       "5": {
         "file": "7e52183148124bb31f5ae6e1096a739670a8e9ffada4642ea5f3fd7f54b79611.jpg",
         "path": "recipes/23d7cdb1ba8f40d3947d3230008b60f8.jpg"
+      },
+      "6": {
+        "file": "fe3102ed10c95a1378202a74e505dbc94b6519cb062c4c9fdd0a6ca1cf9e5df4.webp",
+        "path": "recipes/05297faa1b384efb84d04704fd99b74e.webp"
       }
     }
   },
   "postgres_major": 17,
-  "records_sha256": "1ad17e7be7441355efdba3f4da8b3a69ca81ac717d5a2deca08b64266d64accd",
-  "snapshot_id": "20261020T131415Z_aa224df33e7d",
+  "records_sha256": "1cfca6ca1af717dab5f6bb83edd9e1525ea9f06ac819576ad80353457a447089",
+  "snapshot_id": "20261020T140519Z_87fa1d9c5617",
   "source_database": "recipes",
-  "source_git_revision": "691d5d72e80da4f0fedf7324ea48c37e9d72641e"
+  "source_git_revision": "774bd1812ff14864de410ce2ca0bc965c0da622b"
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import RecipePreviewCard from '../components/RecipePreviewCard'
-import { approveRecipe } from '../data/moderationApi'
+import { approveRecipe, rejectRecipe } from '../data/moderationApi'
 import { getCurrentProfile, getRecipeDetails } from '../data/recipeApi'
 import { authTokenStorageKey, formatDate } from '../data/siteData'
 
@@ -60,8 +60,64 @@ function getRecordDate(value) {
   return date && !Number.isNaN(Date.parse(`${date}T12:00:00`)) ? formatDate(date) : null
 }
 
-function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requiresReload, onApprove, onReload }) {
+function RejectionForm({ disabled, onReject, onCancel }) {
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState('')
+
+  function handleSubmit(event) {
+    event.preventDefault()
+    if (disabled) return
+
+    const trimmedReason = reason.trim()
+    if (!trimmedReason) {
+      setError('Enter a reason for rejecting this recipe.')
+      return
+    }
+    if (trimmedReason.length > 1000) {
+      setError('Keep the reason within 1,000 characters.')
+      return
+    }
+
+    setError('')
+    onReject(trimmedReason)
+  }
+
+  return (
+    <form className="field-list" onSubmit={handleSubmit}>
+      <div className="field">
+        <label htmlFor="recipe-rejection-reason">Reason for rejection</label>
+        <p id="recipe-rejection-help">The author will see this reason. The recipe will stay saved privately.</p>
+        <textarea
+          id="recipe-rejection-reason"
+          value={reason}
+          onChange={(event) => {
+            setReason(event.target.value)
+            setError('')
+          }}
+          rows={4}
+          maxLength={1000}
+          disabled={disabled}
+          required
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? 'recipe-rejection-help recipe-rejection-error' : 'recipe-rejection-help'}
+        />
+        {error ? <p id="recipe-rejection-error" className="status-banner" role="alert">{error}</p> : null}
+      </div>
+      <div className="review-request__actions">
+        <button type="submit" className="button button--secondary" disabled={disabled}>
+          Confirm rejection
+        </button>
+        <button type="button" className="button button--ghost" onClick={onCancel} disabled={disabled}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  )
+}
+
+function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requiresReload, onApprove, onReject, onReload }) {
   const [failedAuthorPhoto, setFailedAuthorPhoto] = useState('')
+  const [showRejectionForm, setShowRejectionForm] = useState(false)
   const gallery = Array.isArray(recipe?.images)
     ? recipe.images
     : Array.isArray(recipe?.gallery) ? recipe.gallery : []
@@ -82,7 +138,8 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
   const authorRecipes = Array.isArray(author?.approved_recipes)
     ? author.approved_recipes.filter((item) => (
       item?.approved === true
-      && Number.isInteger(item.id)
+      && Number.isSafeInteger(item.id)
+      && item.id > 0
       && item.id !== recipe.id
       && typeof item.title === 'string'
       && item.title.trim()
@@ -120,12 +177,19 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
 
       {roleStatus ? <p className="status-banner" role="status">{roleStatus}</p> : null}
 
-      {isStaff ? (
+      {isStaff || recipe.rejected === true ? (
         <section className="page-section">
           <article className="detail-panel">
-            <p className="eyebrow">Recipe review</p>
-            <h2>{recipe.approved ? 'Recipe approved' : 'Pending approval'}</h2>
-            {recipe.approved === false ? (
+            <p className="eyebrow">{isStaff ? 'Recipe review' : 'Recipe status'}</p>
+            <h2>{recipe.approved ? 'Recipe approved' : recipe.rejected ? 'Recipe rejected' : 'Pending approval'}</h2>
+            {recipe.rejected === true ? (
+              <>
+                <p>This recipe is kept privately and is not shown to the public.</p>
+                <p><strong>Reason for rejection:</strong></p>
+                <p className="recipe-review__reason">{recipe.rejection_reason}</p>
+              </>
+            ) : null}
+            {isStaff && recipe.approved === false && recipe.rejected === false ? (
               <>
                 <div className="review-request__actions">
                   <button
@@ -136,7 +200,14 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
                   >
                     {isSubmitting ? 'Saving...' : 'Approve'}
                   </button>
-                  <button type="button" className="button button--secondary" disabled>
+                  <button
+                    type="button"
+                    className="button button--secondary"
+                    onClick={() => setShowRejectionForm(true)}
+                    disabled={isSubmitting || requiresReload || showRejectionForm}
+                    aria-expanded={showRejectionForm}
+                    aria-controls="recipe-rejection-form"
+                  >
                     Reject
                   </button>
                   {requiresReload ? (
@@ -150,13 +221,23 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
                     </button>
                   ) : null}
                 </div>
-                <p>Rejection is not available yet.</p>
+                {showRejectionForm ? (
+                  <div id="recipe-rejection-form">
+                    <RejectionForm
+                      disabled={isSubmitting || requiresReload}
+                      onReject={onReject}
+                      onCancel={() => setShowRejectionForm(false)}
+                    />
+                  </div>
+                ) : null}
               </>
             ) : null}
             {status ? <p className="status-banner" role="status">{status}</p> : null}
-            <Link className="button button--ghost" to="/staff">
-              Back to pending recipes
-            </Link>
+            {isStaff ? (
+              <Link className="button button--ghost" to="/staff">
+                Back to pending recipes
+              </Link>
+            ) : null}
           </article>
         </section>
       ) : null}
@@ -322,7 +403,7 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
   )
 }
 
-function RecipeDetails({ recipeName }) {
+function RecipeDetails({ recipeId }) {
   const [recipe, setRecipe] = useState(null)
   const [loadStatus, setLoadStatus] = useState('Loading recipe...')
   const [isStaff, setIsStaff] = useState(false)
@@ -339,7 +420,7 @@ function RecipeDetails({ recipeName }) {
 
     async function loadRecipe() {
       try {
-        const details = await getRecipeDetails(recipeName, controller.signal)
+        const details = await getRecipeDetails(recipeId, controller.signal)
         if (!controller.signal.aborted) setRecipe(details)
       } catch (error) {
         if (!controller.signal.aborted) setLoadStatus(error.message)
@@ -364,19 +445,22 @@ function RecipeDetails({ recipeName }) {
       isMounted.current = false
       controller.abort()
     }
-  }, [recipeName])
+  }, [recipeId])
 
-  async function handleApprove() {
-    if (actionInFlight.current || requiresReload || !isStaff || recipe?.approved !== false) return
+  async function handleDecision(decision, reason) {
+    if (actionInFlight.current || requiresReload || !isStaff
+      || recipe?.approved !== false || recipe?.rejected !== false) return
     actionInFlight.current = true
     setIsSubmitting(true)
-    setStatus('Saving approval...')
+    setStatus(decision === 'approve' ? 'Saving approval...' : 'Saving rejection...')
 
     try {
-      const approvedRecipe = await approveRecipe(recipe)
+      const savedRecipe = decision === 'approve'
+        ? await approveRecipe(recipe)
+        : await rejectRecipe(recipe, reason)
       if (isMounted.current) {
-        setRecipe(approvedRecipe)
-        setStatus('Recipe approved.')
+        setRecipe(savedRecipe)
+        setStatus(decision === 'approve' ? 'Recipe approved.' : 'Recipe rejected.')
       }
     } catch (error) {
       if (isMounted.current) {
@@ -396,14 +480,16 @@ function RecipeDetails({ recipeName }) {
     setStatus('Checking recipe status...')
 
     try {
-      const latestRecipe = await getRecipeDetails(recipeName)
+      const latestRecipe = await getRecipeDetails(recipeId)
       if (latestRecipe.id !== recipe.id) {
         throw new Error('This recipe has changed. Return to the pending list and open it again.')
       }
       if (isMounted.current) {
         setRecipe(latestRecipe)
         setRequiresReload(false)
-        setStatus(latestRecipe.approved ? 'Recipe approved.' : 'This recipe is still pending approval.')
+        setStatus(latestRecipe.approved
+          ? 'Recipe approved.'
+          : latestRecipe.rejected ? 'Recipe rejected.' : 'This recipe is still pending approval.')
       }
     } catch (error) {
       if (isMounted.current) setStatus(error.message)
@@ -443,15 +529,16 @@ function RecipeDetails({ recipeName }) {
       status={status}
       isSubmitting={isSubmitting}
       requiresReload={requiresReload}
-      onApprove={handleApprove}
+      onApprove={() => handleDecision('approve')}
+      onReject={(reason) => handleDecision('reject', reason)}
       onReload={handleReload}
     />
   )
 }
 
 function RecipePage() {
-  const { recipeName } = useParams()
-  return <RecipeDetails key={recipeName} recipeName={recipeName} />
+  const { recipeId } = useParams()
+  return <RecipeDetails key={recipeId} recipeId={recipeId} />
 }
 
 export default RecipePage

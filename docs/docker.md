@@ -319,7 +319,7 @@ Requests arriving on the HTTPS frontend address follow these rules:
   pages such as `/login`, `/privacy`, and `/profile/recipes` after direct navigation
   or a refresh. React's existing login and route rules still apply.
 - The website's staff dashboard is `/staff`, and individual recipe reviews use
-  the full recipe page at `/recipe/<URL-encoded-title>`. These use the React
+  the full recipe page at `/recipe/<recipe-id>`. These use the React
   page fallback. `/admin/` belongs to
   Django's built-in database administration panel, so the two interfaces no
   longer claim the same address.
@@ -493,7 +493,7 @@ These changes are prepared in source. Run the following checks yourself:
    layout too. If a photo is absent, inspect its summary `images` entry and open
    that `/media/` URL to distinguish missing response data from a missing file.
 3. As staff, open it from the pending queue; alternatively, its author can open
-   `/recipe/<URL-encoded-title>`. Confirm the complete picture displays at its
+   `/recipe/<recipe-id>`. Confirm the complete picture displays at its
    compact size, centered inside a full-width section, and both instructions
    appear in order. Open its `/media/`
    URL and confirm it returns an image rather than the React page. Approval
@@ -801,7 +801,7 @@ The route separation is implemented in source; browser checks remain user-run.
    administration interface. Staff accounts can load the queue; other accounts
    should see the sign-in or admin-only message.
 3. As staff, open an actual pending recipe from that list and refresh its
-   `/recipe/<URL-encoded-title>` address. Expect the full recipe and its
+   `/recipe/<recipe-id>` address. Expect the full recipe and its
    **Back to pending recipes** link to `/staff`. The connected approval flow
    also requires the backend rebuild/migration described in
    [staff-api.md](staff-api.md).
@@ -809,8 +809,9 @@ The route separation is implemented in source; browser checks remain user-run.
    Django's administration login page and working `/static/admin/` assets.
 
 Use your configured HTTPS port if different. This fixes address routing; recipe
-queue loading, approval/rejection and staff permissions remain separate
-application work. No redirect from the old website `/admin` addresses is added,
+queue loading, approval/rejection and staff permissions are implemented in
+source and still need the user-run checks in [staff-api.md](staff-api.md).
+No redirect from the old website `/admin` addresses is added,
 because those addresses now belong to Django.
 
 ## User check: PostgreSQL and sharing between computers
@@ -937,7 +938,7 @@ remain separate.
 
 Fresh-machine/school startup still requires confirmed Docker, installation/network
 and browser-trust permissions. The website staff routes now use `/staff` and
-the full `/recipe/<URL-encoded-title>` page, while Django keeps `/admin/`;
+the full `/recipe/<recipe-id>` page, while Django keeps `/admin/`;
 verify this separation after
 the frontend rebuild. These pending checks prevent claiming the whole deployment
 is fully verified merely because source preparation is complete.

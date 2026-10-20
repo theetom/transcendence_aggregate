@@ -1326,6 +1326,16 @@
   font-size: 0.8rem;
 }
 
+.recipe-preview-card__feedback,
+.recipe-review__reason {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.recipe-preview-card__feedback strong {
+  display: block;
+}
+
 .recipe-preview-grid--compact {
   gap: 8px;
 }

@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework import serializers, status
 
 from .models import Recipe, Category, Ingredient, RecipeImage
-from .serializers import RecipeSummarySerializer, RecipeDetailedSerializer, RecipeUpdateSerializer, CategorySerializer, IngredientSerializer
+from .serializers import RecipeSummarySerializer, RecipeDetailedSerializer, RecipeUpdateSerializer, RecipeRejectionSerializer, CategorySerializer, IngredientSerializer
 from reviews.serializers import ReviewSerializer
 
 logger = logging.getLogger(__name__)
@@ -146,7 +146,7 @@ def pending_approval(request):
 			{"error": "You do not have permission to approve recipes."},
 			status=status.HTTP_403_FORBIDDEN
 		)
-	recipes = Recipe.objects.filter(approved=False)
+	recipes = Recipe.objects.filter(approved=False, rejected=False)
 
 	serializer = RecipeSummarySerializer(
 		recipes,
@@ -157,25 +157,67 @@ def pending_approval(request):
 	
 
 @api_view(["POST"])
-def recipe_approve(request, recipe_name):
+def recipe_approve(request, recipe_id):
 	if not request.user.is_staff:
 		return Response(
 			{"error": "You do not have permission to approve recipes."},
 			status=status.HTTP_403_FORBIDDEN
 		)
 
-	try:
-		recipe = Recipe.objects.get(title=recipe_name)
-	except Recipe.DoesNotExist:
+	with transaction.atomic():
+		try:
+			recipe = Recipe.objects.select_for_update().get(pk=recipe_id)
+		except Recipe.DoesNotExist:
+			return Response(
+				{"error": "Recipe not found"},
+				status=status.HTTP_404_NOT_FOUND
+			)
+
+		if recipe.rejected:
+			return Response(
+				{"error": "This recipe has already been rejected. Reload to see its current status."},
+				status=status.HTTP_409_CONFLICT,
+			)
+
+		if not recipe.approved:
+			recipe.approved = True
+			recipe.save(update_fields=["approved"])
+
+		return Response(RecipeSummarySerializer(recipe).data)
+
+
+@api_view(["POST"])
+def recipe_reject(request, recipe_id):
+	if not request.user.is_staff:
 		return Response(
-			{"error": "Recipe not found"},
-			status=status.HTTP_404_NOT_FOUND
+			{"error": "You do not have permission to reject recipes."},
+			status=status.HTTP_403_FORBIDDEN,
 		)
 
-	recipe.approved = True
-	recipe.save(update_fields=["approved"])
+	serializer = RecipeRejectionSerializer(data=request.data)
+	if not serializer.is_valid():
+		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-	return Response(RecipeSummarySerializer(recipe).data)
+	with transaction.atomic():
+		try:
+			recipe = Recipe.objects.select_for_update().get(pk=recipe_id)
+		except Recipe.DoesNotExist:
+			return Response(
+				{"error": "Recipe not found"},
+				status=status.HTTP_404_NOT_FOUND,
+			)
+
+		if recipe.approved or recipe.rejected:
+			return Response(
+				{"error": "This recipe has already been reviewed. Reload to see its current status."},
+				status=status.HTTP_409_CONFLICT,
+			)
+
+		recipe.rejected = True
+		recipe.rejection_reason = serializer.validated_data["reason"]
+		recipe.save(update_fields=["rejected", "rejection_reason"])
+
+		return Response(RecipeSummarySerializer(recipe).data)
 	
 
 @api_view(["GET"])
@@ -205,10 +247,10 @@ def recipe_landing_page(request):
 	})
 
 @api_view(["GET", "POST", "PUT"])
-def recipe_detail(request, recipe_name):
+def recipe_detail(request, recipe_id):
 
 	try:
-		recipe = Recipe.objects.get(title=recipe_name)
+		recipe = Recipe.objects.get(pk=recipe_id)
 	except Recipe.DoesNotExist:
 		return Response(
 			{"error": "Recipe not found"},

@@ -83,6 +83,8 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 	user = serializers.PrimaryKeyRelatedField(read_only=True)
 	author = serializers.SerializerMethodField()
 	approved = serializers.BooleanField(read_only=True)
+	rejected = serializers.BooleanField(read_only=True)
+	rejection_reason = serializers.CharField(read_only=True)
 
 	ingredients = RecipeIngredientSerializer(
 		source="recipe_ingredients",
@@ -110,6 +112,8 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 			"id",
 			"title",
 			"approved",
+			"rejected",
+			"rejection_reason",
 			"description",
 			"date_created",
 			"user",
@@ -199,6 +203,15 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 		return recipe
 
 
+class RecipeRejectionSerializer(serializers.Serializer):
+	reason = serializers.CharField(
+		required=True,
+		allow_blank=False,
+		trim_whitespace=True,
+		max_length=1000,
+	)
+
+
 class RecipeUpdateSerializer(serializers.ModelSerializer):
 	ingredients = RecipeUpdateIngredientSerializer(many=True, required=False)
 	categories = RecipeUpdateCategorySerializer(many=True, required=False)
@@ -228,7 +241,11 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
 		ingredients = validated_data.pop("ingredients", None)
 		categories = validated_data.pop("categories", None)
 		steps = validated_data.pop("steps", None)
-		instance = super().update(instance, validated_data)
+		for field, value in validated_data.items():
+			setattr(instance, field, value)
+		if validated_data:
+			# Do not overwrite a staff decision made during this edit.
+			instance.save(update_fields=list(validated_data))
 
 		if categories is not None:
 			category_objects = [
@@ -256,11 +273,14 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
 				[RecipeStep(recipe=instance, **step) for step in steps]
 			)
 
+		instance.refresh_from_db(fields=["approved", "rejected", "rejection_reason"])
 		return instance
 
 
 class RecipeSummarySerializer(serializers.ModelSerializer):
 	approved = serializers.BooleanField(read_only=True)
+	rejected = serializers.BooleanField(read_only=True)
+	rejection_reason = serializers.CharField(read_only=True)
 	ingredients = RecipeIngredientNameSerializer(
 		source="recipe_ingredients",
 		many=True,
@@ -280,6 +300,8 @@ class RecipeSummarySerializer(serializers.ModelSerializer):
 			"id",
 			"title",
 			"approved",
+			"rejected",
+			"rejection_reason",
 			"ingredients",
 			"categories",
 			"images",

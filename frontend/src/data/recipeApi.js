@@ -51,14 +51,27 @@ export async function requestRecipeApi(path, { signal, method = 'GET', requiresA
   })
 }
 
-export function getRecipePath(title) {
-  return `/recipe/${encodeURIComponent(title)}`
+function readRecipeId(value) {
+  const id = typeof value === 'string' && /^[1-9]\d*$/.test(value) ? Number(value) : value
+  if (!Number.isSafeInteger(id) || id < 1) {
+    throw new Error('Choose a valid recipe to open.')
+  }
+  return id
+}
+
+export function getRecipePath(recipeId) {
+  return `/recipe/${readRecipeId(recipeId)}`
 }
 
 export function readRecipeSummary(data) {
-  if (!Number.isInteger(data?.id) || data.id < 1
+  if (!Number.isSafeInteger(data?.id) || data.id < 1
     || typeof data.title !== 'string' || !data.title.trim()
-    || typeof data.approved !== 'boolean') {
+    || typeof data.approved !== 'boolean'
+    || typeof data.rejected !== 'boolean'
+    || typeof data.rejection_reason !== 'string'
+    || (data.rejected
+      ? data.approved || !data.rejection_reason.trim()
+      : data.rejection_reason !== '')) {
     throw new Error(invalidDataMessage)
   }
   return data
@@ -115,13 +128,10 @@ export async function updateCurrentProfile(payload, signal) {
   return profile
 }
 
-export async function getRecipeDetails(recipeName, signal) {
-  if (typeof recipeName !== 'string' || !recipeName.trim()) {
-    throw new Error('Choose a recipe to open.')
-  }
-
-  const recipe = readRecipeSummary(await requestRecipeApi(`/api/recipes/${encodeURIComponent(recipeName)}/`, { signal }))
-  if (recipe.title !== recipeName
+export async function getRecipeDetails(recipeId, signal) {
+  const id = readRecipeId(recipeId)
+  const recipe = readRecipeSummary(await requestRecipeApi(`/api/recipes/${id}/`, { signal }))
+  if (recipe.id !== id
     || typeof recipe.description !== 'string' || typeof recipe.date_created !== 'string'
     || !Array.isArray(recipe.ingredients) || !Array.isArray(recipe.steps) || !Array.isArray(recipe.reviews)
     || recipe.ingredients.some((item) => typeof item?.name !== 'string'

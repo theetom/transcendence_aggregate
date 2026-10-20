@@ -101,7 +101,7 @@ function AdminPage() {
           <ul className="pending-list">
             {pendingRecipes.map((recipe) => (
               <li key={recipe.id} className="pending-item">
-                <Link to={getRecipePath(recipe.title)}>{recipe.title}</Link>
+                <Link to={getRecipePath(recipe.id)}>{recipe.title}</Link>
               </li>
             ))}
           </ul>

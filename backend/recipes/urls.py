@@ -7,6 +7,7 @@ urlpatterns = [
     path("recipes/all_recipes/", views.recipe_list),
     path("recipes/all_recipes/pending/", views.pending_approval),
 	path("recipes/add_recipe/", views.recipe_intake),
-    path("recipes/<str:recipe_name>/approve/", views.recipe_approve),
-    path("recipes/<str:recipe_name>/", views.recipe_detail),
+    path("recipes/<int:recipe_id>/approve/", views.recipe_approve),
+    path("recipes/<int:recipe_id>/reject/", views.recipe_reject),
+    path("recipes/<int:recipe_id>/", views.recipe_detail),
 ]

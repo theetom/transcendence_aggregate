@@ -84,8 +84,9 @@ function HomePage() {
               const recipeTitle = item.title
               const ingredients = Array.isArray(item.ingredients) ? item.ingredients.map((entry) => entry.name).join(', ') : ''
               const categories = Array.isArray(item.categories) ? item.categories.map((entry) => entry.name).join(', ') : ''
-              const recipePath = typeof recipeTitle === 'string' && recipeTitle.trim()
-                ? getRecipePath(recipeTitle)
+              const recipePath = Number.isSafeInteger(item.id) && item.id > 0
+                && typeof recipeTitle === 'string' && recipeTitle.trim()
+                ? getRecipePath(item.id)
                 : null
               const Card = recipePath ? Link : 'article'
 
@@ -129,8 +130,9 @@ function HomePage() {
             {mostReviewedRecipes.map((item) => {
               const recipeTitle = item.title
               const ingredients = Array.isArray(item.ingredients) ? item.ingredients.map((entry) => entry.name).join(', ') : ''
-              const recipePath = typeof recipeTitle === 'string' && recipeTitle.trim()
-                ? getRecipePath(recipeTitle)
+              const recipePath = Number.isSafeInteger(item.id) && item.id > 0
+                && typeof recipeTitle === 'string' && recipeTitle.trim()
+                ? getRecipePath(item.id)
                 : null
               const Card = recipePath ? Link : 'article'
 

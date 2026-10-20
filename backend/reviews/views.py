@@ -8,14 +8,24 @@ from .models import Review
 from reviews.serializers import ReviewSerializer
 
 @api_view(["GET"])
-def review_detail(request, recipe_name, review_id):
+def review_detail(request, recipe_id, review_id):
 
     try:
-        recipe = Recipe.objects.get(title=recipe_name)
+        recipe = Recipe.objects.get(pk=recipe_id)
     except Recipe.DoesNotExist:
         return Response(
             {"error": "Recipe not found"},
             status=status.HTTP_404_NOT_FOUND
+        )
+
+    if (
+        not recipe.approved
+        and not request.user.is_staff
+        and recipe.user_id != request.user.id
+    ):
+        return Response(
+            {"error": "This recipe has not been approved."},
+            status=status.HTTP_403_FORBIDDEN,
         )
 
     try:
