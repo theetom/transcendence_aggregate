@@ -6,11 +6,46 @@ fail() {
     exit 1
 }
 
+usage() {
+    printf '%s\n' \
+        'Usage: sh scripts/start.sh' \
+        'Initialize shared data once, start the project and export its current database.' \
+        'Optional: --import SNAPSHOT_ID_OR_PATH selects a specific snapshot.'
+}
+
+database_snapshot=
+case "${1:-}" in
+    '') [ "$#" -eq 0 ] || fail 'Unexpected empty argument. Use --help for usage.' ;;
+    -h|--help)
+        [ "$#" -eq 1 ] || fail 'Help does not accept additional arguments.'
+        usage
+        exit 0
+        ;;
+    --import)
+        [ "$#" -eq 2 ] && [ -n "$2" ] ||
+            fail 'Use --import with exactly one snapshot ID or directory path.'
+        database_snapshot=$2
+        case "$database_snapshot" in
+            -*) fail 'The snapshot argument must be an ID or directory path, not an option.' ;;
+            */*) ;;
+            [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]T[0-9][0-9][0-9][0-9][0-9][0-9]Z_[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f])
+                database_snapshot="data/shared-database/$database_snapshot"
+                ;;
+            *) fail 'Provide a valid snapshot ID or snapshot directory path.' ;;
+        esac
+        ;;
+    *) fail 'Unknown startup argument. Use --help for usage.' ;;
+esac
+
 project_directory=$(cd "$(dirname "$0")/.." && pwd -P)
 cd "$project_directory"
+[ -z "$database_snapshot" ] || [ -d "$database_snapshot" ] ||
+    fail 'The requested snapshot directory does not exist in this checkout.'
 [ "$(id -u)" -ne 0 ] || fail 'Run startup as your normal browser user.'
 [ "$(uname -s)" = Linux ] || fail 'This no-sudo launcher targets Linux and WSL.'
 
+command -v python3 >/dev/null 2>&1 || fail 'Python 3 is required for database snapshot sharing.'
+command -v gpg >/dev/null 2>&1 || fail 'GnuPG (gpg) is required for encrypted database snapshots.'
 command -v docker >/dev/null 2>&1 ||
     fail 'Docker and Compose must already be installed and accessible without sudo.'
 docker compose version >/dev/null 2>&1 || fail 'A current Docker Compose plugin is required.'
@@ -195,6 +230,16 @@ else
         "$tools_image" python3 /opt/local-tools/install-browser-trust.py /opt/public-rootCA.pem required chrome
 fi
 
+# Initialize shared data once; later startups preserve the selected local database.
+printf '%s\n' 'Preparing PostgreSQL and the local database selection.'
+docker compose build backend
+docker compose up -d --wait --wait-timeout 120 postgres
+if [ -n "$database_snapshot" ]; then
+    python3 scripts/share-postgres.py import "$database_snapshot" --startup
+else
+    python3 scripts/share-postgres.py prepare-startup
+fi
+
 recreate_frontend=0
 reload_marker="$tls_directory/.frontend-reload-required"
 if [ -e "$reload_marker" ]; then
@@ -210,6 +255,10 @@ fi
 if [ -e "$reload_marker" ]; then
     rm -f "$reload_marker"
 fi
+
+printf '%s\n' 'Exporting the running website database to an encrypted snapshot.'
+python3 scripts/share-postgres.py export
+printf '%s\n' 'Snapshots are saved copies; databases are not continuously synchronized.'
 
 printf '\nOpen https://%s:%s\n' "$server_name" "$https_port"
 printf '%s\n' 'Fully restart Chrome after trust setup, including incognito windows.'

@@ -27,7 +27,7 @@ services:
       DJANGO_DEBUG: "${DJANGO_DEBUG:-False}"
       DJANGO_ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}"
       DJANGO_DB_ENGINE: "${DJANGO_DB_ENGINE:-sqlite}"
-      POSTGRES_DB: recipes
+      POSTGRES_DB: "${DJANGO_POSTGRES_DB:-recipes}"
       POSTGRES_USER: recipes
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}"
       POSTGRES_HOST: postgres

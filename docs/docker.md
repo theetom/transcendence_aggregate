@@ -60,11 +60,12 @@ earlier Git history still contains the superseded key. Replacing a Django key
 can invalidate Django's built-in administration login sessions, but does not
 change account passwords or the recipe website's database-backed login tokens.
 
-The minimal environment files now contain five settings: `DJANGO_SECRET_KEY`,
-`DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_DB_ENGINE` and `POSTGRES_PASSWORD`.
-Keep real secrets in ignored `.env`; the example leaves both blank. This computer's
-existing settings were preserved, a private database password was added, and
-`DJANGO_DB_ENGINE=sqlite` remains selected until the transfer below succeeds.
+The environment example contains six settings: `DJANGO_SECRET_KEY`,
+`DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_DB_ENGINE`,
+`DJANGO_POSTGRES_DB` and `POSTGRES_PASSWORD`.
+Keep real secrets in ignored `.env`; the example leaves both blank. Preserve an
+existing PostgreSQL setup's `DJANGO_DB_ENGINE=postgresql`; the SQLite-to-PostgreSQL
+procedure below is only for a machine that has not completed that transition.
 Port, server-name and certificate-directory settings use Compose defaults;
 add an override only when needed.
 
@@ -80,6 +81,7 @@ Compose reads these values when preparing the service configuration:
 | `DJANGO_DEBUG` | `False` | Enable or disable Django debug responses |
 | `DJANGO_ALLOWED_HOSTS` | `localhost,127.0.0.1,backend` | Comma-separated allowed hostnames/IPs, without ports or protocols |
 | `DJANGO_DB_ENGINE` | `sqlite` | Use `sqlite` before transfer; `postgresql` after successful comparison |
+| `DJANGO_POSTGRES_DB` | `recipes` | PostgreSQL database selected by the backend; can select a separately restored snapshot |
 | `POSTGRES_PASSWORD` | Required; no default | Private password for PostgreSQL, supplied to its service and Django |
 
 The port/host defaults work without `.env`, but both secrets must be supplied
@@ -89,10 +91,12 @@ from the computer running Docker. Django has no published host port: its port
 8000 is used only over Docker's internal network. An old `BACKEND_PORT` value in
 an existing `.env` is no longer used.
 
-Compose passes the four `DJANGO_` variables and PostgreSQL connection settings
-explicitly into the backend container. Database/user are `recipes`, the Docker
-hostname is `postgres`, and its internal port is `5432`; these fixed connection
-settings do not need extra `.env` entries. `backend/config/settings.py` reads
+Compose passes the four Django settings and PostgreSQL connection settings
+explicitly into the backend container. The selected database defaults to
+`recipes`; `DJANGO_POSTGRES_DB` overrides the backend's `POSTGRES_DB`. The
+PostgreSQL service still initializes its original `recipes` database. The local
+database user is `recipes`, the Docker hostname is `postgres`, and its internal
+port is `5432`. `backend/config/settings.py` reads
 them from its process environment;
 Django does not open `.env` itself. The Nginx variables configure Compose and its
 template. Arbitrary extra settings in `.env` are not automatically passed through.
@@ -368,6 +372,16 @@ empty volume. Changing `.env` afterward does not change that stored password.
 Keep it stable; do not delete the volume to solve a credential mismatch.
 Database selection rejects unknown values and does not fall back to SQLite
 when a PostgreSQL connection fails.
+
+`sh scripts/start.sh` loads `data/shared-database/shared-data.gpg` on a computer's
+first use, keeps local edits on later starts, and saves the current data into that
+same shared file after startup. Its companion `manifest.json` checks that the
+file is complete and matches the project. There is one current shared data file;
+older exported copies are not retained. Previous local databases are kept.
+Python 3 and `gpg` are required, and each developer needs a private
+copy of `data/database-private/share.key` once to open the file. Git delivery is
+still required; separate computers' edits are not merged or synchronized live.
+Photo files are separate.
 
 ## Django static assets
 
@@ -703,7 +717,7 @@ The complete root README is deferred until the finished version.
 The user reported these checks passing before step five. Repeat them after
 PostgreSQL activation; the assistant has not run them.
 
-1. Keep the existing `.env` and database. Ensure the five example settings are
+1. Keep the existing `.env` and database. Ensure the required example settings are
    present; this computer's file has been prepared without changing existing
    entries. On a new machine, copy `.env.example` to `.env`, then fill the blank
    secrets in `.env`; keep the example free of real credentials. Keep
