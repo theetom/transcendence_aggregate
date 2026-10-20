@@ -9,7 +9,7 @@ venv/
 # Private SQLite backup and database-transfer fixtures.
 /data/postgres-transfer/
 
-# Unencrypted PostgreSQL snapshots, sharing key and private operation logs.
+# Local database setup state, import receipts and temporary operation files.
 /data/database-private/
 
 # Local TLS certificates and private keys are machine-specific.

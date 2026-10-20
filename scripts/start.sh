@@ -9,8 +9,8 @@ fail() {
 usage() {
     printf '%s\n' \
         'Usage: sh scripts/start.sh' \
-        'Initialize shared data once, start the project and export its current database.' \
-        'Optional: --import SNAPSHOT_ID_OR_PATH selects a specific snapshot.'
+        'Load shared updates, retain local recipes, start the project and export its data.' \
+        'Optional: --import SNAPSHOT_ID_OR_PATH explicitly loads a shared copy.'
 }
 
 database_snapshot=
@@ -45,7 +45,6 @@ cd "$project_directory"
 [ "$(uname -s)" = Linux ] || fail 'This no-sudo launcher targets Linux and WSL.'
 
 command -v python3 >/dev/null 2>&1 || fail 'Python 3 is required for database snapshot sharing.'
-command -v gpg >/dev/null 2>&1 || fail 'GnuPG (gpg) is required for encrypted database snapshots.'
 command -v docker >/dev/null 2>&1 ||
     fail 'Docker and Compose must already be installed and accessible without sudo.'
 docker compose version >/dev/null 2>&1 || fail 'A current Docker Compose plugin is required.'
@@ -230,7 +229,7 @@ else
         "$tools_image" python3 /opt/local-tools/install-browser-trust.py /opt/public-rootCA.pem required chrome
 fi
 
-# Initialize shared data once; later startups preserve the selected local database.
+# Load a downloaded update and retain local recipes before starting the website.
 printf '%s\n' 'Preparing PostgreSQL and the local database selection.'
 docker compose build backend
 docker compose up -d --wait --wait-timeout 120 postgres
@@ -256,9 +255,9 @@ if [ -e "$reload_marker" ]; then
     rm -f "$reload_marker"
 fi
 
-printf '%s\n' 'Exporting the running website database to an encrypted snapshot.'
+printf '%s\n' 'Saving the running website database to the shared data file.'
 python3 scripts/share-postgres.py export
-printf '%s\n' 'Snapshots are saved copies; databases are not continuously synchronized.'
+printf '%s\n' 'Share updates with Git commit/push; other computers load them on startup after Git pull.'
 
 printf '\nOpen https://%s:%s\n' "$server_name" "$https_port"
 printf '%s\n' 'Fully restart Chrome after trust setup, including incognito windows.'

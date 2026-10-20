@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""Export encrypted PostgreSQL snapshots or restore one into a new database.
+"""Share PostgreSQL data through Git and prepare the local website at startup.
 
 Run from the host with the existing backend and postgres services running.
-The sharing key must travel separately from Git. Imports never replace existing
-databases or transfer photos. Only import --startup selects a database for Django.
-The same private key authenticates manifest metadata before it is trusted.
+Shared files are unencrypted and require no sharing key. Startup combines local
+recipes with a downloaded copy before selecting it; previous databases remain.
+Photo files and Git push/pull are separate from database transfer.
 """
 
 import argparse
 import datetime
 import hashlib
-import hmac
 import json
 import os
 from pathlib import Path
@@ -26,7 +25,6 @@ import tempfile
 ROOT = Path(__file__).resolve().parent.parent
 PRIVATE = ROOT / "data/database-private"
 SHARED = ROOT / "data/shared-database"
-KEY = PRIVATE / "share.key"
 PG_MAJOR = 17
 EXCLUSIONS = ["public.django_session", "public.authtoken_token"]
 SNAPSHOT_NAME = re.compile(r"\d{8}T\d{6}Z_[0-9a-f]{12}")
@@ -84,29 +82,6 @@ def private_file(path):
     return os.fdopen(descriptor, "wb")
 
 
-def sharing_key(create=False):
-    safe_directory(PRIVATE, create=create)
-    if KEY.is_symlink():
-        fail("The sharing key must be a regular private file.")
-    if not KEY.exists():
-        if not create:
-            fail("Sharing key missing: copy share.key separately into data/database-private/ first.")
-        if SHARED.is_symlink():
-            fail("The shared snapshot directory must not be a symbolic link.")
-        if SHARED.exists() and any(SHARED.iterdir()):
-            fail("Snapshots already exist: recover their separate share.key instead of generating another key.")
-        with private_file(KEY) as stream:
-            stream.write((secrets.token_urlsafe(48) + "\n").encode("ascii"))
-    details = KEY.stat()
-    if not stat.S_ISREG(details.st_mode) or details.st_nlink != 1:
-        fail("The sharing key must be a regular file without hard links.")
-    if details.st_uid != os.getuid() or not 32 <= details.st_size <= 4096:
-        fail("The sharing key must belong to this user and contain a valid passphrase.")
-    KEY.chmod(0o600)
-    if not re.fullmatch(rb"[A-Za-z0-9_-]{32,4095}\n?", KEY.read_bytes()):
-        fail("The sharing key must contain one line of at least 32 URL-safe characters.")
-
-
 def fingerprint():
     files = {}
     for path in sorted((ROOT / "backend").glob("*/migrations/*.py")):
@@ -125,17 +100,6 @@ def digest(path):
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             result.update(block)
     return result.hexdigest()
-
-
-def manifest_signature(manifest):
-    content = {key: value for key, value in manifest.items() if key != "manifest_hmac_sha256"}
-    canonical = json.dumps(
-        content, sort_keys=True, separators=(",", ":"), allow_nan=False
-    ).encode("utf-8")
-    # GPG reads the first passphrase line; normalize its optional final newline
-    # so copying the same token with or without that newline keeps the same key.
-    secret = KEY.read_bytes().removesuffix(b"\n")
-    return hmac.new(secret, canonical, hashlib.sha256).hexdigest()
 
 
 def atomic_json(path, value):
@@ -281,42 +245,54 @@ class Operation:
             fail("This sharing workflow requires PostgreSQL 17 on both computers.")
         return major
 
-    def gpg(self, *arguments):
-        home = PRIVATE / "gnupg"
-        safe_directory(home, create=True)
-        self.run(
-            ["gpg", "--homedir", str(home), "--batch", "--pinentry-mode", "loopback",
-             "--no-symkey-cache", "--passphrase-file", str(KEY), *arguments]
-        )
+
+def records_fingerprint(operation):
+    script = ROOT / "scripts/merge-shared-recipes.py"
+    if script.is_symlink() or not script.is_file():
+        fail("The recipe-sharing helper is missing; no shared files were changed.")
+    output = operation.run(["docker", "compose", "exec", "-T", "backend", "python",
+                            "-c", script.read_text(encoding="utf-8"), "--fingerprint"])
+    value = output.decode("ascii").strip()
+    if not HEX_DIGEST.fullmatch(value):
+        fail("Could not compare the website's records; no shared files were changed.")
+    return value
 
 
 def export_snapshot(operation):
-    sharing_key(create=True)
     migration_hash = fingerprint()
     database = operation.backend(migration_hash)
     major = operation.postgres_version()
+    before = records_fingerprint(operation)
+    state = startup_state()
+    current_pair = [SHARED / "shared-data", SHARED / "manifest.json"]
+    if any(path.exists() or path.is_symlink() for path in current_pair):
+        current, _ = read_manifest(str(SHARED), check_migrations=False)
+        if (state and state["database"] == database
+                and state["source_snapshot_id"] == current["snapshot_id"]
+                and current["migration_fingerprint"] == migration_hash
+                and current.get("records_sha256") == before):
+            print("The shared file already contains the current records; no files changed.")
+            shutil.rmtree(operation.directory)
+            return
     revision = operation.run(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
     if not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", revision):
         fail("The source Git revision could not be identified.")
     snapshot_id = utc_stamp() + "_" + secrets.token_hex(6)
-    plaintext = operation.directory / "shared-data"
-    with private_file(plaintext) as stream:
+    data = operation.directory / "shared-data"
+    with private_file(data) as stream:
         operation.postgres(
             "pg_dump", "--no-password", "-U", "recipes", "-d", database, "--format=custom",
             "--no-acl", *["--exclude-table-data=" + table for table in EXCLUSIONS],
             output=stream,
         )
-    if plaintext.stat().st_size == 0:
+    if data.stat().st_size == 0:
         fail("PostgreSQL produced an empty snapshot; nothing was published.")
-    staged = operation.directory / "shared-data-stage"
-    staged.mkdir(mode=0o700)
-    encrypted = staged / "shared-data.gpg"
-    operation.gpg(
-        "--symmetric", "--cipher-algo", "AES256", "--output", str(encrypted), str(plaintext)
-    )
-    encrypted.chmod(0o600)
+    with data.open("rb") as stream:
+        if stream.read(5) != b"PGDMP":
+            fail("PostgreSQL did not produce the expected shared data format.")
+    after = records_fingerprint(operation)
     manifest = {
-        "format_version": 1,
+        "format_version": 2,
         "snapshot_id": snapshot_id,
         "created_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "source_git_revision": revision,
@@ -324,19 +300,18 @@ def export_snapshot(operation):
         "postgres_major": major,
         "source_database": database,
         "archive_format": "postgresql-custom",
-        "encryption": "gpg-symmetric-aes256",
-        "manifest_authentication": "hmac-sha256",
-        "encrypted_sha256": digest(encrypted),
-        "encrypted_bytes": encrypted.stat().st_size,
-        "plaintext_sha256": digest(plaintext),
+        "data_sha256": digest(data),
+        "data_bytes": data.stat().st_size,
         "excluded_table_data": EXCLUSIONS,
         "media_included": False,
     }
-    manifest["manifest_hmac_sha256"] = manifest_signature(manifest)
-    with private_file(staged / "manifest.json") as stream:
+    if before == after:
+        manifest["records_sha256"] = after
+    staged_manifest = operation.directory / "manifest.json"
+    with private_file(staged_manifest) as stream:
         stream.write((json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode())
     safe_directory(SHARED, create=True)
-    public_pair = [SHARED / "shared-data.gpg", SHARED / "manifest.json"]
+    public_pair = [SHARED / "shared-data", SHARED / "manifest.json"]
     present = [path for path in public_pair if path.exists() or path.is_symlink()]
     if present:
         if len(present) != 2 or any(path.is_symlink() or not path.is_file() for path in present):
@@ -344,19 +319,19 @@ def export_snapshot(operation):
     # Mark this source as initialized before publication, so an interrupted
     # export cannot make its next startup import its own just-saved data.
     record_initialized(database, manifest)
-    encrypted.replace(public_pair[0])
+    data.replace(public_pair[0])
     # Publish matching metadata last. An import racing this two-file update
     # refuses a checksum mismatch rather than importing incomplete data.
-    (staged / "manifest.json").replace(public_pair[1])
+    staged_manifest.replace(public_pair[1])
     # These files belong only to this completed export. Keep the current shared
-    # pair, key, initialization marker and all import receipts outside this tree.
+    # pair, initialization marker and all import receipts outside this tree.
     shutil.rmtree(operation.directory)
-    print("Shared data saved: data/shared-database/shared-data.gpg")
-    print("Git needs that file and data/shared-database/manifest.json. Copy share.key separately.")
+    print("Shared data saved: data/shared-database/shared-data")
+    print("Git needs that file and data/shared-database/manifest.json. No sharing key is needed.")
     print("Photos are separate; shared data does not include uploaded image files.")
 
 
-def read_manifest(snapshot_argument):
+def read_manifest(snapshot_argument, *, check_migrations=True):
     supplied = Path(snapshot_argument)
     if not supplied.is_absolute():
         supplied = ROOT / supplied
@@ -371,12 +346,8 @@ def read_manifest(snapshot_argument):
         fail("Import requires the shared data directory or a valid legacy backup directory.")
     safe_directory(supplied)
     manifest_path = supplied / "manifest.json"
-    candidates = [supplied / "shared-data.gpg", supplied / "database.backup.gpg", supplied / "database.dump.gpg"]
-    present = [path for path in candidates if path.exists() or path.is_symlink()]
-    if len(present) != 1:
-        fail("The snapshot must contain exactly one supported encrypted database backup.")
-    encrypted = present[0]
-    for path in (manifest_path, encrypted):
+    data = supplied / "shared-data"
+    for path in (manifest_path, data):
         if path.is_symlink() or not path.is_file():
             fail("Snapshot files must be regular files, not symbolic links.")
     if manifest_path.stat().st_size > 65536:
@@ -387,20 +358,14 @@ def read_manifest(snapshot_argument):
         fail("The snapshot manifest is not valid JSON.")
     if not isinstance(manifest, dict):
         fail("The snapshot manifest must be an object.")
-    signature = manifest.get("manifest_hmac_sha256")
-    if not isinstance(signature, str) or not HEX_DIGEST.fullmatch(signature):
-        fail("The snapshot manifest has no valid authentication signature.")
-    if not hmac.compare_digest(signature, manifest_signature(manifest)):
-        fail("Snapshot metadata authentication failed; check the separate sharing key and trusted snapshot.")
     snapshot_id = manifest.get("snapshot_id")
     if not isinstance(snapshot_id, str) or not SNAPSHOT_NAME.fullmatch(snapshot_id):
-        fail("The authenticated shared data identifier is invalid.")
+        fail("The shared data identifier is invalid.")
     if not stable and snapshot_id != relative.name:
-        fail("The authenticated legacy backup identifier does not match its directory.")
+        fail("The shared data identifier does not match its directory.")
     fixed = {
-        "format_version": 1, "postgres_major": PG_MAJOR,
-        "archive_format": "postgresql-custom", "encryption": "gpg-symmetric-aes256",
-        "manifest_authentication": "hmac-sha256",
+        "format_version": 2, "postgres_major": PG_MAJOR,
+        "archive_format": "postgresql-custom",
         "excluded_table_data": EXCLUSIONS, "media_included": False,
     }
     if any(manifest.get(key) != value for key, value in fixed.items()):
@@ -418,17 +383,26 @@ def read_manifest(snapshot_argument):
         fail("The snapshot creation timestamp is invalid.")
     if created_at.utcoffset() != datetime.timedelta(0):
         fail("The snapshot creation timestamp must use UTC.")
-    for key in ("migration_fingerprint", "encrypted_sha256", "plaintext_sha256"):
+    for key in ("migration_fingerprint", "data_sha256"):
         if not isinstance(manifest.get(key), str) or not HEX_DIGEST.fullmatch(manifest[key]):
             fail("The snapshot manifest contains an invalid fingerprint or checksum.")
-    if (type(manifest.get("encrypted_bytes")) is not int
-            or manifest["encrypted_bytes"] != encrypted.stat().st_size
-            or manifest["encrypted_bytes"] <= 0
-            or digest(encrypted) != manifest["encrypted_sha256"]):
-        fail("The encrypted snapshot size or checksum does not match its manifest.")
-    if manifest["migration_fingerprint"] != fingerprint():
+    legacy_hash = manifest.get("legacy_encrypted_sha256")
+    if legacy_hash is not None and (not isinstance(legacy_hash, str) or not HEX_DIGEST.fullmatch(legacy_hash)):
+        fail("The converted shared data identifier is invalid.")
+    record_hash = manifest.get("records_sha256")
+    if record_hash is not None and (not isinstance(record_hash, str) or not HEX_DIGEST.fullmatch(record_hash)):
+        fail("The shared record comparison is invalid.")
+    if (type(manifest.get("data_bytes")) is not int
+            or manifest["data_bytes"] != data.stat().st_size
+            or manifest["data_bytes"] <= 0
+            or digest(data) != manifest["data_sha256"]):
+        fail("The shared data size or checksum does not match its manifest.")
+    with data.open("rb") as stream:
+        if stream.read(5) != b"PGDMP":
+            fail("The shared data is not a PostgreSQL export.")
+    if check_migrations and manifest["migration_fingerprint"] != fingerprint():
         fail("This checkout has different migrations; use the snapshot's matching code first.")
-    return manifest, encrypted
+    return manifest, data
 
 
 def environment_selection(database, write=False):
@@ -516,9 +490,13 @@ def prior_import(operation, manifest):
     except (ValueError, UnicodeError):
         fail("The private import receipt is invalid; existing databases were preserved.")
     if not isinstance(receipt, dict) or any(receipt.get(key) != manifest[key] for key in (
-        "snapshot_id", "encrypted_sha256", "source_git_revision", "migration_fingerprint"
+        "snapshot_id", "source_git_revision", "migration_fingerprint"
     )) or receipt.get("status") != "restore-complete":
-        fail("The private receipt does not match this authenticated snapshot.")
+        fail("The private receipt does not match this shared data.")
+    if receipt.get("data_sha256") != manifest["data_sha256"]:
+        if (not manifest.get("legacy_encrypted_sha256")
+                or receipt.get("encrypted_sha256") != manifest["legacy_encrypted_sha256"]):
+            fail("The private receipt does not match this shared data's contents.")
     database = receipt.get("restored_database")
     if not isinstance(database, str) or not re.fullmatch(r"recipes_shared_\d{8}t\d{6}z_[0-9a-f]{12}", database):
         fail("The private receipt has an invalid restored database name.")
@@ -532,33 +510,20 @@ def prior_import(operation, manifest):
     return database
 
 
-def import_snapshot(operation, snapshot_argument, startup=False):
-    # Never generate a different key on the receiving computer.
-    sharing_key(create=False)
-    manifest, encrypted = read_manifest(snapshot_argument)
-    operation.backend(manifest["migration_fingerprint"], from_image=startup)
+def restore_snapshot(operation, snapshot_argument, *, from_image=False):
+    manifest, data = read_manifest(snapshot_argument)
+    operation.backend(manifest["migration_fingerprint"], from_image=from_image)
     operation.postgres_version()
     database = prior_import(operation, manifest)
     if database:
-        if startup:
-            environment_selection(database, write=True)
-            record_initialized(database, manifest)
-        print("Reusing the previously restored database: " + database)
-        print("Later local changes in that database were preserved; no data was imported again.")
-        if startup:
-            print("Local .env now selects that database for the remaining startup.")
-        else:
-            print("The website database selection was not changed.")
-        return
+        return manifest, database
     plaintext = operation.directory / "shared-data"
-    operation.gpg("--decrypt", "--output", str(plaintext), str(encrypted))
-    plaintext.chmod(0o600)
-    if digest(plaintext) != manifest["plaintext_sha256"]:
-        fail("The decrypted snapshot checksum does not match; no database was created.")
+    with data.open("rb") as source, private_file(plaintext) as target:
+        shutil.copyfileobj(source, target)
+    if digest(plaintext) != manifest["data_sha256"]:
+        fail("The shared data changed while being copied; no database was created.")
     # A failed createdb never leads to restore: existing databases are refused.
     database = "recipes_shared_" + utc_stamp().lower() + "_" + secrets.token_hex(6)
-    if startup:
-        environment_selection(database)
     operation.postgres(
         "createdb", "--no-password", "-U", "recipes", "--maintenance-db=postgres", "--template=template0",
         "--owner=recipes", "--", database,
@@ -576,7 +541,7 @@ def import_snapshot(operation, snapshot_argument, startup=False):
         "snapshot_id": manifest["snapshot_id"],
         "source_git_revision": manifest["source_git_revision"],
         "migration_fingerprint": manifest["migration_fingerprint"],
-        "encrypted_sha256": manifest["encrypted_sha256"],
+        "data_sha256": manifest["data_sha256"],
         "restored_database": database,
         "status": "restore-complete",
         "completed_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
@@ -590,38 +555,92 @@ def import_snapshot(operation, snapshot_argument, startup=False):
         os.fsync(stream.fileno())
     # Publish the completed receipt without replacing a concurrently created one.
     os.link(metadata_path, receipt_path(manifest))
+    return manifest, database
+
+
+def import_snapshot(operation, snapshot_argument, startup=False):
     if startup:
-        environment_selection(database, write=True)
-        record_initialized(database, manifest)
-    print("Restored into a new database: " + database)
-    if startup:
-        print("Local .env now selects the restored database for the remaining startup.")
-        print("Previous databases remain stored separately; their records were not merged.")
+        prepare_startup(operation, snapshot_argument, force=True)
         return
-    print("The website still uses its previous database. Existing records were not merged or replaced.")
-    print("To select the imported database, set this line in the local .env file:")
-    print("DJANGO_POSTGRES_DB=" + database)
-    print("Then run: sh scripts/start.sh")
+    manifest, database = restore_snapshot(operation, snapshot_argument)
+    print("Restored into a separate database: " + database)
+    print("The website database selection was not changed.")
+    print("To combine this copy with the local website, run:")
+    print("sh scripts/start.sh --import " + snapshot_argument)
     print("Uploaded photo files must be transferred separately.")
 
 
-def prepare_startup(operation):
-    if startup_state() is not None:
-        print("This computer is initialized; preserving its selected local database and edits.")
+def combine_recipes(operation, local_database, imported_database):
+    if local_database == imported_database:
         return
-    if SHARED.is_symlink():
-        fail("The shared backup directory must not be a symbolic link.")
-    if not SHARED.exists():
-        print("No shared database backup is available; continuing ordinary local startup.")
+    script = ROOT / "scripts/merge-shared-recipes.py"
+    if script.is_symlink() or not script.is_file():
+        fail("The recipe-sharing helper is missing; no database was selected.")
+    output = operation.run(["docker", "compose", "run", "--rm", "--no-deps", "-T",
+                            "-e", "DJANGO_DB_ENGINE=postgresql", "--entrypoint", "python",
+                            "backend", "-c", script.read_text(encoding="utf-8"),
+                            local_database, imported_database])
+    try:
+        counts = json.loads(output)
+    except (ValueError, UnicodeError):
+        fail("The recipe-sharing result was invalid; the previous database is still selected.")
+    if (not isinstance(counts, dict)
+            or any(type(counts.get(name)) is not int or counts[name] < 0
+                   for name in ("users_added", "recipes_added", "reviews_added"))):
+        fail("The recipe-sharing result was invalid; the previous database is still selected.")
+    print("Retained local recipes alongside downloaded data: " + str(counts["recipes_added"]))
+
+
+def has_local_recipes(operation, database):
+    exists = operation.postgres(
+        "psql", "--no-password", "-X", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1",
+        "-U", "recipes", "-d", "postgres", "-c",
+        "SELECT 1 FROM pg_database WHERE datname = '" + database + "'",
+    )
+    if exists.strip() != b"1":
+        return False
+    schema = operation.postgres(
+        "psql", "--no-password", "-X", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1",
+        "-U", "recipes", "-d", database, "-c",
+        "SELECT to_regclass('public.recipes_recipe') IS NOT NULL",
+    )
+    return schema.strip() == b"t"
+
+
+def prepare_startup(operation, snapshot_argument=None, *, force=False):
+    state = startup_state()
+    supplied = str(SHARED) if snapshot_argument is None else snapshot_argument
+    if snapshot_argument is None:
+        if SHARED.is_symlink():
+            fail("The shared data directory must not be a symbolic link.")
+        if not SHARED.exists():
+            print("No shared data is available; continuing local startup.")
+            return
+        safe_directory(SHARED)
+        if not any(SHARED.iterdir()):
+            print("No shared data is available; continuing local startup.")
+            return
+    manifest, data = read_manifest(supplied, check_migrations=False)
+    if state and state["source_snapshot_id"] == manifest["snapshot_id"] and not force:
+        print("This computer already has the current shared copy; preserving its local database.")
         return
-    safe_directory(SHARED)
-    if not any(SHARED.iterdir()):
-        print("No shared database backup is available; continuing ordinary local startup.")
-        return
-    if not (SHARED / "shared-data.gpg").is_file() or not (SHARED / "manifest.json").is_file():
-        fail("Shared data is incomplete; both shared-data.gpg and manifest.json are required.")
-    print("Preparing this computer from shared data.")
-    import_snapshot(operation, str(SHARED), startup=True)
+    if manifest["migration_fingerprint"] != fingerprint():
+        fail("The downloaded data has different migrations; use its matching project code first.")
+    local_database = operation.backend(manifest["migration_fingerprint"], from_image=True)
+    environment_selection(local_database)
+    local_ready = has_local_recipes(operation, local_database)
+    # Freeze website writes while its local recipes are copied. The launcher
+    # starts the backend again after the combined database is selected.
+    if local_ready:
+        operation.run(["docker", "compose", "stop", "backend"])
+    manifest, database = restore_snapshot(operation, supplied, from_image=True)
+    if local_ready:
+        print("Combining downloaded recipes with this computer's recipes.")
+        combine_recipes(operation, local_database, database)
+    environment_selection(database, write=True)
+    record_initialized(database, manifest)
+    print("Shared data is ready; the website will use: " + database)
+    print("Previous databases remain stored separately. Uploaded photo files are separate.")
 
 
 def remove_operation_plaintext(operation):
@@ -638,8 +657,8 @@ def remove_operation_plaintext(operation):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("export", help="Create a new encrypted, Git-shareable snapshot.")
-    commands.add_parser("prepare-startup", help="Prepare a first-use shared database or preserve initialized local data.")
+    commands.add_parser("export", help="Save the database as Git-shareable data without encryption.")
+    commands.add_parser("prepare-startup", help="Automatically load shared updates and retain local recipes.")
     importer = commands.add_parser("import", help="Restore into a new database without selecting it.")
     importer.add_argument("snapshot_directory")
     importer.add_argument("--startup", action="store_true", help="Inspect the built image and select the restored database in .env.")
@@ -647,11 +666,9 @@ def main():
     os.umask(0o077)
     operation = None
     try:
-        for executable in ("docker", "gpg", "git"):
+        for executable in ("docker", "git"):
             if shutil.which(executable) is None:
                 fail("Required host command missing: " + executable)
-        if arguments.command == "import":
-            sharing_key(create=False)
         operation = Operation(arguments.command)
         if arguments.command == "export":
             export_snapshot(operation)

@@ -197,9 +197,11 @@ This one command:
 
 1. Checks local Docker and Compose access, the account mapping, and the resolved
    private configuration. A missing/empty `DJANGO_SECRET_KEY` or
-   `POSTGRES_PASSWORD` prevents startup. Your `.env` is not overwritten or executed.
+   `POSTGRES_PASSWORD` prevents startup. Your `.env` is not executed; importing
+   shared data updates only its two database-selection settings.
 2. Builds/reuses the dedicated certificate-tools image with verified mkcert.
-   No host Python, OpenSSL, mkcert, certutil or sudo installation is required.
+   Host Python 3 is required for database sharing. No host OpenSSL, mkcert,
+   certutil, GPG or sudo installation is required.
 3. Reads the same resolved certificate paths, names and port Compose uses through
    the tools container. Runtime helpers mount only the dedicated directories
    they need; they do not mount your whole home, repository or Docker socket.
@@ -213,11 +215,16 @@ This one command:
    store. Under WSL it instead imports the public CA into Windows current-user
    trust. Close Chrome before starting and fully reopen it afterward, including
    incognito windows.
-7. Runs `docker compose up -d --build --wait --wait-timeout 120`, building both
+7. Builds the backend, starts PostgreSQL, and checks for downloaded shared data.
+   A new copy is imported automatically and local-only recipes are retained in
+   it before the website switches databases. The previous database is preserved.
+8. Runs `docker compose up -d --build --wait --wait-timeout 120`, building both
    application images, starting all three services and waiting for container
    health. When a changed certificate must be loaded by an existing Nginx,
    it recreates only the frontend before printing the website address. A pending
    reload marker keeps this requirement across an interrupted/failed startup.
+9. Saves the current database to `data/shared-database/shared-data` and its
+   `manifest.json`, ready for an explicit Git commit/push.
 
 Missing base images and app dependencies are downloaded by the image builds.
 Repeated runs reuse the tools image, verified certificates, and Docker's build cache.
@@ -373,15 +380,24 @@ Keep it stable; do not delete the volume to solve a credential mismatch.
 Database selection rejects unknown values and does not fall back to SQLite
 when a PostgreSQL connection fails.
 
-`sh scripts/start.sh` loads `data/shared-database/shared-data.gpg` on a computer's
-first use, keeps local edits on later starts, and saves the current data into that
-same shared file after startup. Its companion `manifest.json` checks that the
-file is complete and matches the project. There is one current shared data file;
-older exported copies are not retained. Previous local databases are kept.
-Python 3 and `gpg` are required, and each developer needs a private
-copy of `data/database-private/share.key` once to open the file. Git delivery is
-still required; separate computers' edits are not merged or synchronized live.
-Photo files are separate.
+`sh scripts/start.sh` automatically loads a newly downloaded
+`data/shared-database/shared-data` and retains local-only recipes, their authors,
+ingredients, steps, categories and image references. It also retains local
+reviews and favorites, then saves the combined database into the same shared
+file after startup. Matching recipes are identified by author username, title and
+original creation time; the downloaded version wins for an existing match.
+Previous local databases remain stored separately. The companion `manifest.json`
+checks completeness and project compatibility. There is one current shared data
+file; older exported copies are not retained.
+
+Python 3 is required. The shared data is unencrypted: no GPG, sharing key or
+`--import` argument is needed. Commit/push the shared pair after exporting;
+other computers pull it and run the same startup command. Git commit/push/pull
+remain manual. An unchanged shared copy preserves the selected local database.
+Once a copy includes the record comparison, unchanged records also leave the
+shared files untouched rather than producing needless Git changes on startup.
+Renames, deletions and conflicting edits are not reconciled as a live sync system.
+Uploaded photo files still need a separate transfer; approval rules are unchanged.
 
 ## Django static assets
 
