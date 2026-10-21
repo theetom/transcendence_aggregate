@@ -1,15 +1,15 @@
 {
   "archive_format": "postgresql-custom",
-  "created_at_utc": "2026-10-21T07:34:13.287194+00:00",
-  "data_bytes": 63381,
-  "data_sha256": "4d8215d04177891b0f6d90b594727e634e7d0f30ff623bcc844c9ad1d2dea09c",
+  "created_at_utc": "2026-10-21T08:01:02.680593+00:00",
+  "data_bytes": 63490,
+  "data_sha256": "f63af418a5403304e5d61b7ec15109f9dd1333d249685346642cbc17c93993e9",
   "excluded_table_data": [
     "public.django_session",
     "public.authtoken_token"
   ],
   "format_version": 3,
   "media_included": true,
-  "media_sha256": "1fc6589bd0149233e8736ea7ac1536f6e764647f35225a93098c4d62f6ee5db0",
+  "media_sha256": "74796cfba977349151c5f36203b3d96ce58376a703c5e88783473b68f077b30c",
   "migration_fingerprint": "6be0b27fd4928f405f3b83171cc6cbf2e7290e9fbdde274be871b2937930769a",
   "photos": {
     "files": {
@@ -20,6 +20,10 @@
       "0c2f721aef10b1bf41e64a97f5b6219497db2031c5edbc07c49ffda5a4ec149b.jpg": {
         "bytes": 2226984,
         "sha256": "0c2f721aef10b1bf41e64a97f5b6219497db2031c5edbc07c49ffda5a4ec149b"
+      },
+      "288d646784d42d9c9d113472b4553d441ba91ce2446da5374a9fa8143678f38f.jpg": {
+        "bytes": 234081,
+        "sha256": "288d646784d42d9c9d113472b4553d441ba91ce2446da5374a9fa8143678f38f"
       },
       "5b298f55188b76ddc286f435395caeb97bc00df9caec39cef00bfb6586c71ab4.jpg": {
         "bytes": 3643629,
@@ -68,12 +72,20 @@
       "6": {
         "file": "fe3102ed10c95a1378202a74e505dbc94b6519cb062c4c9fdd0a6ca1cf9e5df4.webp",
         "path": "shared/recipes/fe3102ed10c95a1378202a74e505dbc94b6519cb062c4c9fdd0a6ca1cf9e5df4.webp"
+      },
+      "7": {
+        "file": "288d646784d42d9c9d113472b4553d441ba91ce2446da5374a9fa8143678f38f.jpg",
+        "path": "recipes/07d1c1932df7494aa512f473c7e090dc.jpg"
+      },
+      "8": {
+        "file": "288d646784d42d9c9d113472b4553d441ba91ce2446da5374a9fa8143678f38f.jpg",
+        "path": "recipes/3caeff67d77a4e27b52aed5dded72976.jpg"
       }
     }
   },
   "postgres_major": 17,
-  "records_sha256": "62430ef1a2eb21f4043a112f5a1280156c8aa24235944e1eb50c14597eaf2360",
-  "snapshot_id": "20261021T073411Z_196182007425",
+  "records_sha256": "07814e55de1d6dc39f1bed406e4c5420d8644db4ecb0fa6fa062a9e76097836a",
+  "snapshot_id": "20261021T080100Z_7fcd24e45619",
   "source_database": "recipes_shared_20261021t073339z_a7cec6f0a80c",
-  "source_git_revision": "ce413fc36a72a4623104c1c4f8bb0d5999159ab5"
+  "source_git_revision": "25c02d194af76a5f2a3c0534bbd0980b5b706d57"
 }
