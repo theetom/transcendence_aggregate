@@ -189,55 +189,57 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
                 <p className="recipe-review__reason">{recipe.rejection_reason}</p>
               </>
             ) : null}
-            {isStaff && recipe.approved === false && recipe.rejected === false ? (
-              <>
-                <div className="review-request__actions">
-                  <button
-                    type="button"
-                    className="button button--primary"
-                    onClick={onApprove}
-                    disabled={isSubmitting || requiresReload}
-                  >
-                    {isSubmitting ? 'Saving...' : 'Approve'}
-                  </button>
-                  <button
-                    type="button"
-                    className="button button--secondary"
-                    onClick={() => setShowRejectionForm(true)}
-                    disabled={isSubmitting || requiresReload || showRejectionForm}
-                    aria-expanded={showRejectionForm}
-                    aria-controls="recipe-rejection-form"
-                  >
-                    Reject
-                  </button>
-                  {requiresReload ? (
+            <div className="recipe-review__controls">
+              {isStaff && recipe.approved === false && recipe.rejected === false ? (
+                <>
+                  <div className="review-request__actions">
                     <button
                       type="button"
-                      className="button button--ghost"
-                      onClick={onReload}
-                      disabled={isSubmitting}
-                    >
-                      Reload recipe
-                    </button>
-                  ) : null}
-                </div>
-                {showRejectionForm ? (
-                  <div id="recipe-rejection-form">
-                    <RejectionForm
+                      className="button button--primary"
+                      onClick={onApprove}
                       disabled={isSubmitting || requiresReload}
-                      onReject={onReject}
-                      onCancel={() => setShowRejectionForm(false)}
-                    />
+                    >
+                      {isSubmitting ? 'Saving...' : 'Approve'}
+                    </button>
+                    <button
+                      type="button"
+                      className="button button--secondary"
+                      onClick={() => setShowRejectionForm(true)}
+                      disabled={isSubmitting || requiresReload || showRejectionForm}
+                      aria-expanded={showRejectionForm}
+                      aria-controls="recipe-rejection-form"
+                    >
+                      Reject
+                    </button>
+                    {requiresReload ? (
+                      <button
+                        type="button"
+                        className="button button--ghost"
+                        onClick={onReload}
+                        disabled={isSubmitting}
+                      >
+                        Reload recipe
+                      </button>
+                    ) : null}
                   </div>
-                ) : null}
-              </>
-            ) : null}
-            {status ? <p className="status-banner" role="status">{status}</p> : null}
-            {isStaff ? (
-              <Link className="button button--ghost" to="/staff">
-                Back to pending recipes
-              </Link>
-            ) : null}
+                  {showRejectionForm ? (
+                    <div id="recipe-rejection-form">
+                      <RejectionForm
+                        disabled={isSubmitting || requiresReload}
+                        onReject={onReject}
+                        onCancel={() => setShowRejectionForm(false)}
+                      />
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+              {status ? <p className="status-banner" role="status">{status}</p> : null}
+              {isStaff ? (
+                <Link className="button button--ghost" to="/staff">
+                  Back to pending recipes
+                </Link>
+              ) : null}
+            </div>
           </article>
         </section>
       ) : null}

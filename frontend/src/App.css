@@ -509,6 +509,20 @@
   margin-top: 18px;
 }
 
+.recipe-review__controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.recipe-review__controls .review-request__actions {
+  gap: 16px;
+}
+
+.recipe-review__controls > .button {
+  justify-self: start;
+}
+
 .recipe-shell__author-panel {
   display: grid;
   gap: 18px;

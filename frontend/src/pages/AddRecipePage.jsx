@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authTokenStorageKey } from '../data/siteData'
 
+const maxPictures = 2
 const maxPictureSize = 5 * 1024 * 1024
 const maxPicturesTotalSize = 20 * 1024 * 1024
 const supportedPictureTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
@@ -55,6 +56,7 @@ function AddRecipePage() {
   const [categories, setCategories] = useState([''])
   const [steps, setSteps] = useState([''])
   const [pictures, setPictures] = useState([null])
+  const [pictureSelectionError, setPictureSelectionError] = useState('')
   const [status, setStatus] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false)
@@ -100,6 +102,10 @@ function AddRecipePage() {
 
   if (!pictures.some(Boolean)) {
     validationErrors['picture-1'] = 'Add at least one photo before submitting.'
+  }
+
+  if (pictures.filter(Boolean).length > maxPictures) {
+    validationErrors['picture-1'] = 'Add no more than two photos per recipe.'
   }
 
   pictures.forEach((picture, index) => {
@@ -271,12 +277,33 @@ function AddRecipePage() {
   }
 
   function addPictureField() {
-    setPictures((current) => [...current, null])
+    setPictures((current) =>
+      current.length < maxPictures ? [...current, null] : current,
+    )
   }
 
-  function updatePicture(index, file) {
+  function updatePicture(index, input) {
+    const files = input.files
+    const file = files?.length === 1 ? files[0] : null
+
+    if (files?.length > 1) {
+      input.value = ''
+      setPictureSelectionError('Choose one file per picture field, up to two photos per recipe.')
+    } else {
+      setPictureSelectionError('')
+    }
+
     setPictures((current) =>
       current.map((picture, pictureIndex) => (pictureIndex === index ? file : picture)),
+    )
+  }
+
+  function removePicture(index) {
+    const input = document.getElementById(`picture-${index + 1}`)
+    if (input) input.value = ''
+    setPictureSelectionError('')
+    setPictures((current) =>
+      current.map((picture, pictureIndex) => (pictureIndex === index ? null : picture)),
     )
   }
 
@@ -447,11 +474,12 @@ function AddRecipePage() {
           <article className="form-panel">
             <h3>Pictures</h3>
             <p id="recipe-pictures-notice">
-              Add at least one JPEG, PNG, GIF or WebP photo. Each photo can be up to 5 MiB,
-              with a total of up to 20 MiB.
+              Add one or two JPEG, PNG, GIF or WebP photos. Choose one file per picture
+              field. Each photo can be up to 5 MiB.
             </p>
+            <FieldError id="recipe-pictures-selection-error" message={pictureSelectionError} />
             <div className="form-panel__body dynamic-list">
-              {pictures.map((_, index) => (
+              {pictures.map((picture, index) => (
                 <div key={`picture-${index + 1}`} className="dynamic-card field-list">
                   <div className="field">
                     <label htmlFor={`picture-${index + 1}`}>{`Picture ${index + 1}`}</label>
@@ -459,14 +487,28 @@ function AddRecipePage() {
                       id={`picture-${index + 1}`}
                       type="file"
                       accept={supportedPictureTypes.join(',')}
-                      onChange={(event) => updatePicture(index, event.target.files?.[0] ?? null)}
-                      aria-invalid={Boolean(fieldError(`picture-${index + 1}`))}
-                      aria-describedby={fieldError(`picture-${index + 1}`)
-                        ? `recipe-pictures-notice picture-${index + 1}-error`
-                        : 'recipe-pictures-notice'}
+                      disabled={isSubmitting}
+                      onChange={(event) => updatePicture(index, event.currentTarget)}
+                      aria-invalid={Boolean(pictureSelectionError || fieldError(`picture-${index + 1}`))}
+                      aria-describedby={[
+                        'recipe-pictures-notice',
+                        pictureSelectionError && 'recipe-pictures-selection-error',
+                        fieldError(`picture-${index + 1}`) && `picture-${index + 1}-error`,
+                      ].filter(Boolean).join(' ')}
                     />
                     <FieldError id={`picture-${index + 1}-error`} message={fieldError(`picture-${index + 1}`)} />
                   </div>
+                  {picture ? (
+                    <button
+                      type="button"
+                      className="button button--ghost"
+                      disabled={isSubmitting}
+                      onClick={() => removePicture(index)}
+                      aria-label={`Remove picture ${index + 1}`}
+                    >
+                      Remove picture
+                    </button>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -475,6 +517,7 @@ function AddRecipePage() {
                 type="button"
                 className="button button--ghost"
                 onClick={addPictureField}
+                disabled={pictures.length >= maxPictures || isSubmitting}
               >
                 Add picture
               </button>

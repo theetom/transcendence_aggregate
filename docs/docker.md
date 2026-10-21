@@ -462,10 +462,12 @@ the recipe-detail API retains its separate pending-recipe access checks.
 
 The form sends multipart data to `POST /api/recipes/add_recipe/`: `title` text,
 JSON-string `ingredients`, `categories` and `steps`, and repeated `images` file
-fields. At least one valid, nonempty JPEG, PNG, GIF or WebP image is required.
-The form and backend allow at most 5 MiB per picture and 20 MiB of pictures combined; Nginx
-allows a 25 MiB total request to include the recipe text and multipart overhead.
-No fixed photo-count limit is introduced. Recipe creation now validates and
+fields. The form and backend require one or two valid, nonempty JPEG, PNG, GIF
+or WebP photos, each at most 5 MiB. The existing 20 MiB combined-photo guard
+remains; the two-photo and per-photo limits are tighter. Nginx allows a 25 MiB
+total request to include the recipe text and multipart overhead. The form stops
+at two upload fields, and selected photos can be removed or replaced.
+Recipe creation now validates and
 saves submitted cooking steps through the existing RecipeStep model; verify
 their saved contents when reopening the recipe as part of the checks below.
 
@@ -500,11 +502,13 @@ These changes are prepared in source. Run the following checks yourself:
    remains a separate staff action; ordinary users must still be denied access
    to other authors' pending recipe details.
 4. Confirm missing, empty, invalid and oversized pictures are rejected clearly.
-   Try a valid picture between 3 and 5 MiB and multiple pictures within the limits
-   to check forwarding, saving and display. Check a missing `/media/` filename
-   returns 404. API-level validation needs a direct multipart request if the form
-   rejects a file before sending; do not count frontend validation as a backend
-   test.
+   Try a valid picture between 3 and 5 MiB and a two-photo recipe to check
+   forwarding, saving and display. Confirm a third upload field cannot be added
+   and replacing, removing and reselecting photos works within the two fields.
+   Check a missing `/media/` filename returns 404. API-level validation needs a
+   direct multipart request if the form rejects a file before sending; include
+   three valid photos to confirm the API rejects the count with HTTP 400. Do not
+   count frontend validation as a backend test.
 5. Use the normal container removal/recreation procedure below without `-v`,
    then confirm the saved recipe and its image URL still work. Preserve the
    database, media volume and credentials. Share the failing URL, HTTP status and
@@ -845,13 +849,16 @@ shared file to resolve a failed check.
    `docker compose logs --tail=50 postgres backend frontend`; expect all three
    healthy and no startup/import errors.
 3. If records or pictures changed after startup finished, save them before
-   sharing. With the app running, use:
+   sharing. With the app running, use this shortcut from the project root:
 
    ```sh
-   python3 scripts/share-postgres.py export
+   sh scripts/export.sh
    ```
 
-   Startup exports once; it does not continuously update the shared folder.
+   This exports the current database and referenced recipe/profile photos to
+   `data/shared-database/` using the existing exporter. Run it before staging,
+   committing and pushing that whole folder. Startup exports once; it does not
+   continuously update the shared folder.
 4. Review and send the main computer's current database and pictures through Git:
 
    ```sh

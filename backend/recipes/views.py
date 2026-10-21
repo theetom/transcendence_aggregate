@@ -49,6 +49,11 @@ def recipe_intake(request):
 				{"images": "Add at least one photo before submitting."},
 				status=status.HTTP_400_BAD_REQUEST,
 			)
+		if len(image_files) > 2:
+			return Response(
+				{"images": "Add no more than two photos per recipe."},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
 		if sum(image_file.size for image_file in image_files) > 20 * 1024 * 1024:
 			return Response(
 				{"images": "Photos must total 20 MiB or smaller."},
