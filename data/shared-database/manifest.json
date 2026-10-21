@@ -1,15 +1,15 @@
 {
   "archive_format": "postgresql-custom",
-  "created_at_utc": "2026-10-21T07:14:13.596794+00:00",
-  "data_bytes": 62691,
-  "data_sha256": "78131a7f7363cc203a32201addd50dc5d2e41ca04be8dd0bd91fb9cd11b43358",
+  "created_at_utc": "2026-10-21T07:34:13.287194+00:00",
+  "data_bytes": 63381,
+  "data_sha256": "4d8215d04177891b0f6d90b594727e634e7d0f30ff623bcc844c9ad1d2dea09c",
   "excluded_table_data": [
     "public.django_session",
     "public.authtoken_token"
   ],
   "format_version": 3,
   "media_included": true,
-  "media_sha256": "5fee8ba3c40129285f46754d24c5670b595bd2d444308337c3cb73f6a08da652",
+  "media_sha256": "1fc6589bd0149233e8736ea7ac1536f6e764647f35225a93098c4d62f6ee5db0",
   "migration_fingerprint": "6be0b27fd4928f405f3b83171cc6cbf2e7290e9fbdde274be871b2937930769a",
   "photos": {
     "files": {
@@ -41,39 +41,39 @@
     "profiles": {
       "1": {
         "file": "0c2f721aef10b1bf41e64a97f5b6219497db2031c5edbc07c49ffda5a4ec149b.jpg",
-        "path": "profile_pictures/5691d0fc3172415788c9bfe0bc304d39.jpg"
+        "path": "shared/profiles/0c2f721aef10b1bf41e64a97f5b6219497db2031c5edbc07c49ffda5a4ec149b.jpg"
       }
     },
     "recipes": {
       "1": {
         "file": "0b36935d9b322a59c0cab8ad8fa97a3a73096ee091630c62771769abc6a9f026.jpg",
-        "path": "recipes/6126eff472c3410eac1c55f728f71ccb.jpg"
+        "path": "shared/recipes/0b36935d9b322a59c0cab8ad8fa97a3a73096ee091630c62771769abc6a9f026.jpg"
       },
       "2": {
         "file": "89fdb7dcffefc4b0554e70b5bbb1e873bd3bdab2094d9c254685a68acfb6a717.jpg",
-        "path": "recipes/9dd7266b1bfb4d888a3f9183744e67a5.jpg"
+        "path": "shared/recipes/89fdb7dcffefc4b0554e70b5bbb1e873bd3bdab2094d9c254685a68acfb6a717.jpg"
       },
       "3": {
         "file": "5b298f55188b76ddc286f435395caeb97bc00df9caec39cef00bfb6586c71ab4.jpg",
-        "path": "recipes/d7eb8958dee745ffae5df918f20fe5b9.jpg"
+        "path": "shared/recipes/5b298f55188b76ddc286f435395caeb97bc00df9caec39cef00bfb6586c71ab4.jpg"
       },
       "4": {
         "file": "0c2f721aef10b1bf41e64a97f5b6219497db2031c5edbc07c49ffda5a4ec149b.jpg",
-        "path": "recipes/10b3195bb2884dd7b863bf6e39445792.jpg"
+        "path": "shared/recipes/0c2f721aef10b1bf41e64a97f5b6219497db2031c5edbc07c49ffda5a4ec149b.jpg"
       },
       "5": {
         "file": "7e52183148124bb31f5ae6e1096a739670a8e9ffada4642ea5f3fd7f54b79611.jpg",
-        "path": "recipes/23d7cdb1ba8f40d3947d3230008b60f8.jpg"
+        "path": "shared/recipes/7e52183148124bb31f5ae6e1096a739670a8e9ffada4642ea5f3fd7f54b79611.jpg"
       },
       "6": {
         "file": "fe3102ed10c95a1378202a74e505dbc94b6519cb062c4c9fdd0a6ca1cf9e5df4.webp",
-        "path": "recipes/05297faa1b384efb84d04704fd99b74e.webp"
+        "path": "shared/recipes/fe3102ed10c95a1378202a74e505dbc94b6519cb062c4c9fdd0a6ca1cf9e5df4.webp"
       }
     }
   },
   "postgres_major": 17,
-  "records_sha256": "935778a48e032f8c76cdef90bda03218104ab46bd67eb76d23bf552fd6e0ac4d",
-  "snapshot_id": "20261021T071412Z_25fb826988c0",
-  "source_database": "recipes",
-  "source_git_revision": "05d3fc72f33f299da216e64e064319029185ad5b"
+  "records_sha256": "62430ef1a2eb21f4043a112f5a1280156c8aa24235944e1eb50c14597eaf2360",
+  "snapshot_id": "20261021T073411Z_196182007425",
+  "source_database": "recipes_shared_20261021t073339z_a7cec6f0a80c",
+  "source_git_revision": "ce413fc36a72a4623104c1c4f8bb0d5999159ab5"
 }
