@@ -253,18 +253,6 @@ class Operation:
         return major
 
 
-def records_fingerprint(operation):
-    script = ROOT / "scripts/merge-shared-recipes.py"
-    if script.is_symlink() or not script.is_file():
-        fail("The recipe-sharing helper is missing; no shared files were changed.")
-    output = operation.run(["docker", "compose", "exec", "-T", "backend", "python",
-                            "-c", script.read_text(encoding="utf-8"), "--fingerprint"])
-    value = output.decode("ascii").strip()
-    if not HEX_DIGEST.fullmatch(value):
-        fail("Could not compare the website's records; no shared files were changed.")
-    return value
-
-
 def photo_script():
     path = ROOT / "scripts/shared-photos.py"
     if path.is_symlink() or not path.is_file():
@@ -292,10 +280,13 @@ def photo_index_bytes(index):
     return photo_tools()["index_bytes"](index)
 
 
-def photo_command(*arguments, from_image=False):
+def photo_command(*arguments, from_image=False, database=None):
     if from_image:
         command = ["docker", "compose", "run", "--rm", "--no-deps", "-T",
-                   "-e", "DJANGO_DB_ENGINE=postgresql", "--entrypoint", "python", "backend"]
+                   "-e", "DJANGO_DB_ENGINE=postgresql"]
+        if database is not None:
+            command.extend(["-e", "POSTGRES_DB=" + database])
+        command.extend(["--entrypoint", "python", "backend"])
     else:
         command = ["docker", "compose", "exec", "-T", "backend", "python"]
     return [*command, "-c", photo_script().read_text(encoding="utf-8"), *arguments]
@@ -322,10 +313,10 @@ def verify_photo_files(directory, index):
             fail("A shared photo is missing or damaged; existing photos were preserved.")
 
 
-def collect_photos(operation):
+def collect_photos(operation, database):
     archive = operation.directory / "photos-export.tar"
     with private_file(archive) as stream:
-        operation.run(photo_command("export"), output=stream)
+        operation.run(photo_command("export", from_image=True, database=database), output=stream)
     directory = operation.directory / "photos"
     directory.mkdir(mode=0o700)
     try:
@@ -426,44 +417,32 @@ def export_snapshot(operation):
     migration_hash = fingerprint()
     database = operation.backend(migration_hash)
     major = operation.postgres_version()
-    before = records_fingerprint(operation)
-    photos, photo_directory = collect_photos(operation)
-    media_hash = hashlib.sha256(photo_index_bytes(photos)).hexdigest()
-    state = startup_state()
-    current_pair = [SHARED / "shared-data", SHARED / "manifest.json"]
-    if any(path.exists() or path.is_symlink() for path in current_pair):
-        current, _ = read_manifest(str(SHARED), check_migrations=False)
-        if (state and state["database"] == database
-                and state["source_snapshot_id"] == current["snapshot_id"]
-                and current["migration_fingerprint"] == migration_hash
-                and current.get("records_sha256") == before
-                and current["format_version"] == 3
-                and current.get("media_sha256") == media_hash):
-            if records_fingerprint(operation) != before:
-                fail("Records changed while collecting photos; finish editing and run export again.")
-            prune_photos(photos)
-            print("The shared folder already contains the current records and photos.")
-            shutil.rmtree(operation.directory)
-            return
     revision = operation.run(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
     if not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", revision):
         fail("The source Git revision could not be identified.")
     snapshot_id = utc_stamp() + "_" + secrets.token_hex(6)
     data = operation.directory / "shared-data"
-    with private_file(data) as stream:
-        operation.postgres(
-            "pg_dump", "--no-password", "-U", "recipes", "-d", database, "--format=custom",
-            "--no-acl", *["--exclude-table-data=" + table for table in EXCLUSIONS],
-            output=stream,
-        )
+    print("Briefly stopping website writes while saving the database and photos.")
+    try:
+        operation.run(["docker", "compose", "stop", "--timeout", "35", "backend"])
+        with private_file(data) as stream:
+            operation.postgres(
+                "pg_dump", "--no-password", "-U", "recipes", "-d", database, "--format=custom",
+                "--no-acl", *["--exclude-table-data=" + table for table in EXCLUSIONS],
+                output=stream,
+            )
+        photos, photo_directory = collect_photos(operation, database)
+    finally:
+        try:
+            operation.run(["docker", "compose", "start", "--wait", "--wait-timeout", "120", "backend"])
+        except Failure:
+            fail("The backend could not restart. Run docker compose start backend before retrying the export.")
     if data.stat().st_size == 0:
         fail("PostgreSQL produced an empty snapshot; nothing was published.")
     with data.open("rb") as stream:
         if stream.read(5) != b"PGDMP":
             fail("PostgreSQL did not produce the expected shared data format.")
-    after = records_fingerprint(operation)
-    if before != after:
-        fail("Records changed during export; nothing was published. Finish editing and run export again.")
+    media_hash = hashlib.sha256(photo_index_bytes(photos)).hexdigest()
     manifest = {
         "format_version": 3,
         "snapshot_id": snapshot_id,
@@ -473,13 +452,11 @@ def export_snapshot(operation):
         "postgres_major": major,
         "source_database": database,
         "archive_format": "postgresql-custom",
-        "data_sha256": digest(data),
         "data_bytes": data.stat().st_size,
         "excluded_table_data": EXCLUSIONS,
         "media_included": True,
         "media_sha256": media_hash,
         "photos": photos,
-        "records_sha256": after,
     }
     staged_manifest = operation.directory / "manifest.json"
     encoded_manifest = (json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode()
@@ -500,8 +477,7 @@ def export_snapshot(operation):
     # export cannot make its next startup import its own just-saved data.
     record_initialized(database, manifest)
     data.replace(public_pair[0])
-    # Publish matching metadata last. An import racing this two-file update
-    # refuses a checksum mismatch rather than importing incomplete data.
+    # Publish matching metadata last, after the complete database file is saved.
     staged_manifest.replace(public_pair[1])
     prune_photos(photos)
     # These files belong only to this completed export. Keep the current shared
@@ -573,20 +549,14 @@ def read_manifest(snapshot_argument, *, check_migrations=True):
         fail("The snapshot creation timestamp is invalid.")
     if created_at.utcoffset() != datetime.timedelta(0):
         fail("The snapshot creation timestamp must use UTC.")
-    for key in ("migration_fingerprint", "data_sha256"):
-        if not isinstance(manifest.get(key), str) or not HEX_DIGEST.fullmatch(manifest[key]):
-            fail("The snapshot manifest contains an invalid fingerprint or checksum.")
-    legacy_hash = manifest.get("legacy_encrypted_sha256")
-    if legacy_hash is not None and (not isinstance(legacy_hash, str) or not HEX_DIGEST.fullmatch(legacy_hash)):
-        fail("The converted shared data identifier is invalid.")
-    record_hash = manifest.get("records_sha256")
-    if record_hash is not None and (not isinstance(record_hash, str) or not HEX_DIGEST.fullmatch(record_hash)):
-        fail("The shared record comparison is invalid.")
+    migration_hash = manifest.get("migration_fingerprint")
+    if not isinstance(migration_hash, str) or not HEX_DIGEST.fullmatch(migration_hash):
+        fail("The snapshot manifest contains an invalid migration fingerprint.")
+    # Legacy database checksum/comparison fields are ignored.
     if (type(manifest.get("data_bytes")) is not int
             or manifest["data_bytes"] != data.stat().st_size
-            or manifest["data_bytes"] <= 0
-            or digest(data) != manifest["data_sha256"]):
-        fail("The shared data size or checksum does not match its manifest.")
+            or manifest["data_bytes"] <= 0):
+        fail("The shared data size does not match its manifest.")
     with data.open("rb") as stream:
         if stream.read(5) != b"PGDMP":
             fail("The shared data is not a PostgreSQL export.")
@@ -683,10 +653,9 @@ def prior_import(operation, manifest):
         "snapshot_id", "source_git_revision", "migration_fingerprint"
     )) or receipt.get("status") != "restore-complete":
         fail("The private receipt does not match this shared data.")
-    if receipt.get("data_sha256") != manifest["data_sha256"]:
-        if (not manifest.get("legacy_encrypted_sha256")
-                or receipt.get("encrypted_sha256") != manifest["legacy_encrypted_sha256"]):
-            fail("The private receipt does not match this shared data's contents.")
+    if "data_bytes" in receipt and (
+            type(receipt["data_bytes"]) is not int or receipt["data_bytes"] != manifest["data_bytes"]):
+        fail("The private receipt does not match this shared data's size.")
     database = receipt.get("restored_database")
     if not isinstance(database, str) or not re.fullmatch(r"recipes_shared_\d{8}t\d{6}z_[0-9a-f]{12}", database):
         fail("The private receipt has an invalid restored database name.")
@@ -711,7 +680,7 @@ def restore_snapshot(operation, snapshot_argument, *, from_image=False):
     plaintext = operation.directory / "shared-data"
     with data.open("rb") as source, private_file(plaintext) as target:
         shutil.copyfileobj(source, target)
-    if digest(plaintext) != manifest["data_sha256"]:
+    if plaintext.stat().st_size != manifest["data_bytes"]:
         fail("The shared data changed while being copied; no database was created.")
     # A failed createdb never leads to restore: existing databases are refused.
     database = "recipes_shared_" + utc_stamp().lower() + "_" + secrets.token_hex(6)
@@ -732,7 +701,7 @@ def restore_snapshot(operation, snapshot_argument, *, from_image=False):
         "snapshot_id": manifest["snapshot_id"],
         "source_git_revision": manifest["source_git_revision"],
         "migration_fingerprint": manifest["migration_fingerprint"],
-        "data_sha256": manifest["data_sha256"],
+        "data_bytes": manifest["data_bytes"],
         "restored_database": database,
         "status": "restore-complete",
         "completed_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),

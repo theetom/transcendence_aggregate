@@ -8,7 +8,6 @@ files and adjusts incoming references before this merger copies local-only rows.
 
 import copy
 import datetime
-import hashlib
 import json
 import os
 import sys
@@ -24,36 +23,6 @@ def timestamp(value):
     if value.tzinfo is not None:
         value = value.astimezone(datetime.timezone.utc)
     return value.isoformat(timespec="microseconds")
-
-
-def records_fingerprint():
-    """Compare application records without pg_dump's changing archive headers."""
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
-    import django
-
-    django.setup()
-    from django.apps import apps
-    from django.core.serializers.json import DjangoJSONEncoder
-    from django.db import connections, transaction
-
-    result = hashlib.sha256()
-    encoder = DjangoJSONEncoder(sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-    excluded = {"django_session", "authtoken_token"}
-    try:
-        with transaction.atomic(using=TARGET):
-            with connections[TARGET].cursor() as cursor:
-                cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
-            for model in sorted(apps.get_models(include_auto_created=True), key=lambda item: item._meta.label_lower):
-                if model._meta.proxy or not model._meta.managed or model._meta.db_table in excluded:
-                    continue
-                fields = sorted(field.attname for field in model._meta.concrete_fields)
-                result.update(encoder.encode([model._meta.label_lower, fields]).encode("utf-8") + b"\n")
-                rows = model._base_manager.using(TARGET).order_by(model._meta.pk.attname).values(*fields)
-                for row in rows.iterator():
-                    result.update(encoder.encode(row).encode("utf-8") + b"\n")
-        return result.hexdigest()
-    finally:
-        connections.close_all()
 
 
 def combine(local_database, imported_database):
@@ -222,9 +191,7 @@ def combine(local_database, imported_database):
 
 if __name__ == "__main__":
     try:
-        if sys.argv[1:] == ["--fingerprint"]:
-            print(records_fingerprint())
-        elif len(sys.argv) == 3:
+        if len(sys.argv) == 3:
             print(json.dumps(combine(sys.argv[1], sys.argv[2]), sort_keys=True))
         else:
             raise ValueError("Expected the local and downloaded database names.")

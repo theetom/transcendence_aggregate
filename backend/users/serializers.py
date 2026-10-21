@@ -36,7 +36,7 @@ class UsernameOrEmailAuthTokenSerializer(AuthTokenSerializer):
 class UserSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = User
-		exclude = ["password"]
+		exclude = ["password", "last_login"]
 
 class UserProfileSerializer(serializers.ModelSerializer):
 	user = UserSerializer()

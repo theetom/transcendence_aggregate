@@ -392,7 +392,7 @@ files into the local media volume and saves the combined database and photos
 after startup. Matching recipes are identified by author username, title and
 original creation time; the downloaded version wins for an existing match.
 Previous local databases remain stored separately. The companion `manifest.json`
-checks completeness, project compatibility and file checksums. The shared folder
+checks completeness, project compatibility and photo checksums. The shared folder
 contains one current `shared-data`, `manifest.json`, and actual picture files
 under `photos/<content-hash>.<extension>`; older exported copies are not retained.
 The format-3 manifest lists those files. An older format-2 copy remains readable
@@ -405,13 +405,25 @@ other computers pull it and run the same startup command. Include the entire
 `data/shared-database/` folder so added and removed photo files travel with the
 database and manifest. Git commit/push/pull remain manual. An unchanged shared
 copy preserves the selected local database, and startup restores any missing
-downloaded picture files into the media volume. Unchanged records and referenced
-photo contents leave the shared files untouched rather than producing needless
-Git changes on startup.
+downloaded picture files into the media volume. Both normal startup and
+`sh scripts/export.sh` save a fresh database/photo copy. There is no database
+checksum or record-comparison hash; each export can update the shared files even
+when recipe contents are unchanged. Login and page browsing do not invoke export.
+An export briefly stops the backend to keep the database and photo references
+consistent, collects the copy, then restarts the existing backend and waits for
+it to be ready before publishing. PostgreSQL stays running. Photo checksums and
+the migration-source compatibility check remain; old database-checksum fields
+are ignored when reading existing snapshots.
+The app also disables future last-login timestamp updates and omits that field
+from user API responses and Django admin. Django's existing nullable column and
+historical values remain for database/snapshot compatibility; no schema change
+is required.
+Existing format-2/3 imports remain supported. Use the updated sharing scripts
+on both computers.
 Renames, deletions and conflicting edits are not reconciled as a live sync system.
 Approval rules are unchanged. There is no separate manual photo-transfer step.
-Automatic startup import/export, recipe combination, picture transfer and
-unchanged-content handling remain pending user-run verification. Saved-file
+Automatic startup import/export, recipe combination and picture transfer
+remain pending user-run verification. Saved-file
 checksum checks and source review do not establish that this complete workflow
 has passed.
 
@@ -891,11 +903,13 @@ shared file to resolve a failed check.
    open a picture URL directly to confirm actual images load. Check an existing
    login and suitable reviews/favorites. Approval rules are unchanged.
 7. Run `sh scripts/start.sh` again and confirm recipes remain without added
-   duplicates and pictures still load after restart. Compare the whole shared
-   folder immediately before and after another repeat run with no record/photo
-   changes or intervening logins: an already-upgraded, unchanged copy should
-   stay unchanged. The first merge may legitimately change the folder and an
-   older manifest may be upgraded once.
+   duplicates and pictures still load after restart. Startup deliberately
+   exports a fresh copy, so shared-file changes are expected for that command.
+   Login and browsing without another startup/export should leave those files
+   alone. Confirm last-login information is absent from user API/admin screens,
+   existing login/permissions still work, and a fresh manifest omits database
+   archive/record/content hashes while retaining photo/media checksums. Existing
+   snapshots containing the removed fields should still import successfully.
 8. To check sharing the combined result back, send the receiver's shared folder
    with the same export-if-needed, review, commit and push steps. Then pull and
    run startup on the main computer. Confirm both recipes and pictures remain
