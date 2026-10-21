@@ -434,7 +434,10 @@ def export_snapshot(operation):
         photos, photo_directory = collect_photos(operation, database)
     finally:
         try:
-            operation.run(["docker", "compose", "start", "--wait", "--wait-timeout", "120", "backend"])
+            # Older Compose versions support waiting on up, but not on start.
+            # Keep the existing container and its selected database environment.
+            operation.run(["docker", "compose", "up", "-d", "--no-deps", "--no-recreate",
+                           "--wait", "--wait-timeout", "120", "backend"])
         except Failure:
             fail("The backend could not restart. Run docker compose start backend before retrying the export.")
     if data.stat().st_size == 0:

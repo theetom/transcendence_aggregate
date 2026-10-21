@@ -2,7 +2,7 @@
 set -eu
 
 if ! command -v mkcert >/dev/null 2>&1; then
-    printf '%s\n' 'mkcert is required. See docs/docker.md for installation and trust setup.' >&2
+    printf '%s\n' 'mkcert is required. Install mkcert before running this script.' >&2
     exit 1
 fi
 
