@@ -8,7 +8,7 @@ export async function getPendingRecipes(signal) {
   }
 
   const recipes = data.map(readRecipeSummary)
-  if (recipes.some((recipe) => recipe.approved !== false || recipe.rejected !== false)
+  if (recipes.some((recipe) => !recipe.deletion_requested && (recipe.approved || recipe.rejected))
     || new Set(recipes.map((recipe) => recipe.id)).size !== recipes.length) {
     throw new Error('The pending recipe list could not be read. Try again later.')
   }
@@ -17,8 +17,8 @@ export async function getPendingRecipes(signal) {
 
 async function saveRecipeDecision(recipe, action, reason = '') {
   readRecipeSummary(recipe)
-  if (recipe.approved || recipe.rejected) {
-    throw Object.assign(new Error('This recipe has already been reviewed. Reload to see its current status.'), {
+  if (recipe.approved || recipe.rejected || recipe.deletion_requested) {
+    throw Object.assign(new Error('This recipe needs a different review action. Reload to see its current status.'), {
       requiresReload: true,
     })
   }
@@ -26,6 +26,7 @@ async function saveRecipeDecision(recipe, action, reason = '') {
   const matchesDecision = (record) => record.id === recipe.id
     && record.approved === approved && record.rejected === !approved
     && record.rejection_reason === reason
+    && !record.deletion_requested
   let responseReceived = false
 
   try {
@@ -68,4 +69,36 @@ export function rejectRecipe(recipe, reason) {
     throw new Error('Enter a reason using 1 to 1,000 characters.')
   }
   return saveRecipeDecision(recipe, 'reject', trimmedReason)
+}
+
+export async function rejectRecipeDeletion(recipe) {
+  readRecipeSummary(recipe)
+  if (!recipe.deletion_requested) {
+    throw Object.assign(new Error('There is no deletion request to reject. Reload to see the current recipe.'), {
+      requiresReload: true,
+    })
+  }
+  let responseReceived = false
+
+  try {
+    const data = await requestRecipeApi(`/api/recipes/${recipe.id}/deletion/reject/`, {
+      method: 'POST', requiresAuth: true, expectedStatus: 200,
+    })
+    responseReceived = true
+    const savedRecipe = readRecipeSummary(data)
+    if (savedRecipe.id !== recipe.id || savedRecipe.deletion_requested) {
+      throw new Error('The deletion decision could not be confirmed.')
+    }
+
+    const details = await getRecipeDetails(recipe.id)
+    if (details.deletion_requested) {
+      throw new Error('The deletion request has changed. Reload to see its current status.')
+    }
+    return details
+  } catch (error) {
+    if (!responseReceived && [400, 401, 403, 404, 405].includes(error.status)) throw error
+    throw Object.assign(new Error('The deletion decision could not be confirmed. Reload the recipe before trying again.'), {
+      requiresReload: true, status: error.status,
+    })
+  }
 }

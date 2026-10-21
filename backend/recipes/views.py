@@ -145,13 +145,26 @@ def recipe_list(request):
 
 
 @api_view(["GET"])
+def managed_recipes(request):
+	if not request.user.is_staff:
+		return Response(
+			{"error": "You do not have permission to manage all recipes."},
+			status=status.HTTP_403_FORBIDDEN,
+		)
+	recipes = Recipe.objects.all().order_by("-date_created", "-id")
+	return Response(RecipeSummarySerializer(recipes, many=True).data)
+
+
+@api_view(["GET"])
 def pending_approval(request):
 	if not request.user.is_staff:
 		return Response(
 			{"error": "You do not have permission to approve recipes."},
 			status=status.HTTP_403_FORBIDDEN
 		)
-	recipes = Recipe.objects.filter(approved=False, rejected=False)
+	recipes = Recipe.objects.filter(
+		Q(approved=False, rejected=False) | Q(deletion_requested=True)
+	)
 
 	serializer = RecipeSummarySerializer(
 		recipes,
@@ -176,6 +189,12 @@ def recipe_approve(request, recipe_id):
 			return Response(
 				{"error": "Recipe not found"},
 				status=status.HTTP_404_NOT_FOUND
+			)
+
+		if recipe.deletion_requested:
+			return Response(
+				{"error": "Review this recipe's deletion request before its approval status."},
+				status=status.HTTP_409_CONFLICT,
 			)
 
 		if recipe.rejected:
@@ -212,6 +231,12 @@ def recipe_reject(request, recipe_id):
 				status=status.HTTP_404_NOT_FOUND,
 			)
 
+		if recipe.deletion_requested:
+			return Response(
+				{"error": "Review this recipe's deletion request before its approval status."},
+				status=status.HTTP_409_CONFLICT,
+			)
+
 		if recipe.approved or recipe.rejected:
 			return Response(
 				{"error": "This recipe has already been reviewed. Reload to see its current status."},
@@ -223,7 +248,33 @@ def recipe_reject(request, recipe_id):
 		recipe.save(update_fields=["rejected", "rejection_reason"])
 
 		return Response(RecipeSummarySerializer(recipe).data)
-	
+
+
+@api_view(["POST"])
+def recipe_deletion_reject(request, recipe_id):
+	if not request.user.is_staff:
+		return Response(
+			{"error": "You do not have permission to review deletion requests."},
+			status=status.HTTP_403_FORBIDDEN,
+		)
+
+	with transaction.atomic():
+		try:
+			recipe = Recipe.objects.select_for_update().get(pk=recipe_id)
+		except Recipe.DoesNotExist:
+			return Response(
+				{"error": "Recipe not found"},
+				status=status.HTTP_404_NOT_FOUND,
+			)
+		if not recipe.deletion_requested:
+			return Response(
+				{"error": "There is no deletion request to reject. Reload to see the current recipe."},
+				status=status.HTTP_409_CONFLICT,
+			)
+		recipe.deletion_requested = False
+		recipe.save(update_fields=["deletion_requested"])
+		return Response(RecipeSummarySerializer(recipe).data)
+
 
 @api_view(["GET"])
 def recipe_landing_page(request):
@@ -251,8 +302,163 @@ def recipe_landing_page(request):
 		"recently_added": RecipeSummarySerializer(recently_added, many=True).data,
 	})
 
-@api_view(["GET", "POST", "PUT"])
+def _recipe_edit_or_delete(request, recipe_id):
+	if not request.user.is_authenticated:
+		return Response(
+			{"error": "You must be logged in to manage a recipe."},
+			status=status.HTTP_401_UNAUTHORIZED,
+		)
+
+	created_files = []
+	try:
+		with transaction.atomic():
+			try:
+				recipe = Recipe.objects.select_for_update().get(pk=recipe_id)
+			except Recipe.DoesNotExist:
+				return Response(
+					{"error": "Recipe not found"},
+					status=status.HTTP_404_NOT_FOUND,
+				)
+			if not request.user.is_staff and recipe.user_id != request.user.id:
+				return Response(
+					{"error": "You do not have permission to manage this recipe."},
+					status=status.HTTP_403_FORBIDDEN,
+				)
+
+			if request.method == "DELETE":
+				if not request.user.is_staff:
+					if not recipe.deletion_requested:
+						recipe.deletion_requested = True
+						recipe.save(update_fields=["deletion_requested"])
+					return Response(
+						RecipeSummarySerializer(recipe).data,
+						status=status.HTTP_202_ACCEPTED,
+					)
+				# Retained database snapshots may still reference the stored photo files.
+				recipe.delete()
+				return Response(status=status.HTTP_204_NO_CONTENT)
+
+			if recipe.deletion_requested and not request.user.is_staff:
+				return Response(
+					{"error": "Wait for an admin to review your deletion request before editing this recipe."},
+					status=status.HTTP_409_CONFLICT,
+				)
+
+			raw_data = request.data
+			if not isinstance(raw_data, dict):
+				return Response(
+					{"non_field_errors": ["Recipe data must be an object."]},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			data = {
+				key: raw_data.get(key)
+				for key in raw_data
+				if key not in request.FILES
+			}
+			allowed_fields = {
+				"title", "description", "ingredients", "categories", "steps",
+				"retained_image_ids", "resubmit",
+			}
+			if set(data) - allowed_fields:
+				return Response(
+					{"non_field_errors": ["Only recipe contents and photos can be edited."]},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			for field in ("ingredients", "categories", "steps", "retained_image_ids"):
+				if field in data and isinstance(data[field], str):
+					try:
+						data[field] = json.loads(data[field])
+					except json.JSONDecodeError:
+						return Response(
+							{field: "This field must contain a valid JSON array."},
+							status=status.HTTP_400_BAD_REQUEST,
+						)
+
+			existing_photos = list(recipe.images.all())
+			existing_ids = {photo.pk for photo in existing_photos}
+			retained_ids = data.pop("retained_image_ids", list(existing_ids))
+			if (
+				not isinstance(retained_ids, list)
+				or any(type(image_id) is not int for image_id in retained_ids)
+				or len(retained_ids) != len(set(retained_ids))
+				or not set(retained_ids).issubset(existing_ids)
+			):
+				return Response(
+					{"retained_image_ids": "Choose each retained photo once from this recipe."},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+
+			image_files = request.FILES.getlist("images")
+			if not 1 <= len(retained_ids) + len(image_files) <= 2:
+				return Response(
+					{"images": "Keep one or two photos per recipe."},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			if sum(image_file.size for image_file in image_files) > 20 * 1024 * 1024:
+				return Response(
+					{"images": "Photos must total 20 MiB or smaller."},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			image_field = serializers.ImageField(allow_empty_file=False)
+			image_extensions = {
+				"JPEG": ".jpg", "PNG": ".png", "GIF": ".gif", "WEBP": ".webp",
+			}
+			for index, image_file in enumerate(image_files, start=1):
+				if image_file.size > 5 * 1024 * 1024:
+					return Response(
+						{"images": f"Photo {index} must be 5 MiB or smaller."},
+						status=status.HTTP_400_BAD_REQUEST,
+					)
+				try:
+					image_field.run_validation(image_file)
+				except serializers.ValidationError as error:
+					return Response(
+						{"images": {str(index): error.detail}},
+						status=status.HTTP_400_BAD_REQUEST,
+					)
+				extension = image_extensions.get(image_file.image.format)
+				if extension is None:
+					return Response(
+						{"images": f"Photo {index} must be JPEG, PNG, GIF or WebP."},
+						status=status.HTTP_400_BAD_REQUEST,
+					)
+				image_file.name = f"{uuid4().hex}{extension}"
+				image_file.seek(0)
+
+			serializer = RecipeUpdateSerializer(recipe, data=data)
+			if not serializer.is_valid():
+				return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+			resubmit = serializer.validated_data.pop("resubmit", False)
+			serializer.save()
+			recipe.images.exclude(pk__in=retained_ids).delete()
+			for image_file in image_files:
+				photo = RecipeImage(recipe=recipe)
+				photo.image.save(image_file.name, image_file, save=False)
+				created_files.append((photo.image.storage, photo.image.name))
+				photo.save()
+
+			if not request.user.is_staff or resubmit:
+				recipe.approved = False
+				recipe.rejected = False
+				recipe.rejection_reason = ""
+				recipe.save(update_fields=["approved", "rejected", "rejection_reason"])
+			# Include response serialization in the same all-or-nothing transaction.
+			response = Response(RecipeDetailedSerializer(recipe).data)
+	except Exception:
+		for storage, name in created_files:
+			try:
+				storage.delete(name)
+			except Exception:
+				logger.exception("Could not remove recipe photo %s after failed edit.", name)
+		raise
+	return response
+
+
+@api_view(["GET", "POST", "PUT", "DELETE"])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
 def recipe_detail(request, recipe_id):
+	if request.method in ("PUT", "DELETE"):
+		return _recipe_edit_or_delete(request, recipe_id)
 
 	try:
 		recipe = Recipe.objects.get(pk=recipe_id)
@@ -275,34 +481,6 @@ def recipe_detail(request, recipe_id):
 	if request.method == "GET":
 		serializer = RecipeDetailedSerializer(recipe)
 		return Response(serializer.data)
-
-	if request.method == "PUT":
-		if not request.user.is_authenticated:
-			return Response(
-				{"error": "You must be logged in to edit a recipe."},
-				status=status.HTTP_401_UNAUTHORIZED
-			)
-
-		if not request.user.is_staff and recipe.user_id != request.user.id:
-			return Response(
-				{"error": "You do not have permission to edit this recipe."},
-				status=status.HTTP_403_FORBIDDEN
-			)
-
-		serializer = RecipeUpdateSerializer(
-			recipe,
-			data=request.data,
-			partial=True
-		)
-
-		if serializer.is_valid():
-			serializer.save()
-			return Response(RecipeDetailedSerializer(recipe).data)
-
-		return Response(
-			serializer.errors,
-			status=status.HTTP_400_BAD_REQUEST
-		)
 
 	if request.method == "POST":
 		if not request.user.is_authenticated:

@@ -55,6 +55,7 @@ def combine(local_database, imported_database):
                 }
             rejection_fields = {"rejected", "rejection_reason"}
             local_has_rejection = rejection_fields.issubset(local_columns)
+            local_has_deletion_request = "deletion_requested" in local_columns
             if local_columns.intersection(rejection_fields) and not local_has_rejection:
                 raise ValueError("The local recipe rejection fields are incomplete.")
             with connections[TARGET].cursor() as cursor:
@@ -120,6 +121,8 @@ def combine(local_database, imported_database):
                 # Startup imports before normal migrations. Read older local
                 # recipes without requiring or changing their missing columns.
                 local_recipes = local_recipes.defer(*rejection_fields)
+            if not local_has_deletion_request:
+                local_recipes = local_recipes.defer("deletion_requested")
             for recipe in local_recipes:
                 identity = (recipe.user.username, timestamp(recipe.date_created), recipe.title)
                 position = local_positions.get(identity, 0)
@@ -131,6 +134,9 @@ def combine(local_database, imported_database):
                         approved=recipe.approved, user_id=users[recipe.user_id],
                         rejected=recipe.rejected if local_has_rejection else False,
                         rejection_reason=recipe.rejection_reason if local_has_rejection else "",
+                        deletion_requested=(
+                            recipe.deletion_requested if local_has_deletion_request else False
+                        ),
                     )
                     # Preserve auto_now_add values so a recipe keeps the same
                     # identity when it travels to another computer and back.

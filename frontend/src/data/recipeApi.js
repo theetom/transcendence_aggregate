@@ -2,7 +2,7 @@ import { authTokenStorageKey } from './siteData'
 
 const invalidDataMessage = 'Recipe data could not be read. Reload and try again.'
 
-export async function requestRecipeApi(path, { signal, method = 'GET', requiresAuth = false, body } = {}) {
+export async function requestRecipeApi(path, { signal, method = 'GET', requiresAuth = false, body, expectedStatus } = {}) {
   const token = window.sessionStorage.getItem(authTokenStorageKey)
   if (requiresAuth && !token) {
     throw Object.assign(new Error('Sign in to continue.'), { status: 401 })
@@ -46,6 +46,11 @@ export async function requestRecipeApi(path, { signal, method = 'GET', requiresA
     })
   }
 
+  if (expectedStatus !== undefined && response.status !== expectedStatus) {
+    throw new Error('The saved change could not be confirmed. Reload before trying again.')
+  }
+  if (response.status === 204) return null
+
   return response.json().catch(() => {
     throw Object.assign(new Error(invalidDataMessage), { status: response.status })
   })
@@ -63,12 +68,17 @@ export function getRecipePath(recipeId) {
   return `/recipe/${readRecipeId(recipeId)}`
 }
 
+export function getRecipeEditPath(recipeId) {
+  return `${getRecipePath(recipeId)}/edit`
+}
+
 export function readRecipeSummary(data) {
   if (!Number.isSafeInteger(data?.id) || data.id < 1
     || typeof data.title !== 'string' || !data.title.trim()
     || typeof data.approved !== 'boolean'
     || typeof data.rejected !== 'boolean'
     || typeof data.rejection_reason !== 'string'
+    || typeof data.deletion_requested !== 'boolean'
     || (data.rejected
       ? data.approved || !data.rejection_reason.trim()
       : data.rejection_reason !== '')) {
@@ -88,9 +98,20 @@ export async function getApprovedRecipes(signal) {
   return recipes
 }
 
+export async function getManagedRecipes(signal) {
+  const data = await requestRecipeApi('/api/recipes/manage/', { signal, requiresAuth: true })
+  if (!Array.isArray(data)) throw new Error(invalidDataMessage)
+  const recipes = data.map(readRecipeSummary)
+  if (new Set(recipes.map((recipe) => recipe.id)).size !== recipes.length) {
+    throw new Error(invalidDataMessage)
+  }
+  return recipes
+}
+
 export async function getCurrentProfile(signal) {
   const profile = await requestRecipeApi('/api/me/', { signal, requiresAuth: true })
-  if (typeof profile?.user?.username !== 'string' || typeof profile.user.is_staff !== 'boolean') {
+  if (!Number.isSafeInteger(profile?.user?.id) || profile.user.id < 1
+    || typeof profile.user.username !== 'string' || typeof profile.user.is_staff !== 'boolean') {
     throw new Error('Your account details could not be read. Sign in again to continue.')
   }
   return profile
@@ -128,12 +149,16 @@ export async function updateCurrentProfile(payload, signal) {
   return profile
 }
 
-export async function getRecipeDetails(recipeId, signal) {
-  const id = readRecipeId(recipeId)
-  const recipe = readRecipeSummary(await requestRecipeApi(`/api/recipes/${id}/`, { signal }))
+function readRecipeDetails(data, id) {
+  const recipe = readRecipeSummary(data)
   if (recipe.id !== id
+    || !Number.isSafeInteger(recipe.user) || recipe.user < 1
     || typeof recipe.description !== 'string' || typeof recipe.date_created !== 'string'
     || !Array.isArray(recipe.ingredients) || !Array.isArray(recipe.steps) || !Array.isArray(recipe.reviews)
+    || !Array.isArray(recipe.categories) || !Array.isArray(recipe.images)
+    || recipe.categories.some((item) => typeof item?.name !== 'string')
+    || recipe.images.some((item) => !Number.isSafeInteger(item?.id) || item.id < 1
+      || typeof item.image !== 'string')
     || recipe.ingredients.some((item) => typeof item?.name !== 'string'
       || typeof item.quantity !== 'string' || typeof item.unit !== 'string')
     || recipe.steps.some((item) => !Number.isInteger(item?.step_number)
@@ -143,4 +168,69 @@ export async function getRecipeDetails(recipeId, signal) {
     throw new Error(invalidDataMessage)
   }
   return recipe
+}
+
+export async function getRecipeDetails(recipeId, signal) {
+  const id = readRecipeId(recipeId)
+  return readRecipeDetails(await requestRecipeApi(`/api/recipes/${id}/`, { signal }), id)
+}
+
+export async function updateRecipe(recipeId, payload, signal) {
+  const id = readRecipeId(recipeId)
+  try {
+    const data = await requestRecipeApi(`/api/recipes/${id}/`, {
+      method: 'PUT', requiresAuth: true, body: payload, signal,
+    })
+    return readRecipeDetails(data, id)
+  } catch (error) {
+    if ([400, 401, 403, 404, 405, 413].includes(error.status)) {
+      if (error.status === 400) error.message = 'Check the recipe fields and try again.'
+      if (error.status === 413) error.message = 'The upload is too large. Choose smaller photos.'
+      throw error
+    }
+    throw Object.assign(new Error('The save could not be confirmed. Reload the recipe before editing again.'), {
+      requiresReload: true, status: error.status,
+    })
+  }
+}
+
+export async function deleteRecipe(recipeId, signal) {
+  const id = readRecipeId(recipeId)
+  try {
+    await requestRecipeApi(`/api/recipes/${id}/`, {
+      method: 'DELETE', requiresAuth: true, signal, expectedStatus: 204,
+    })
+  } catch (error) {
+    if ([400, 401, 403, 405].includes(error.status)) throw error
+    throw Object.assign(new Error('Deletion could not be confirmed. Reload the recipe before trying again.'), {
+      requiresReload: true, status: error.status,
+    })
+  }
+}
+
+export async function requestRecipeDeletion(recipeId, signal) {
+  const id = readRecipeId(recipeId)
+  let responseReceived = false
+
+  try {
+    const data = await requestRecipeApi(`/api/recipes/${id}/`, {
+      method: 'DELETE', requiresAuth: true, signal, expectedStatus: 202,
+    })
+    responseReceived = true
+    const savedRecipe = readRecipeSummary(data)
+    if (savedRecipe.id !== id || !savedRecipe.deletion_requested) {
+      throw new Error('The deletion request could not be confirmed.')
+    }
+
+    const details = await getRecipeDetails(id, signal)
+    if (!details.deletion_requested) {
+      throw new Error('The deletion request has changed. Reload to see its current status.')
+    }
+    return details
+  } catch (error) {
+    if (!responseReceived && [400, 401, 403, 405].includes(error.status)) throw error
+    throw Object.assign(new Error('The deletion request could not be confirmed. Reload the recipe before trying again.'), {
+      requiresReload: true, status: error.status,
+    })
+  }
 }

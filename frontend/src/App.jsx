@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import './App.css'
 import SiteHeader from './components/SiteHeader'
 import SiteFooter from './components/SiteFooter'
@@ -34,10 +34,15 @@ function PublicOnlyRoute({ children }) {
   return children
 }
 
+function EditRecipeRoute() {
+  const { recipeId } = useParams()
+  return <AddRecipePage key={recipeId} editMode />
+}
+
 function AppShell() {
   const location = useLocation()
   const isHomePage = location.pathname === '/'
-  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+|\/results\/search|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile(?:\/recipes)?|\/staff|\/privacy|\/terms)$/
+  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+(?:\/edit)?|\/results\/search|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile(?:\/recipes)?|\/staff|\/privacy|\/terms)$/
   const hideShell = !knownPathPattern.test(location.pathname)
   const mainClassName = isHomePage ? 'page-main page-main--home' : 'page-main'
 
@@ -52,6 +57,14 @@ function AppShell() {
           <Route path="/category" element={<Navigate replace to="/" />} />
           <Route path="/category/:slug" element={<CategoryPage />} />
           <Route path="/recipe/:recipeId" element={<RecipePage />} />
+          <Route
+            path="/recipe/:recipeId/edit"
+            element={
+              <ProtectedRoute>
+                <EditRecipeRoute />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/results/search" element={<SearchResultsPage />} />
           <Route
             path="/connect"

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import RecipePreviewCard from '../components/RecipePreviewCard'
-import { approveRecipe, rejectRecipe } from '../data/moderationApi'
-import { getCurrentProfile, getRecipeDetails } from '../data/recipeApi'
+import { approveRecipe, rejectRecipe, rejectRecipeDeletion } from '../data/moderationApi'
+import { deleteRecipe, getCurrentProfile, getRecipeDetails, getRecipeEditPath, requestRecipeDeletion } from '../data/recipeApi'
 import { authTokenStorageKey, formatDate } from '../data/siteData'
+import useTransientMessage from '../hooks/useTransientMessage'
 
 function getImageSource(imageRecord) {
   const candidates = [imageRecord?.image, imageRecord?.src, imageRecord?.url, imageRecord?.imageUrl]
@@ -115,7 +116,7 @@ function RejectionForm({ disabled, onReject, onCancel }) {
   )
 }
 
-function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requiresReload, onApprove, onReject, onReload }) {
+function RecipeContent({ recipe, isStaff, canManage, roleStatus, status, isSubmitting, requiresReload, onApprove, onReject, onRejectDeletion, onReload, onDelete }) {
   const [failedAuthorPhoto, setFailedAuthorPhoto] = useState('')
   const [showRejectionForm, setShowRejectionForm] = useState(false)
   const gallery = Array.isArray(recipe?.images)
@@ -150,6 +151,7 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
   const ratingValue = getRatingValue(recipe)
   const reviewCountLabel = getReviewCountLabel(recipe)
   const submittedOn = getRecordDate(recipe.date_created)
+  const isPendingReview = isStaff && !recipe.deletion_requested && !recipe.approved && !recipe.rejected
 
   return (
     <div className="content-frame">
@@ -177,11 +179,21 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
 
       {roleStatus ? <p className="status-banner" role="status">{roleStatus}</p> : null}
 
-      {isStaff || recipe.rejected === true ? (
+      {isStaff || canManage || recipe.rejected === true ? (
         <section className="page-section">
           <article className="detail-panel">
             <p className="eyebrow">{isStaff ? 'Recipe review' : 'Recipe status'}</p>
-            <h2>{recipe.approved ? 'Recipe approved' : recipe.rejected ? 'Recipe rejected' : 'Pending approval'}</h2>
+            <h2>{recipe.deletion_requested
+              ? 'Deletion pending approval'
+              : recipe.approved ? 'Recipe approved' : recipe.rejected ? 'Recipe rejected' : 'Pending approval'}</h2>
+            {recipe.deletion_requested ? (
+              <>
+                <p>{isStaff
+                  ? 'The author requested deletion. Approve to permanently remove this recipe and its reviews, or reject to keep it.'
+                  : 'Your deletion request is waiting for admin approval. Editing is unavailable until it is reviewed.'}</p>
+                {recipe.approved ? <p>This recipe remains public while the deletion request is pending.</p> : null}
+              </>
+            ) : null}
             {recipe.rejected === true ? (
               <>
                 <p>This recipe is kept privately and is not shown to the public.</p>
@@ -190,7 +202,57 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
               </>
             ) : null}
             <div className="recipe-review__controls">
-              {isStaff && recipe.approved === false && recipe.rejected === false ? (
+              {canManage && !isPendingReview && !recipe.deletion_requested ? (
+                <>
+                  <p>
+                    {recipe.rejected
+                      ? 'Edit and resubmit this recipe for a new approval decision.'
+                      : isStaff
+                        ? 'You can edit or delete this recipe. Editing keeps its current approval status.'
+                        : 'Saving edits sends this recipe back for admin approval. It will stay private until approved.'}
+                  </p>
+                  <div className="review-request__actions">
+                    {isSubmitting || requiresReload ? (
+                      <button type="button" className="button button--secondary" disabled>
+                        {recipe.rejected ? 'Edit and resubmit' : 'Edit recipe'}
+                      </button>
+                    ) : (
+                      <Link className="button button--secondary" to={getRecipeEditPath(recipe.id)}>
+                        {recipe.rejected ? 'Edit and resubmit' : 'Edit recipe'}
+                      </Link>
+                    )}
+                    <button
+                      type="button"
+                      className="button button--ghost"
+                      onClick={onDelete}
+                      disabled={isSubmitting || requiresReload}
+                    >
+                      {isStaff ? 'Delete recipe' : 'Request deletion'}
+                    </button>
+                  </div>
+                </>
+              ) : null}
+              {isStaff && recipe.deletion_requested ? (
+                <div className="review-request__actions">
+                  <button
+                    type="button"
+                    className="button button--primary"
+                    onClick={onDelete}
+                    disabled={isSubmitting || requiresReload}
+                  >
+                    Approve deletion
+                  </button>
+                  <button
+                    type="button"
+                    className="button button--secondary"
+                    onClick={onRejectDeletion}
+                    disabled={isSubmitting || requiresReload}
+                  >
+                    Reject deletion
+                  </button>
+                </div>
+              ) : null}
+              {isPendingReview ? (
                 <>
                   <div className="review-request__actions">
                     <button
@@ -211,16 +273,6 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
                     >
                       Reject
                     </button>
-                    {requiresReload ? (
-                      <button
-                        type="button"
-                        className="button button--ghost"
-                        onClick={onReload}
-                        disabled={isSubmitting}
-                      >
-                        Reload recipe
-                      </button>
-                    ) : null}
                   </div>
                   {showRejectionForm ? (
                     <div id="recipe-rejection-form">
@@ -232,6 +284,13 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
                     </div>
                   ) : null}
                 </>
+              ) : null}
+              {requiresReload ? (
+                <div className="review-request__actions">
+                  <button type="button" className="button button--ghost" onClick={onReload} disabled={isSubmitting}>
+                    Reload recipe
+                  </button>
+                </div>
               ) : null}
               {status ? <p className="status-banner" role="status">{status}</p> : null}
               {isStaff ? (
@@ -401,20 +460,41 @@ function RecipeContent({ recipe, isStaff, roleStatus, status, isSubmitting, requ
           )}
         </article>
       </section>
+      {isPendingReview ? (
+        <section className="page-section recipe-shell__delete-actions" aria-label="Delete recipe">
+          <button
+            type="button"
+            className="button button--ghost"
+            onClick={onDelete}
+            disabled={isSubmitting || requiresReload}
+          >
+            Delete recipe
+          </button>
+        </section>
+      ) : null}
     </div>
   )
 }
 
 function RecipeDetails({ recipeId }) {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [recipe, setRecipe] = useState(null)
   const [loadStatus, setLoadStatus] = useState('Loading recipe...')
-  const [isStaff, setIsStaff] = useState(false)
+  const [viewer, setViewer] = useState(null)
   const [roleStatus, setRoleStatus] = useState('')
   const [status, setStatus] = useState('')
+  const [confirmation, setConfirmation] = useTransientMessage(() => location.state?.recipeEditSaved
+    ? location.state.submittedForApproval
+      ? 'Recipe changes saved and submitted for admin approval.'
+      : 'Recipe changes saved.'
+    : '')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [requiresReload, setRequiresReload] = useState(false)
   const actionInFlight = useRef(false)
   const isMounted = useRef(false)
+  const isStaff = viewer?.is_staff === true
+  const canManage = isStaff || (viewer !== null && recipe?.user === viewer.id)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -432,10 +512,10 @@ function RecipeDetails({ recipeId }) {
     async function loadRole() {
       try {
         const profile = await getCurrentProfile(controller.signal)
-        if (!controller.signal.aborted) setIsStaff(profile.user.is_staff === true)
+        if (!controller.signal.aborted) setViewer(profile.user)
       } catch {
         if (!controller.signal.aborted) {
-          setRoleStatus('Unable to check whether this account can review recipes. Reload to try again.')
+          setRoleStatus('Unable to check recipe management permissions. Reload to try again.')
         }
       }
     }
@@ -449,11 +529,49 @@ function RecipeDetails({ recipeId }) {
     }
   }, [recipeId])
 
-  async function handleDecision(decision, reason) {
-    if (actionInFlight.current || requiresReload || !isStaff
-      || recipe?.approved !== false || recipe?.rejected !== false) return
+  async function handleDelete() {
+    if (actionInFlight.current || requiresReload || !canManage || !recipe
+      || (!isStaff && recipe.deletion_requested)) return
+    const prompt = isStaff
+      ? `${recipe.deletion_requested ? 'Approve deletion of' : 'Delete'} "${recipe.title}"? This permanently removes the recipe and its reviews.`
+      : `Request deletion of "${recipe.title}"? An admin must approve before the recipe is removed.`
+    if (!window.confirm(prompt)) return
     actionInFlight.current = true
     setIsSubmitting(true)
+    setConfirmation('')
+    setStatus(isStaff ? 'Deleting recipe...' : 'Sending deletion request...')
+
+    try {
+      if (isStaff) {
+        await deleteRecipe(recipe.id)
+        if (isMounted.current) {
+          navigate('/staff', { replace: true, state: { recipeDeleted: true } })
+        }
+      } else {
+        const savedRecipe = await requestRecipeDeletion(recipe.id)
+        if (isMounted.current) {
+          setRecipe(savedRecipe)
+          setStatus('')
+          setConfirmation('Deletion requested. Waiting for admin approval.')
+        }
+      }
+    } catch (error) {
+      if (isMounted.current) {
+        setStatus(error.message)
+        if (error.requiresReload) setRequiresReload(true)
+      }
+    } finally {
+      actionInFlight.current = false
+      if (isMounted.current) setIsSubmitting(false)
+    }
+  }
+
+  async function handleDecision(decision, reason) {
+    if (actionInFlight.current || requiresReload || !isStaff
+      || recipe?.approved !== false || recipe?.rejected !== false || recipe.deletion_requested) return
+    actionInFlight.current = true
+    setIsSubmitting(true)
+    setConfirmation('')
     setStatus(decision === 'approve' ? 'Saving approval...' : 'Saving rejection...')
 
     try {
@@ -462,7 +580,33 @@ function RecipeDetails({ recipeId }) {
         : await rejectRecipe(recipe, reason)
       if (isMounted.current) {
         setRecipe(savedRecipe)
-        setStatus(decision === 'approve' ? 'Recipe approved.' : 'Recipe rejected.')
+        setStatus('')
+        setConfirmation(decision === 'approve' ? 'Recipe approved.' : 'Recipe rejected.')
+      }
+    } catch (error) {
+      if (isMounted.current) {
+        setStatus(error.message)
+        if (error.requiresReload) setRequiresReload(true)
+      }
+    } finally {
+      actionInFlight.current = false
+      if (isMounted.current) setIsSubmitting(false)
+    }
+  }
+
+  async function handleDeletionRejection() {
+    if (actionInFlight.current || requiresReload || !isStaff || !recipe?.deletion_requested) return
+    actionInFlight.current = true
+    setIsSubmitting(true)
+    setConfirmation('')
+    setStatus('Rejecting deletion request...')
+
+    try {
+      const savedRecipe = await rejectRecipeDeletion(recipe)
+      if (isMounted.current) {
+        setRecipe(savedRecipe)
+        setStatus('')
+        setConfirmation('Deletion request rejected. Recipe kept.')
       }
     } catch (error) {
       if (isMounted.current) {
@@ -479,6 +623,7 @@ function RecipeDetails({ recipeId }) {
     if (actionInFlight.current || !requiresReload) return
     actionInFlight.current = true
     setIsSubmitting(true)
+    setConfirmation('')
     setStatus('Checking recipe status...')
 
     try {
@@ -489,9 +634,12 @@ function RecipeDetails({ recipeId }) {
       if (isMounted.current) {
         setRecipe(latestRecipe)
         setRequiresReload(false)
-        setStatus(latestRecipe.approved
-          ? 'Recipe approved.'
-          : latestRecipe.rejected ? 'Recipe rejected.' : 'This recipe is still pending approval.')
+        setStatus('')
+        setConfirmation(latestRecipe.deletion_requested
+          ? 'Deletion is waiting for admin approval.'
+          : latestRecipe.approved
+            ? 'Recipe approved.'
+            : latestRecipe.rejected ? 'Recipe rejected.' : 'This recipe is still pending approval.')
       }
     } catch (error) {
       if (isMounted.current) setStatus(error.message)
@@ -527,13 +675,16 @@ function RecipeDetails({ recipeId }) {
     <RecipeContent
       recipe={recipe}
       isStaff={isStaff}
+      canManage={canManage}
       roleStatus={roleStatus}
-      status={status}
+      status={status || confirmation}
       isSubmitting={isSubmitting}
       requiresReload={requiresReload}
       onApprove={() => handleDecision('approve')}
       onReject={(reason) => handleDecision('reject', reason)}
+      onRejectDeletion={handleDeletionRejection}
       onReload={handleReload}
+      onDelete={handleDelete}
     />
   )
 }

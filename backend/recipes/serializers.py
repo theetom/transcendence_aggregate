@@ -85,6 +85,7 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 	approved = serializers.BooleanField(read_only=True)
 	rejected = serializers.BooleanField(read_only=True)
 	rejection_reason = serializers.CharField(read_only=True)
+	deletion_requested = serializers.BooleanField(read_only=True)
 
 	ingredients = RecipeIngredientSerializer(
 		source="recipe_ingredients",
@@ -114,6 +115,7 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 			"approved",
 			"rejected",
 			"rejection_reason",
+			"deletion_requested",
 			"description",
 			"date_created",
 			"user",
@@ -213,13 +215,15 @@ class RecipeRejectionSerializer(serializers.Serializer):
 
 
 class RecipeUpdateSerializer(serializers.ModelSerializer):
-	ingredients = RecipeUpdateIngredientSerializer(many=True, required=False)
+	resubmit = serializers.BooleanField(write_only=True, required=False)
+	ingredients = RecipeUpdateIngredientSerializer(many=True, required=False, allow_empty=False)
 	categories = RecipeUpdateCategorySerializer(many=True, required=False)
-	steps = RecipeStepSerializer(many=True, required=False)
+	steps = RecipeStepSerializer(many=True, required=False, allow_empty=False)
 
 	class Meta:
 		model = Recipe
-		fields = ["title", "description", "ingredients", "categories", "steps"]
+		fields = ["title", "description", "ingredients", "categories", "steps", "resubmit"]
+		extra_kwargs = {"title": {"required": False}, "description": {"required": False}}
 
 	def validate_ingredients(self, ingredients):
 		names = [ingredient["name"].lower() for ingredient in ingredients]
@@ -231,6 +235,10 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
 
 	def validate_steps(self, steps):
 		step_numbers = [step["step_number"] for step in steps]
+		if any(number < 1 for number in step_numbers):
+			raise serializers.ValidationError(
+				"Step numbers must be greater than zero."
+			)
 		if len(step_numbers) != len(set(step_numbers)):
 			raise serializers.ValidationError(
 				"Step numbers must be unique."
@@ -244,7 +252,6 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
 		for field, value in validated_data.items():
 			setattr(instance, field, value)
 		if validated_data:
-			# Do not overwrite a staff decision made during this edit.
 			instance.save(update_fields=list(validated_data))
 
 		if categories is not None:
@@ -273,7 +280,6 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
 				[RecipeStep(recipe=instance, **step) for step in steps]
 			)
 
-		instance.refresh_from_db(fields=["approved", "rejected", "rejection_reason"])
 		return instance
 
 
@@ -281,6 +287,7 @@ class RecipeSummarySerializer(serializers.ModelSerializer):
 	approved = serializers.BooleanField(read_only=True)
 	rejected = serializers.BooleanField(read_only=True)
 	rejection_reason = serializers.CharField(read_only=True)
+	deletion_requested = serializers.BooleanField(read_only=True)
 	ingredients = RecipeIngredientNameSerializer(
 		source="recipe_ingredients",
 		many=True,
@@ -302,6 +309,7 @@ class RecipeSummarySerializer(serializers.ModelSerializer):
 			"approved",
 			"rejected",
 			"rejection_reason",
+			"deletion_requested",
 			"ingredients",
 			"categories",
 			"images",

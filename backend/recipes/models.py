@@ -6,6 +6,7 @@ class Recipe(models.Model):
     approved = models.BooleanField(default=False)
     rejected = models.BooleanField(default=False)
     rejection_reason = models.TextField(blank=True, default="")
+    deletion_requested = models.BooleanField(default=False)
     ingredients = models.ManyToManyField('Ingredient', through='RecipeIngredient')
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     date_created = models.DateTimeField(auto_now_add=True)

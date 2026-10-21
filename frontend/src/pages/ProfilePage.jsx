@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import RecipePreviewCard from '../components/RecipePreviewCard'
 import { getCurrentProfile, getRecipeDetails, readRecipeSummary, requestRecipeApi, updateCurrentProfile } from '../data/recipeApi'
 import { formatDate } from '../data/siteData'
+import useTransientMessage from '../hooks/useTransientMessage'
 
 const recipePreviewLimit = 3
 const profilePhotoTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
@@ -277,6 +278,7 @@ function readProfileRecipes(data) {
 }
 
 function ProfilePage({ showAllRecipes = false }) {
+  const location = useLocation()
   const [profile, setProfile] = useState(null)
   const [status, setStatus] = useState('Loading profile...')
   const [recipes, setRecipes] = useState(null)
@@ -288,7 +290,7 @@ function ProfilePage({ showAllRecipes = false }) {
   const [rejectedRecipes, setRejectedRecipes] = useState(null)
   const [pictureFailed, setPictureFailed] = useState(false)
   const [isEditingProfile, setIsEditingProfile] = useState(false)
-  const [profileMessage, setProfileMessage] = useState('')
+  const [profileMessage, setProfileMessage] = useTransientMessage(() => location.state?.recipeDeleted ? 'Recipe deleted.' : '')
 
   useEffect(() => {
     const controller = new AbortController()
