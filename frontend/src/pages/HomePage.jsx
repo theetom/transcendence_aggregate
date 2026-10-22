@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import RecipePreviewCard from '../components/RecipePreviewCard'
-import { getRecipePath, readRecipeSummary } from '../data/recipeApi'
+import { readRecipeSummary } from '../data/recipeApi'
 import {
   getCategoryPath,
   landingRecipeCategories,
@@ -35,8 +35,8 @@ function HomePage() {
         if (recentlyAdded.some((recipe) => recipe.approved !== true)) {
           throw new Error('Recently added recipes could not be read.')
         }
-        setBestAverageRecipes(Array.isArray(data.best_average) ? data.best_average : [])
-        setMostReviewedRecipes(Array.isArray(data.most_reviews) ? data.most_reviews : [])
+        setBestAverageRecipes(Array.isArray(data.best_average) ? data.best_average.map(readRecipeSummary) : [])
+        setMostReviewedRecipes(Array.isArray(data.most_reviews) ? data.most_reviews.map(readRecipeSummary) : [])
         setRecentlyAddedRecipes(recentlyAdded)
       } catch (loadError) {
         if (controller.signal.aborted || loadError.name === 'AbortError') return
@@ -80,36 +80,9 @@ function HomePage() {
           <p>{error}</p>
         ) : (
           <div className="landing-plain__popular-grid">
-            {bestAverageRecipes.map((item) => {
-              const recipeTitle = item.title
-              const ingredients = Array.isArray(item.ingredients) ? item.ingredients.map((entry) => entry.name).join(', ') : ''
-              const categories = Array.isArray(item.categories) ? item.categories.map((entry) => entry.name).join(', ') : ''
-              const recipePath = Number.isSafeInteger(item.id) && item.id > 0
-                && typeof recipeTitle === 'string' && recipeTitle.trim()
-                ? getRecipePath(item.id)
-                : null
-              const Card = recipePath ? Link : 'article'
-
-              return (
-                <Card
-                  key={item.id ?? recipeTitle}
-                  {...(recipePath ? { to: recipePath } : {})}
-                  className="landing-plain__popular-card landing-plain__card-button"
-                  data-recipe-title={recipeTitle}
-                >
-                  <div className="landing-plain__image-placeholder" aria-hidden="true">
-                    {categories}
-                  </div>
-                  <div className="landing-plain__caption">{recipeTitle}</div>
-                  {ingredients ? <div className="landing-plain__caption" style={{ fontSize: '0.8rem' }}>{ingredients}</div> : null}
-                  <div className="landing-plain__caption" style={{ fontSize: '0.8rem' }}>
-                    {typeof item.average_score === 'number' ? `Avg: ${item.average_score.toFixed(1)}` : 'Avg: n/a'}
-                    {' · '}
-                    {typeof item.number_of_reviews === 'number' ? `${item.number_of_reviews} reviews` : 'Review count unavailable'}
-                  </div>
-                </Card>
-              )
-            })}
+            {bestAverageRecipes.map((recipe) => (
+              <RecipePreviewCard key={recipe.id} recipe={recipe} />
+            ))}
           </div>
         )}
 
@@ -127,36 +100,9 @@ function HomePage() {
           <p>{error}</p>
         ) : (
           <div className="landing-plain__latest-grid">
-            {mostReviewedRecipes.map((item) => {
-              const recipeTitle = item.title
-              const ingredients = Array.isArray(item.ingredients) ? item.ingredients.map((entry) => entry.name).join(', ') : ''
-              const recipePath = Number.isSafeInteger(item.id) && item.id > 0
-                && typeof recipeTitle === 'string' && recipeTitle.trim()
-                ? getRecipePath(item.id)
-                : null
-              const Card = recipePath ? Link : 'article'
-
-              return (
-                <Card
-                  key={item.id ?? recipeTitle}
-                  {...(recipePath ? { to: recipePath } : {})}
-                  className="landing-plain__latest-card landing-plain__card-button"
-                  data-recipe-title={recipeTitle}
-                >
-                  <div className="landing-plain__latest-image" aria-hidden="true" />
-
-                  <div className="landing-plain__latest-copy">
-                    <h3>{recipeTitle}</h3>
-                    {ingredients ? <p>{ingredients}</p> : null}
-                    <p>
-                      {typeof item.average_score === 'number' ? `Avg: ${item.average_score.toFixed(1)}` : 'Avg: n/a'}
-                      {' · '}
-                      {typeof item.number_of_reviews === 'number' ? `${item.number_of_reviews} reviews` : 'Review count unavailable'}
-                    </p>
-                  </div>
-                </Card>
-              )
-            })}
+            {mostReviewedRecipes.map((recipe) => (
+              <RecipePreviewCard key={recipe.id} recipe={recipe} layout="horizontal" />
+            ))}
           </div>
         )}
 

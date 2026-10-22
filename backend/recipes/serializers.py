@@ -2,10 +2,30 @@ import re
 from decimal import Decimal, InvalidOperation
 
 from rest_framework import serializers
-from django.db import transaction
+from django.db import connection, transaction
 from django.core.exceptions import ObjectDoesNotExist
 from .models import Recipe, RecipeIngredient, RecipeStep, Category, Ingredient, RecipeImage
 from reviews.serializers import ReviewSerializer
+
+@transaction.atomic
+def get_or_create_named_record(model, name):
+	name = name.strip()
+	# Serialize lookup/create, including names which do not have a row to lock yet.
+	with connection.cursor() as cursor:
+		cursor.execute("SELECT pg_advisory_xact_lock(%s, %s)", [730017, 1])
+	# Apply the same whitespace/case rules as validation, including legacy names.
+	key = name.lower()
+	for record in model.objects.only("name").order_by("pk").iterator():
+		if record.name.strip().lower() == key:
+			return record
+	return model.objects.create(name=name)
+
+
+def validate_unique_names(names, label):
+	normalized = [name.strip().lower() for name in names]
+	if len(normalized) != len(set(normalized)):
+		raise serializers.ValidationError(f"{label} must be unique.")
+
 
 def validate_positive_quantity(value):
 	message = "Enter a number greater than zero."
@@ -154,6 +174,16 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 			"approved_recipes": RecipeSummarySerializer(other_recipes, many=True, context=self.context).data,
 		}
 
+	def validate_ingredients(self, ingredients):
+		validate_unique_names(
+			[item["ingredient"]["name"] for item in ingredients], "Ingredients"
+		)
+		return ingredients
+
+	def validate_categories(self, categories):
+		validate_unique_names([category["name"] for category in categories], "Categories")
+		return categories
+
 	#  for all reviews
 	def get_average_score(self, recipe):
 		reviews = recipe.reviews.all()
@@ -187,13 +217,13 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 
 		for category in category_data:
 			category_name = category.get("name") if isinstance(category, dict) else category
-			category_object, _ = Category.objects.get_or_create(name=category_name)
+			category_object = get_or_create_named_record(Category, category_name)
 			recipe.categories.add(category_object)
 
 		for item in ingredient_data:
 			ingredient = item.pop("ingredient")
 			ingredient_name = ingredient.get("name")
-			ingredient_object, _ = Ingredient.objects.get_or_create(name=ingredient_name)
+			ingredient_object = get_or_create_named_record(Ingredient, ingredient_name)
 			RecipeIngredient.objects.create(
 				recipe=recipe,
 				ingredient=ingredient_object,
@@ -232,12 +262,12 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
 		extra_kwargs = {"title": {"required": False}, "description": {"required": False}}
 
 	def validate_ingredients(self, ingredients):
-		names = [ingredient["name"].lower() for ingredient in ingredients]
-		if len(names) != len(set(names)):
-			raise serializers.ValidationError(
-				"Ingredients must be unique."
-			)
+		validate_unique_names([ingredient["name"] for ingredient in ingredients], "Ingredients")
 		return ingredients
+
+	def validate_categories(self, categories):
+		validate_unique_names([category["name"] for category in categories], "Categories")
+		return categories
 
 	def validate_steps(self, steps):
 		step_numbers = [step["step_number"] for step in steps]
@@ -262,7 +292,7 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
 
 		if categories is not None:
 			category_objects = [
-				Category.objects.get_or_create(name=category["name"])[0]
+				get_or_create_named_record(Category, category["name"])
 				for category in categories
 			]
 			instance.categories.set(category_objects)
@@ -270,9 +300,7 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
 		if ingredients is not None:
 			instance.recipe_ingredients.all().delete()
 			for ingredient_data in ingredients:
-				ingredient, _ = Ingredient.objects.get_or_create(
-					name=ingredient_data["name"]
-				)
+				ingredient = get_or_create_named_record(Ingredient, ingredient_data["name"])
 				RecipeIngredient.objects.create(
 					recipe=instance,
 					ingredient=ingredient,

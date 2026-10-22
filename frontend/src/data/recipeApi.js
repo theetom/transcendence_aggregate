@@ -116,7 +116,61 @@ export async function getCurrentProfile(signal) {
     || typeof profile.user.username !== 'string' || typeof profile.user.is_staff !== 'boolean') {
     throw new Error('Your account details could not be read. Sign in again to continue.')
   }
+  readFavoriteIds(profile.favorites)
   return profile
+}
+
+function readFavoriteIds(value) {
+  if (!Array.isArray(value) || value.some((id) => !Number.isSafeInteger(id) || id < 1)
+    || new Set(value).size !== value.length) {
+    throw new Error('Your saved favorites could not be read. Reload to try again.')
+  }
+  return value
+}
+
+export async function setRecipeFavorite(recipeId, isFavorite, userId) {
+  const id = readRecipeId(recipeId)
+  try {
+    const data = await requestRecipeApi(`/api/me/favorites/${id}/`, {
+      method: isFavorite ? 'PUT' : 'DELETE', requiresAuth: true, expectedStatus: 200,
+    })
+    const favorites = readFavoriteIds(data?.favorites)
+    if (data.user_id !== userId || data.recipe_id !== id
+      || data.is_favorite !== isFavorite || favorites.includes(id) !== isFavorite) {
+      throw new Error('The saved favorite could not be confirmed.')
+    }
+    return favorites
+  } catch (error) {
+    if ([400, 401, 403, 404, 405].includes(error.status)) {
+      if ([403, 404].includes(error.status)) {
+        error.message = 'This recipe is unavailable for saving. Reload to see its current status.'
+        error.requiresReload = true
+      }
+      throw error
+    }
+    throw Object.assign(new Error('Your favorites could not be confirmed. Reload before trying again.'), {
+      requiresReload: true, status: error.status,
+    })
+  }
+}
+
+export function readAuthoredReviews(profile) {
+  if (!Array.isArray(profile?.authored_reviews)) {
+    throw new Error('Your reviews could not be read. Reload to try again.')
+  }
+  const reviews = profile.authored_reviews.map((review) => {
+    readRecipeReview(review)
+    if (review.user !== profile.user?.id
+      || !Number.isSafeInteger(review.recipe?.id) || review.recipe.id < 1
+      || typeof review.recipe.title !== 'string' || !review.recipe.title.trim()) {
+      throw new Error('Your reviews could not be read. Reload to try again.')
+    }
+    return review
+  })
+  if (new Set(reviews.map((review) => review.id)).size !== reviews.length) {
+    throw new Error('Your reviews could not be read. Reload to try again.')
+  }
+  return reviews
 }
 
 export async function updateCurrentProfile(payload, signal) {
@@ -151,6 +205,19 @@ export async function updateCurrentProfile(payload, signal) {
   return profile
 }
 
+function readRecipeReview(data) {
+  if (!Number.isSafeInteger(data?.id) || data.id < 1
+    || !Number.isSafeInteger(data.user) || data.user < 1
+    || !Number.isSafeInteger(data.grade) || data.grade < 0
+    || typeof data.comment !== 'string' || typeof data.timestamp !== 'string'
+    || data.author?.id !== data.user
+    || typeof data.author.username !== 'string' || !data.author.username.trim()
+    || typeof data.author.name !== 'string' || !data.author.name.trim()) {
+    throw new Error(invalidDataMessage)
+  }
+  return data
+}
+
 function readRecipeDetails(data, id) {
   const recipe = readRecipeSummary(data)
   if (recipe.id !== id
@@ -165,16 +232,54 @@ function readRecipeDetails(data, id) {
       || typeof item.quantity !== 'string' || typeof item.unit !== 'string')
     || recipe.steps.some((item) => !Number.isInteger(item?.step_number)
       || item.step_number < 1 || typeof item.instruction !== 'string')
-    || recipe.reviews.some((item) => !Number.isInteger(item?.id)
-      || typeof item.comment !== 'string' || typeof item.timestamp !== 'string')) {
+    || !Number.isFinite(recipe.average_score) || recipe.average_score < 0
+    || !Number.isSafeInteger(recipe.number_of_reviews) || recipe.number_of_reviews < 0) {
     throw new Error(invalidDataMessage)
   }
+  recipe.reviews.forEach(readRecipeReview)
   return recipe
 }
 
 export async function getRecipeDetails(recipeId, signal) {
   const id = readRecipeId(recipeId)
   return readRecipeDetails(await requestRecipeApi(`/api/recipes/${id}/`, { signal }), id)
+}
+
+export async function submitRecipeReview(recipeId, payload, reviewerId) {
+  const id = readRecipeId(recipeId)
+  let responseReceived = false
+
+  try {
+    const data = await requestRecipeApi(`/api/recipes/${id}/`, {
+      method: 'POST', requiresAuth: true, body: payload, expectedStatus: 201,
+    })
+    responseReceived = true
+    const savedReview = readRecipeReview(data)
+    if (savedReview.user !== reviewerId || savedReview.grade !== payload.grade
+      || savedReview.comment !== payload.comment.trim()) {
+      throw new Error('The posted review could not be confirmed.')
+    }
+
+    const details = await getRecipeDetails(id)
+    if (!details.reviews.some((review) => review.id === savedReview.id
+      && review.user === savedReview.user && review.grade === savedReview.grade
+      && review.comment === savedReview.comment)) {
+      throw new Error('The posted review could not be found.')
+    }
+    return details
+  } catch (error) {
+    if (!responseReceived && [400, 401, 403, 404, 405].includes(error.status)) {
+      if (error.status === 400) error.message = 'Check your rating and review below.'
+      if ([403, 404].includes(error.status)) {
+        error.message = 'This recipe is unavailable for reviews. Reload to see its current status.'
+        error.requiresReload = true
+      }
+      throw error
+    }
+    throw Object.assign(new Error('Your review could not be confirmed. Reload and check the reviews before posting again.'), {
+      requiresReload: true, status: error.status,
+    })
+  }
 }
 
 export async function updateRecipe(recipeId, payload, signal) {

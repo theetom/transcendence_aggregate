@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import RecipePreviewCard from '../components/RecipePreviewCard'
+import RecipeReviewForm from '../components/RecipeReviewForm'
 import { approveRecipe, rejectRecipe, rejectRecipeDeletion } from '../data/moderationApi'
-import { deleteRecipe, getCurrentProfile, getRecipeDetails, getRecipeEditPath, requestRecipeDeletion } from '../data/recipeApi'
+import { deleteRecipe, getCurrentProfile, getRecipeDetails, getRecipeEditPath, requestRecipeDeletion, setRecipeFavorite, submitRecipeReview } from '../data/recipeApi'
 import { authTokenStorageKey, formatDate } from '../data/siteData'
 import { getUserProfilePath } from '../data/userApi'
 import useTransientMessage from '../hooks/useTransientMessage'
@@ -141,7 +142,12 @@ function RejectionForm({ disabled, onReject, onCancel }) {
   )
 }
 
-function RecipeContent({ recipe, isStaff, canManage, roleStatus, status, isSubmitting, requiresReload, onApprove, onReject, onRejectDeletion, onReload, onDelete }) {
+function RecipeContent({
+  recipe, viewer, isCheckingViewer, isStaff, canManage, roleStatus, status,
+  isSubmitting, requiresReload, onApprove, onReject, onRejectDeletion, onReload, onDelete,
+  isPostingReview, reviewStatus, reviewErrors, reviewNeedsReload, reviewFormKey, onReview, onClearReviewError,
+  favoriteIds, favoriteStatus, isSavingFavorite, favoriteNeedsReload, onFavorite,
+}) {
   const [failedAuthorPhoto, setFailedAuthorPhoto] = useState('')
   const [showRejectionForm, setShowRejectionForm] = useState(false)
   const gallery = Array.isArray(recipe?.images)
@@ -151,7 +157,9 @@ function RecipeContent({ recipe, isStaff, canManage, roleStatus, status, isSubmi
   const steps = Array.isArray(recipe?.steps)
     ? [...recipe.steps].sort((first, second) => first.step_number - second.step_number)
     : []
-  const comments = Array.isArray(recipe?.reviews) ? recipe.reviews : []
+  const comments = Array.isArray(recipe?.reviews)
+    ? [...recipe.reviews].sort((first, second) => second.id - first.id)
+    : []
   const previewImages = gallery.slice(0, 6)
   const hasPreviewImages = previewImages.length > 0
   const imageGridClassName = hasPreviewImages
@@ -177,6 +185,7 @@ function RecipeContent({ recipe, isStaff, canManage, roleStatus, status, isSubmi
   const reviewCountLabel = getReviewCountLabel(recipe)
   const submittedOn = getRecordDate(recipe.date_created)
   const isPendingReview = isStaff && !recipe.deletion_requested && !recipe.approved && !recipe.rejected
+  const isFavorite = favoriteIds.includes(recipe.id)
 
   return (
     <div className="content-frame">
@@ -197,7 +206,7 @@ function RecipeContent({ recipe, isStaff, canManage, roleStatus, status, isSubmi
           </div>
 
           <a className="button button--ghost" href="#recipe-comments">
-            Go to comments
+            Go to reviews
           </a>
         </div>
       </section>
@@ -208,7 +217,7 @@ function RecipeContent({ recipe, isStaff, canManage, roleStatus, status, isSubmi
         <section className="page-section">
           <article className="detail-panel">
             <p className="eyebrow">{isStaff ? 'Recipe review' : 'Recipe status'}</p>
-            <h2>{recipe.deletion_requested
+            <h2 className="recipe-shell__status-title">{recipe.deletion_requested
               ? 'Deletion pending approval'
               : recipe.approved ? 'Recipe approved' : recipe.rejected ? 'Recipe rejected' : 'Pending approval'}</h2>
             {recipe.deletion_requested ? (
@@ -449,10 +458,30 @@ function RecipeContent({ recipe, isStaff, canManage, roleStatus, status, isSubmi
           ) : null}
         </article>
 
-        <div className="recipe-detail__actions recipe-shell__actions">
-          <button type="button" className="button button--ghost" disabled>
-            Add to favorites
-          </button>
+        <div className="recipe-shell__favorite-actions recipe-shell__actions">
+          {viewer ? (
+            recipe.approved || isFavorite ? (
+              <button
+                type="button"
+                className="button button--ghost"
+                onClick={onFavorite}
+                disabled={isSubmitting || requiresReload}
+                aria-pressed={isFavorite}
+              >
+                {isSavingFavorite ? 'Saving...' : isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              </button>
+            ) : null
+          ) : isCheckingViewer ? (
+            <button type="button" className="button button--ghost" disabled>Loading favorites...</button>
+          ) : recipe.approved && !roleStatus ? (
+            <Link className="button button--ghost" to="/connect">Sign in to save this recipe</Link>
+          ) : null}
+          {favoriteStatus ? <p className="status-banner" role="status">{favoriteStatus}</p> : null}
+          {favoriteNeedsReload ? (
+            <button type="button" className="button button--ghost" onClick={onReload} disabled={isSubmitting}>
+              Reload favorites
+            </button>
+          ) : null}
         </div>
       </section>
 
@@ -468,23 +497,51 @@ function RecipeContent({ recipe, isStaff, canManage, roleStatus, status, isSubmi
 
       <section id="recipe-comments" className="page-section recipe-shell__comments-section">
         <article className="detail-panel recipe-shell__comments-panel">
-          <p className="eyebrow recipe-shell__comments-label">Comments</p>
+          <h2 className="recipe-shell__comments-label">Ratings and reviews</h2>
+
+          {recipe.approved ? (
+            viewer ? (
+              <RecipeReviewForm
+                key={reviewFormKey}
+                disabled={isSubmitting || requiresReload}
+                isSubmitting={isPostingReview}
+                fieldErrors={reviewErrors}
+                onClearFieldError={onClearReviewError}
+                onSubmit={onReview}
+              />
+            ) : isCheckingViewer ? (
+              <p role="status">Loading review form...</p>
+            ) : !roleStatus ? (
+              <p><Link to="/connect">Sign in</Link> to rate this recipe and write a review.</p>
+            ) : null
+          ) : null}
+          {reviewStatus ? <p className="status-banner" role="status">{reviewStatus}</p> : null}
+          {reviewNeedsReload ? (
+            <div className="review-request__actions">
+              <button type="button" className="button button--ghost" onClick={onReload} disabled={isSubmitting}>
+                Reload recipe
+              </button>
+            </div>
+          ) : null}
 
           {comments.length > 0 ? (
             <div className="feature-grid">
               {comments.map((comment) => (
                 <article key={comment.id} className="comment-card">
                   <div className="comment-card__meta">
-                    <strong>Review</strong>
-                    <span>{getRecordDate(comment.timestamp)}</span>
+                    <strong>
+                      <Link to={getUserProfilePath(comment.user)}>{comment.author.name}</Link>
+                    </strong>
+                    <span>{comment.grade} {comment.grade === 1 ? 'star' : 'stars'}</span>
+                    <time dateTime={comment.timestamp}>{getRecordDate(comment.timestamp)}</time>
                   </div>
-                  <p>{comment.comment}</p>
+                  <p className="comment-card__text">{comment.comment}</p>
                 </article>
               ))}
             </div>
           ) : (
             <p className="recipe-shell__comments-empty">
-              No comments yet.
+              No reviews yet.
             </p>
           )}
         </article>
@@ -511,6 +568,7 @@ function RecipeDetails({ recipeId }) {
   const [recipe, setRecipe] = useState(null)
   const [loadStatus, setLoadStatus] = useState('Loading recipe...')
   const [viewer, setViewer] = useState(null)
+  const [isCheckingViewer, setIsCheckingViewer] = useState(() => Boolean(window.sessionStorage.getItem(authTokenStorageKey)))
   const [roleStatus, setRoleStatus] = useState('')
   const [status, setStatus] = useState('')
   const [confirmation, setConfirmation] = useTransientMessage(() => location.state?.recipeEditSaved
@@ -521,6 +579,17 @@ function RecipeDetails({ recipeId }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [requiresReload, setRequiresReload] = useState(false)
   const [showRecipeChanged, setShowRecipeChanged] = useState(false)
+  const [isPostingReview, setIsPostingReview] = useState(false)
+  const [reviewStatus, setReviewStatus] = useState('')
+  const [reviewConfirmation, setReviewConfirmation] = useTransientMessage('')
+  const [reviewErrors, setReviewErrors] = useState({})
+  const [reviewNeedsReload, setReviewNeedsReload] = useState(false)
+  const [reviewFormKey, setReviewFormKey] = useState(0)
+  const [favoriteIds, setFavoriteIds] = useState([])
+  const [favoriteStatus, setFavoriteStatus] = useState('')
+  const [favoriteConfirmation, setFavoriteConfirmation] = useTransientMessage('')
+  const [isSavingFavorite, setIsSavingFavorite] = useState(false)
+  const [favoriteNeedsReload, setFavoriteNeedsReload] = useState(false)
   const actionInFlight = useRef(false)
   const isMounted = useRef(false)
   const isStaff = viewer?.is_staff === true
@@ -542,11 +611,16 @@ function RecipeDetails({ recipeId }) {
     async function loadRole() {
       try {
         const profile = await getCurrentProfile(controller.signal)
-        if (!controller.signal.aborted) setViewer(profile.user)
+        if (!controller.signal.aborted) {
+          setFavoriteIds(profile.favorites)
+          setViewer(profile.user)
+        }
       } catch {
         if (!controller.signal.aborted) {
-          setRoleStatus('Unable to check recipe management permissions. Reload to try again.')
+          setRoleStatus('Unable to load your account. Reload to try again.')
         }
+      } finally {
+        if (!controller.signal.aborted) setIsCheckingViewer(false)
       }
     }
 
@@ -558,6 +632,83 @@ function RecipeDetails({ recipeId }) {
       controller.abort()
     }
   }, [recipeId])
+
+  async function handleFavorite() {
+    if (actionInFlight.current || requiresReload || !viewer || !recipe) return
+    const desiredFavorite = !favoriteIds.includes(recipe.id)
+    if (desiredFavorite && !recipe.approved) return
+    actionInFlight.current = true
+    setIsSubmitting(true)
+    setIsSavingFavorite(true)
+    setFavoriteConfirmation('')
+    setFavoriteStatus('Saving favorites...')
+
+    try {
+      const savedIds = await setRecipeFavorite(recipe.id, desiredFavorite, viewer.id)
+      if (isMounted.current) {
+        setFavoriteIds(savedIds)
+        setFavoriteStatus('')
+        setFavoriteConfirmation(desiredFavorite ? 'Added to favorites.' : 'Removed from favorites.')
+      }
+    } catch (error) {
+      if (isMounted.current) {
+        setFavoriteStatus(error.message)
+        if (error.requiresReload) {
+          setRequiresReload(true)
+          setFavoriteNeedsReload(true)
+        }
+      }
+    } finally {
+      actionInFlight.current = false
+      if (isMounted.current) {
+        setIsSubmitting(false)
+        setIsSavingFavorite(false)
+      }
+    }
+  }
+
+  async function handleReview(payload) {
+    if (actionInFlight.current || requiresReload || !viewer || !recipe?.approved) return false
+    actionInFlight.current = true
+    setIsSubmitting(true)
+    setIsPostingReview(true)
+    setReviewErrors({})
+    setReviewConfirmation('')
+    setReviewStatus('Posting review...')
+
+    try {
+      const savedRecipe = await submitRecipeReview(recipe.id, payload, viewer.id)
+      if (!isMounted.current) return false
+      setRecipe(savedRecipe)
+      setReviewStatus('')
+      setReviewConfirmation('Review posted.')
+      return true
+    } catch (error) {
+      if (isMounted.current) {
+        setReviewErrors(error.fieldErrors || {})
+        setReviewStatus(error.message)
+        if (error.requiresReload) {
+          setRequiresReload(true)
+          setReviewNeedsReload(true)
+        }
+      }
+      return false
+    } finally {
+      actionInFlight.current = false
+      if (isMounted.current) {
+        setIsSubmitting(false)
+        setIsPostingReview(false)
+      }
+    }
+  }
+
+  function handleClearReviewError(field) {
+    setReviewErrors((current) => ({ ...current, [field]: undefined }))
+    if (!requiresReload && !actionInFlight.current) {
+      setReviewStatus('')
+      setReviewConfirmation('')
+    }
+  }
 
   async function handleDelete() {
     if (actionInFlight.current || requiresReload || !canManage || !recipe
@@ -656,10 +807,37 @@ function RecipeDetails({ recipeId }) {
     setIsSubmitting(true)
     setShowRecipeChanged(false)
     setConfirmation('')
-    setStatus('Checking recipe status...')
+    if (reviewNeedsReload) {
+      setReviewConfirmation('')
+      setReviewStatus('Refreshing reviews...')
+    } else if (favoriteNeedsReload) {
+      setFavoriteConfirmation('')
+      setFavoriteStatus('Refreshing favorites...')
+    } else {
+      setStatus('Checking recipe status...')
+    }
 
     try {
-      const latestRecipe = await getRecipeDetails(recipeId)
+      const latestProfile = favoriteNeedsReload ? await getCurrentProfile() : null
+      if (latestProfile && latestProfile.user.id !== viewer.id) {
+        throw new Error('Your signed-in account changed. Reload this page to continue.')
+      }
+      let latestRecipe
+      try {
+        latestRecipe = await getRecipeDetails(recipeId)
+      } catch (error) {
+        if (!latestProfile || ![403, 404].includes(error.status)) throw error
+        if (isMounted.current) {
+          setFavoriteIds(latestProfile.favorites)
+          setViewer(latestProfile.user)
+          setFavoriteNeedsReload(false)
+          setRequiresReload(false)
+          setFavoriteStatus('')
+          setRecipe(null)
+          setLoadStatus('This recipe is no longer available. Your favorites were refreshed; you can manage them from your profile.')
+        }
+        return
+      }
       if (latestRecipe.id !== recipe.id) {
         throw new Error('This recipe has changed. Return to the pending list and open it again.')
       }
@@ -667,14 +845,32 @@ function RecipeDetails({ recipeId }) {
         setRecipe(latestRecipe)
         setRequiresReload(false)
         setStatus('')
-        setConfirmation(latestRecipe.deletion_requested
-          ? 'Deletion is waiting for admin approval.'
-          : latestRecipe.approved
-            ? 'Recipe approved.'
-            : latestRecipe.rejected ? 'Recipe rejected.' : 'This recipe is still pending approval.')
+        if (reviewNeedsReload) {
+          setReviewNeedsReload(false)
+          setReviewErrors({})
+          setReviewFormKey((current) => current + 1)
+          setReviewStatus('')
+          setReviewConfirmation('Reviews refreshed. Check the list before posting again.')
+        } else if (favoriteNeedsReload) {
+          setFavoriteIds(latestProfile.favorites)
+          setViewer(latestProfile.user)
+          setFavoriteNeedsReload(false)
+          setFavoriteStatus('')
+          setFavoriteConfirmation('Favorites refreshed.')
+        } else {
+          setConfirmation(latestRecipe.deletion_requested
+            ? 'Deletion is waiting for admin approval.'
+            : latestRecipe.approved
+              ? 'Recipe approved.'
+              : latestRecipe.rejected ? 'Recipe rejected.' : 'This recipe is still pending approval.')
+        }
       }
     } catch (error) {
-      if (isMounted.current) setStatus(error.message)
+      if (isMounted.current) {
+        if (reviewNeedsReload) setReviewStatus(error.message)
+        else if (favoriteNeedsReload) setFavoriteStatus(error.message)
+        else setStatus(error.message)
+      }
     } finally {
       actionInFlight.current = false
       if (isMounted.current) setIsSubmitting(false)
@@ -698,6 +894,7 @@ function RecipeDetails({ recipeId }) {
             </Link>
           )}
           {roleStatus ? <p className="status-banner" role="status">{roleStatus}</p> : null}
+          {viewer ? <Link className="button button--ghost" to="/profile">Your profile</Link> : null}
         </section>
       </div>
     )
@@ -709,6 +906,8 @@ function RecipeDetails({ recipeId }) {
       <RecipeContent
         key={`${recipe.id}:${recipe.content_revision}`}
         recipe={recipe}
+        viewer={viewer}
+        isCheckingViewer={isCheckingViewer}
         isStaff={isStaff}
         canManage={canManage}
         roleStatus={roleStatus}
@@ -720,6 +919,18 @@ function RecipeDetails({ recipeId }) {
         onRejectDeletion={handleDeletionRejection}
         onReload={handleReload}
         onDelete={handleDelete}
+        isPostingReview={isPostingReview}
+        reviewStatus={reviewStatus || reviewConfirmation}
+        reviewErrors={reviewErrors}
+        reviewNeedsReload={reviewNeedsReload}
+        reviewFormKey={reviewFormKey}
+        onReview={handleReview}
+        onClearReviewError={handleClearReviewError}
+        favoriteIds={favoriteIds}
+        favoriteStatus={favoriteStatus || favoriteConfirmation}
+        isSavingFavorite={isSavingFavorite}
+        favoriteNeedsReload={favoriteNeedsReload}
+        onFavorite={handleFavorite}
       />
     </>
   )

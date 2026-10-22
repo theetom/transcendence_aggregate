@@ -111,6 +111,7 @@ function AddRecipePage({ editMode = false }) {
     validationErrors['recipe-name'] = 'Enter a recipe title before submitting.'
   }
 
+  const ingredientNames = new Set()
   ingredients.forEach((ingredient, index) => {
     const isEmpty =
       !ingredient.name.trim() &&
@@ -119,9 +120,13 @@ function AddRecipePage({ editMode = false }) {
 
     if (index > 0 && isEmpty) return
 
-    if (!ingredient.name.trim()) {
+    const ingredientName = ingredient.name.trim().toLowerCase()
+    if (!ingredientName) {
       validationErrors[`ingredient-${index + 1}`] = 'Enter an ingredient name.'
+    } else if (ingredientNames.has(ingredientName)) {
+      validationErrors[`ingredient-${index + 1}`] = 'This ingredient is already listed.'
     }
+    if (ingredientName) ingredientNames.add(ingredientName)
     if (!ingredient.quantity.trim()) {
       validationErrors[`quantity-${index + 1}`] = 'Enter a quantity for this ingredient.'
     } else if (!Number.isFinite(Number(ingredient.quantity)) || Number(ingredient.quantity) <= 0) {
@@ -132,10 +137,15 @@ function AddRecipePage({ editMode = false }) {
     }
   })
 
+  const categoryNames = new Set()
   categories.forEach((category, index) => {
-    if (!editMode && index === 0 && !category.trim()) {
+    const categoryName = category.trim().toLowerCase()
+    if (!editMode && index === 0 && !categoryName) {
       validationErrors[`category-${index + 1}`] = 'Enter a category name.'
+    } else if (categoryName && categoryNames.has(categoryName)) {
+      validationErrors[`category-${index + 1}`] = 'This category is already listed.'
     }
+    if (categoryName) categoryNames.add(categoryName)
   })
 
   steps.forEach((step, index) => {

@@ -4,7 +4,7 @@ from datetime import timedelta
 from uuid import uuid4
 
 from django.db import transaction
-from django.db.models import Avg, Count, Q
+from django.db.models import Avg, Count, Prefetch, Q
 from django.utils import timezone
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -13,6 +13,7 @@ from rest_framework import serializers, status
 
 from .models import Recipe, Category, Ingredient, RecipeImage
 from .serializers import RecipeSummarySerializer, RecipeDetailedSerializer, RecipeUpdateSerializer, RecipeDecisionSerializer, RecipeRejectionSerializer, CategorySerializer, IngredientSerializer
+from reviews.models import Review
 from reviews.serializers import ReviewSerializer
 
 logger = logging.getLogger(__name__)
@@ -478,14 +479,49 @@ def _recipe_edit_or_delete(request, recipe_id):
 	return response
 
 
+def _recipe_review(request, recipe_id):
+	if not request.user.is_authenticated:
+		return Response(
+			{"error": "You must be logged in to write a review."},
+			status=status.HTTP_401_UNAUTHORIZED,
+		)
+
+	# Recipe edits take this same lock, so an approval change cannot race the save.
+	with transaction.atomic():
+		try:
+			recipe = Recipe.objects.select_for_update().get(pk=recipe_id)
+		except Recipe.DoesNotExist:
+			return Response(
+				{"error": "Recipe not found"},
+				status=status.HTTP_404_NOT_FOUND,
+			)
+
+		if not recipe.approved:
+			return Response(
+				{"error": "Only approved recipes can receive reviews."},
+				status=status.HTTP_403_FORBIDDEN,
+			)
+
+		serializer = ReviewSerializer(data=request.data)
+		if not serializer.is_valid():
+			return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+		serializer.save(recipe=recipe, user=request.user)
+		return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
 @api_view(["GET", "POST", "PUT", "DELETE"])
 @parser_classes([MultiPartParser, FormParser, JSONParser])
 def recipe_detail(request, recipe_id):
 	if request.method in ("PUT", "DELETE"):
 		return _recipe_edit_or_delete(request, recipe_id)
+	if request.method == "POST":
+		return _recipe_review(request, recipe_id)
 
 	try:
-		recipe = Recipe.objects.get(pk=recipe_id)
+		recipe = Recipe.objects.select_related("user").prefetch_related(
+			Prefetch("reviews", queryset=Review.objects.select_related("user")),
+		).get(pk=recipe_id)
 	except Recipe.DoesNotExist:
 		return Response(
 			{"error": "Recipe not found"},
@@ -502,31 +538,8 @@ def recipe_detail(request, recipe_id):
 			status=status.HTTP_403_FORBIDDEN
 		)
 
-	if request.method == "GET":
-		serializer = RecipeDetailedSerializer(recipe)
-		return Response(serializer.data)
-
-	if request.method == "POST":
-		if not request.user.is_authenticated:
-			return Response(
-				{"error": "You must be logged in to write a review."},
-				status=status.HTTP_401_UNAUTHORIZED
-			)
-		serializer = ReviewSerializer(data=request.data)
-
-		if serializer.is_valid():
-			serializer.save(
-				recipe=recipe,
-				user=request.user
-			)
-			return Response(
-				serializer.data,
-				status=status.HTTP_201_CREATED
-			)
-		return Response(
-			serializer.errors,
-			status=status.HTTP_400_BAD_REQUEST
-		)
+	serializer = RecipeDetailedSerializer(recipe)
+	return Response(serializer.data)
 
 """ import json
 

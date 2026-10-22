@@ -1,7 +1,8 @@
 import logging
 
 from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.db import IntegrityError, connection, transaction
+from django.db.models import Q
 
 from rest_framework.decorators import api_view, parser_classes, permission_classes
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -22,6 +23,8 @@ from .serializers import (
 )
 from recipes.models import Recipe
 from recipes.serializers import RecipeSummarySerializer
+from reviews.models import Review
+from reviews.serializers import ReviewSerializer
 
 
 logger = logging.getLogger(__name__)
@@ -40,16 +43,44 @@ def users_list(request):
 @api_view(["POST"])
 def sign_up(request):
     serializer = SignupSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
+    username = None
+    email = None
 
-    with transaction.atomic():
-        user = User.objects.create_user(
-            username=serializer.validated_data["username"],
-            email=serializer.validated_data.get("email", ""),
-            password=serializer.validated_data["password"],
-        )
-        UserProfile.objects.create(user=user)
-        token = Token.objects.create(user=user)
+    try:
+        with transaction.atomic():
+            # Keep duplicate checks and creation together across signup workers.
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT pg_advisory_xact_lock(%s, %s)", [730017, 2])
+            serializer.is_valid(raise_exception=True)
+            username = User.normalize_username(serializer.validated_data["username"])
+            email = serializer.validated_data["email"]
+
+            # create_user applies this normalization before storing the username.
+            if username != serializer.validated_data["username"] and User.objects.filter(username=username).exists():
+                return Response(
+                    {"username": ["A user with this username already exists."]},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=serializer.validated_data["password"],
+            )
+            UserProfile.objects.create(user=user)
+            token = Token.objects.create(user=user)
+    except IntegrityError:
+        # Query only after rollback; do not mask unrelated database failures.
+        if username is None:
+            raise
+        conflicts = {}
+        if User.objects.filter(username=username).exists():
+            conflicts["username"] = ["A user with this username already exists."]
+        if User.objects.filter(email__iexact=email).exists():
+            conflicts["email"] = ["A user with this email already exists."]
+        if not conflicts:
+            raise
+        return Response(conflicts, status=status.HTTP_400_BAD_REQUEST)
 
     return Response(
         {
@@ -77,7 +108,50 @@ def _current_profile_data(profile):
         .order_by("-date_created", "-id")
     )
     data["submitted_recipes"] = RecipeSummarySerializer(submitted_recipes, many=True).data
+    authored_reviews = (
+        Review.objects.filter(user_id=profile.user_id)
+        .select_related("user", "recipe")
+        .order_by("-timestamp", "-id")
+    )
+    if not profile.user.is_staff:
+        authored_reviews = authored_reviews.filter(
+            Q(recipe__approved=True) | Q(recipe__user_id=profile.user_id)
+        )
+    data["authored_reviews"] = [
+        {
+            **ReviewSerializer(review).data,
+            "recipe": {"id": review.recipe_id, "title": review.recipe.title},
+        }
+        for review in authored_reviews
+    ]
     return data
+
+
+@api_view(["PUT", "DELETE"])
+@permission_classes([IsAuthenticated])
+def user_favorite(request, recipe_id):
+    with transaction.atomic():
+        # Keep the approval check consistent with recipe edits and deletion.
+        recipe = get_object_or_404(Recipe.objects.select_for_update(), pk=recipe_id)
+        if request.method == "PUT" and not recipe.approved:
+            return Response(
+                {"error": "Only approved recipes can be added to favorites."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        profile = get_object_or_404(
+            UserProfile.objects.select_for_update(), user=request.user,
+        )
+        if request.method == "PUT":
+            profile.favorites.add(recipe)
+        else:
+            profile.favorites.remove(recipe)
+        favorites = list(profile.favorites.order_by("pk").values_list("pk", flat=True))
+        return Response({
+            "user_id": profile.user_id,
+            "recipe_id": recipe.id,
+            "is_favorite": recipe.id in favorites,
+            "favorites": favorites,
+        })
 
 
 def _delete_unreferenced_profile_photo(storage, name):
@@ -93,7 +167,9 @@ def _delete_unreferenced_profile_photo(storage, name):
 @parser_classes([JSONParser, FormParser, MultiPartParser])
 def user_me(request):
     if request.method == "GET":
-        profile = get_object_or_404(UserProfile, user=request.user)
+        profile = get_object_or_404(
+            UserProfile.objects.select_related("user"), user=request.user,
+        )
         return Response(_current_profile_data(profile))
 
     new_file = None

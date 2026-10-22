@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import RecipePreviewCard from '../components/RecipePreviewCard'
-import { getCurrentProfile, getRecipeDetails, readRecipeSummary, requestRecipeApi, updateCurrentProfile } from '../data/recipeApi'
+import { getCurrentProfile, getRecipeDetails, getRecipePath, readAuthoredReviews, readRecipeSummary, requestRecipeApi, setRecipeFavorite, updateCurrentProfile } from '../data/recipeApi'
 import { formatDate } from '../data/siteData'
 import useTransientMessage from '../hooks/useTransientMessage'
 
@@ -22,6 +22,11 @@ function profileErrorMessage(value) {
   if (Array.isArray(value)) return value.map(profileErrorMessage).filter(Boolean).join(' ')
   if (value && typeof value === 'object') return Object.values(value).map(profileErrorMessage).filter(Boolean).join(' ')
   return ''
+}
+
+function getReviewDate(timestamp) {
+  const date = timestamp.split('T')[0]
+  return date && !Number.isNaN(Date.parse(`${date}T12:00:00`)) ? formatDate(date) : null
 }
 
 function ProfileFieldError({ field, message }) {
@@ -285,15 +290,25 @@ function ProfilePage({ showAllRecipes = false }) {
   const [recipeStatus, setRecipeStatus] = useState('Loading approved recipes...')
   const [favorites, setFavorites] = useState(null)
   const [favoriteStatus, setFavoriteStatus] = useState('Loading favorites...')
+  const [unavailableFavoriteIds, setUnavailableFavoriteIds] = useState([])
+  const [removingFavoriteId, setRemovingFavoriteId] = useState(null)
+  const [favoriteRemovalError, setFavoriteRemovalError] = useState('')
+  const [favoriteRemovalNeedsReload, setFavoriteRemovalNeedsReload] = useState(false)
+  const [favoriteRemovalMessage, setFavoriteRemovalMessage] = useTransientMessage('')
+  const [authoredReviews, setAuthoredReviews] = useState(null)
+  const [reviewStatus, setReviewStatus] = useState('Loading your reviews...')
   const [pendingRecipes, setPendingRecipes] = useState(null)
   const [pendingStatus, setPendingStatus] = useState('Loading pending recipes...')
   const [rejectedRecipes, setRejectedRecipes] = useState(null)
   const [pictureFailed, setPictureFailed] = useState(false)
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [profileMessage, setProfileMessage] = useTransientMessage(() => location.state?.recipeDeleted ? 'Recipe deleted.' : '')
+  const favoriteRemovalInFlight = useRef(false)
+  const profileMounted = useRef(false)
 
   useEffect(() => {
     const controller = new AbortController()
+    profileMounted.current = true
 
     async function loadProfile() {
       let currentProfile
@@ -307,6 +322,13 @@ function ProfilePage({ showAllRecipes = false }) {
       if (controller.signal.aborted) return
       setProfile(currentProfile)
       setStatus('')
+
+      try {
+        setAuthoredReviews(readAuthoredReviews(currentProfile))
+        setReviewStatus('')
+      } catch (error) {
+        setReviewStatus(error.message)
+      }
 
       const needsApprovedLookup = currentProfile.submitted_recipes === undefined
       if (!needsApprovedLookup) {
@@ -328,7 +350,10 @@ function ProfilePage({ showAllRecipes = false }) {
       let favoriteIds = null
       if (currentProfile.favorite_recipes !== undefined) {
         try {
-          setFavorites(readProfileRecipes(currentProfile.favorite_recipes))
+          const savedRecipes = readProfileRecipes(currentProfile.favorite_recipes)
+          const availableIds = new Set(savedRecipes.map((recipe) => recipe.id))
+          setFavorites(savedRecipes)
+          setUnavailableFavoriteIds(currentProfile.favorites.filter((id) => !availableIds.has(id)))
           setFavoriteStatus('')
         } catch (error) {
           setFavoriteStatus(error.message)
@@ -337,6 +362,7 @@ function ProfilePage({ showAllRecipes = false }) {
         && currentProfile.favorites.every((id) => Number.isInteger(id) && id > 0)) {
         if (currentProfile.favorites.length === 0) {
           setFavorites([])
+          setUnavailableFavoriteIds([])
           setFavoriteStatus('')
         } else {
           favoriteIds = currentProfile.favorites
@@ -368,10 +394,10 @@ function ProfilePage({ showAllRecipes = false }) {
       if (favoriteIds) {
         const savedIds = new Set(favoriteIds)
         const availableFavorites = approvedSummaries.filter((recipe) => savedIds.has(recipe.id))
+        const availableIds = new Set(availableFavorites.map((recipe) => recipe.id))
         setFavorites(availableFavorites)
-        setFavoriteStatus(availableFavorites.length === savedIds.size
-          ? ''
-          : 'Some saved favorites are unavailable here.')
+        setUnavailableFavoriteIds(favoriteIds.filter((id) => !availableIds.has(id)))
+        setFavoriteStatus('')
       }
 
       if (!needsApprovedLookup) return
@@ -401,7 +427,10 @@ function ProfilePage({ showAllRecipes = false }) {
     }
 
     loadProfile()
-    return () => controller.abort()
+    return () => {
+      profileMounted.current = false
+      controller.abort()
+    }
   }, [])
 
   const joinedDate = typeof profile?.user.date_joined === 'string'
@@ -413,6 +442,36 @@ function ProfilePage({ showAllRecipes = false }) {
     : showAllRecipes ? 'Approved recipes' : 'Profile'
   const visibleRecipes = showAllRecipes ? recipes : recipes?.slice(0, recipePreviewLimit)
 
+  async function handleRemoveUnavailableFavorite(recipeId) {
+    if (favoriteRemovalInFlight.current || favoriteRemovalNeedsReload || !profile
+      || !unavailableFavoriteIds.includes(recipeId)) return
+    favoriteRemovalInFlight.current = true
+    setRemovingFavoriteId(recipeId)
+    setFavoriteRemovalError('')
+    setFavoriteRemovalMessage('')
+
+    try {
+      const savedIds = await setRecipeFavorite(recipeId, false, profile.user.id)
+      if (!profileMounted.current) return
+      const savedIdSet = new Set(savedIds)
+      setFavorites((current) => current?.filter((recipe) => savedIdSet.has(recipe.id)) ?? null)
+      setUnavailableFavoriteIds((current) => current.filter((id) => savedIdSet.has(id)))
+      setProfile((current) => current?.user.id === profile.user.id
+        ? { ...current, favorites: savedIds }
+        : current)
+      setFavoriteStatus('')
+      setFavoriteRemovalMessage('Removed from favorites.')
+    } catch (error) {
+      if (profileMounted.current) {
+        setFavoriteRemovalError(error.message)
+        if (error.requiresReload) setFavoriteRemovalNeedsReload(true)
+      }
+    } finally {
+      favoriteRemovalInFlight.current = false
+      if (profileMounted.current) setRemovingFavoriteId(null)
+    }
+  }
+
   function startEditingProfile() {
     setProfileMessage('')
     setIsEditingProfile(true)
@@ -420,6 +479,15 @@ function ProfilePage({ showAllRecipes = false }) {
 
   function handleProfileSaved(updatedProfile) {
     setProfile(updatedProfile)
+    if (updatedProfile.authored_reviews !== undefined) {
+      try {
+        setAuthoredReviews(readAuthoredReviews(updatedProfile))
+        setReviewStatus('')
+      } catch (error) {
+        setAuthoredReviews(null)
+        setReviewStatus(error.message)
+      }
+    }
     setPictureFailed(false)
     setIsEditingProfile(false)
     setProfileMessage('Profile updated successfully.')
@@ -513,11 +581,41 @@ function ProfilePage({ showAllRecipes = false }) {
               {!showAllRecipes ? (
                 <article className="detail-panel detail-panel--profile-section">
                   <h2 className="profile-page__section-title">Favorites</h2>
-                  <ProfileRecipeList
-                    recipes={favorites}
-                    status={favoriteStatus}
-                    emptyMessage="No saved favorites yet."
-                  />
+                  {favorites?.length !== 0 || unavailableFavoriteIds.length === 0 ? (
+                    <ProfileRecipeList
+                      recipes={favorites}
+                      status={favoriteStatus}
+                      emptyMessage="No saved favorites yet."
+                      compact
+                    />
+                  ) : null}
+                  {unavailableFavoriteIds.length > 0 ? (
+                    <div className="profile-page__unavailable-favorites">
+                      {unavailableFavoriteIds.map((id) => (
+                        <div key={id} className="profile-page__unavailable-favorite">
+                          <p className="profile-page__section-note">Unavailable recipe</p>
+                          <button
+                            type="button"
+                            className="button button--ghost"
+                            onClick={() => handleRemoveUnavailableFavorite(id)}
+                            disabled={removingFavoriteId !== null || favoriteRemovalNeedsReload}
+                          >
+                            {removingFavoriteId === id ? 'Removing...' : 'Remove from favorites'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {favoriteRemovalError || favoriteRemovalMessage ? (
+                    <p className="profile-page__section-note" role={favoriteRemovalError ? 'alert' : 'status'}>
+                      {favoriteRemovalError || favoriteRemovalMessage}
+                    </p>
+                  ) : null}
+                  {favoriteRemovalNeedsReload ? (
+                    <button type="button" className="button button--ghost" onClick={() => window.location.reload()}>
+                      Reload profile
+                    </button>
+                  ) : null}
                 </article>
               ) : null}
 
@@ -572,6 +670,35 @@ function ProfilePage({ showAllRecipes = false }) {
                 </article>
               ) : null}
             </section>
+
+            {!showAllRecipes ? (
+              <section className="page-section" aria-labelledby="profile-reviews-title">
+                <article className="detail-panel detail-panel--profile-section">
+                  <h2 id="profile-reviews-title" className="profile-page__section-title">
+                    Your reviews{authoredReviews ? ` (${authoredReviews.length})` : ''}
+                  </h2>
+                  {authoredReviews ? (
+                    authoredReviews.length > 0 ? (
+                      <div className="profile-page__reviews">
+                        {authoredReviews.map((review) => {
+                          const reviewedOn = getReviewDate(review.timestamp)
+                          return (
+                            <article key={review.id} className="profile-page__review">
+                              <div className="profile-page__review-meta">
+                                <Link to={getRecipePath(review.recipe.id)}>{review.recipe.title}</Link>
+                                <span>{review.grade} {review.grade === 1 ? 'star' : 'stars'}</span>
+                                {reviewedOn ? <time dateTime={review.timestamp}>{reviewedOn}</time> : null}
+                              </div>
+                              <p className="profile-page__review-comment">{review.comment}</p>
+                            </article>
+                          )
+                        })}
+                      </div>
+                    ) : <p className="profile-page__section-note">No reviews yet.</p>
+                  ) : <p className="profile-page__section-note" role="status">{reviewStatus}</p>}
+                </article>
+              </section>
+            ) : null}
 
             <div className="profile-page__add-recipe-row profile-page__add-recipe-row--end">
               <Link className="button button--ghost" to="/add-recipe">

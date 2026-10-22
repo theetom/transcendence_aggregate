@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getRecipePath } from '../data/recipeApi'
 
-function RecipePreviewCard({ recipe }) {
+function RecipePreviewCard({ recipe, layout = 'vertical' }) {
   const [failedImage, setFailedImage] = useState('')
+  const isHorizontal = layout === 'horizontal'
   const imageSource = Array.isArray(recipe.images)
     ? recipe.images.find((image) => typeof image?.image === 'string' && image.image.trim())?.image
     : null
@@ -17,23 +18,9 @@ function RecipePreviewCard({ recipe }) {
       .filter((name) => typeof name === 'string' && name.trim()).join(', ')
     : ''
 
-  return (
-    <Link
-      to={getRecipePath(recipe.id)}
-      className="landing-plain__popular-card landing-plain__card-button recipe-preview-card"
-    >
-      <div className="landing-plain__image-placeholder recipe-preview-card__image" aria-hidden="true">
-        {hasImage ? (
-          <img
-            className="recipe-preview-card__thumbnail"
-            src={imageSource}
-            alt=""
-            loading="lazy"
-            onError={() => setFailedImage(imageSource)}
-          />
-        ) : (categories || 'No image available.')}
-      </div>
-      <div className="landing-plain__caption">{recipe.title}</div>
+  const content = (
+    <>
+      {isHorizontal ? <h3>{recipe.title}</h3> : <div className="landing-plain__caption">{recipe.title}</div>}
       {recipe.rejected === true ? (
         <div className="landing-plain__caption recipe-preview-card__feedback">
           <strong>Rejected</strong>
@@ -52,9 +39,34 @@ function RecipePreviewCard({ recipe }) {
           : 'Avg: n/a'}
         {' · '}
         {typeof recipe.number_of_reviews === 'number'
-          ? `${recipe.number_of_reviews} reviews`
+          ? `${recipe.number_of_reviews} review${recipe.number_of_reviews === 1 ? '' : 's'}`
           : 'Review count unavailable'}
       </div>
+    </>
+  )
+
+  return (
+    <Link
+      to={getRecipePath(recipe.id)}
+      className={isHorizontal
+        ? 'landing-plain__latest-card landing-plain__card-button recipe-preview-card recipe-preview-card--horizontal'
+        : 'landing-plain__popular-card landing-plain__card-button recipe-preview-card'}
+    >
+      <div
+        className={`${isHorizontal ? 'landing-plain__latest-image' : 'landing-plain__image-placeholder'} recipe-preview-card__image`}
+        aria-hidden="true"
+      >
+        {hasImage ? (
+          <img
+            className="recipe-preview-card__thumbnail"
+            src={imageSource}
+            alt=""
+            loading="lazy"
+            onError={() => setFailedImage(imageSource)}
+          />
+        ) : (categories || 'No image available.')}
+      </div>
+      {isHorizontal ? <div className="landing-plain__latest-copy">{content}</div> : content}
     </Link>
   )
 }
