@@ -532,6 +532,32 @@
   justify-self: start;
 }
 
+.recipe-changed-dialog {
+  width: min(28rem, calc(100% - 2rem));
+  padding: 24px;
+  border: 2px solid rgba(69, 45, 36, 0.72);
+  border-radius: 16px;
+  background: #fffaf3;
+  color: var(--ink);
+  box-shadow: var(--shadow-soft);
+}
+
+.recipe-changed-dialog::backdrop {
+  background: rgba(37, 25, 19, 0.45);
+}
+
+.recipe-changed-dialog h2 {
+  margin: 0;
+}
+
+.recipe-changed-dialog p {
+  margin: 16px 0 24px;
+}
+
+.recipe-changed-dialog .button {
+  width: auto;
+}
+
 .recipe-shell__author-panel {
   display: grid;
   gap: 18px;
@@ -1252,6 +1278,21 @@
 
 .profile-page__bio {
   white-space: pre-wrap;
+}
+
+.user-search-results {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding-inline-start: 1.5rem;
+  list-style: disc;
+  overflow-wrap: anywhere;
+}
+
+.user-search-results a,
+.recipe-shell__author-copy h3 a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .profile-page__editor {

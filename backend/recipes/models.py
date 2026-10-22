@@ -7,6 +7,7 @@ class Recipe(models.Model):
     rejected = models.BooleanField(default=False)
     rejection_reason = models.TextField(blank=True, default="")
     deletion_requested = models.BooleanField(default=False)
+    content_revision = models.PositiveIntegerField(default=1, editable=False)
     ingredients = models.ManyToManyField('Ingredient', through='RecipeIngredient')
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     date_created = models.DateTimeField(auto_now_add=True)

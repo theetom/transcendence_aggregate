@@ -6,12 +6,12 @@ function NotFoundPage() {
     <div className="content-frame">
       <PageHero
         eyebrow="404"
-        title="This page is not part of the current recipe-site map."
-        lead="The route shell exists, but there is no page assigned to this URL yet."
+        title="Page not found."
+        lead="Check the address or return to the home page."
         className="not-found"
       >
         <Link className="button button--primary" to="/">
-          Return to landing page
+          Return to home page
         </Link>
       </PageHero>
     </div>

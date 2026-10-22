@@ -56,6 +56,7 @@ def combine(local_database, imported_database):
             rejection_fields = {"rejected", "rejection_reason"}
             local_has_rejection = rejection_fields.issubset(local_columns)
             local_has_deletion_request = "deletion_requested" in local_columns
+            local_has_content_revision = "content_revision" in local_columns
             if local_columns.intersection(rejection_fields) and not local_has_rejection:
                 raise ValueError("The local recipe rejection fields are incomplete.")
             with connections[TARGET].cursor() as cursor:
@@ -123,6 +124,8 @@ def combine(local_database, imported_database):
                 local_recipes = local_recipes.defer(*rejection_fields)
             if not local_has_deletion_request:
                 local_recipes = local_recipes.defer("deletion_requested")
+            if not local_has_content_revision:
+                local_recipes = local_recipes.defer("content_revision")
             for recipe in local_recipes:
                 identity = (recipe.user.username, timestamp(recipe.date_created), recipe.title)
                 position = local_positions.get(identity, 0)
@@ -136,6 +139,9 @@ def combine(local_database, imported_database):
                         rejection_reason=recipe.rejection_reason if local_has_rejection else "",
                         deletion_requested=(
                             recipe.deletion_requested if local_has_deletion_request else False
+                        ),
+                        content_revision=(
+                            recipe.content_revision if local_has_content_revision else 1
                         ),
                     )
                     # Preserve auto_now_add values so a recipe keeps the same

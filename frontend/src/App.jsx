@@ -12,6 +12,7 @@ import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import PrivacyPage from './pages/PrivacyPage'
 import ProfilePage from './pages/ProfilePage'
+import PublicUserProfilePage from './pages/PublicUserProfilePage'
 import RecipePage from './pages/RecipePage'
 import SearchResultsPage from './pages/SearchResultsPage'
 import SignupPage from './pages/SignupPage'
@@ -42,7 +43,7 @@ function EditRecipeRoute() {
 function AppShell() {
   const location = useLocation()
   const isHomePage = location.pathname === '/'
-  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+(?:\/edit)?|\/results\/search|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile(?:\/recipes)?|\/staff|\/privacy|\/terms)$/
+  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+(?:\/edit)?|\/results\/search|\/users\/[^/]+|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile(?:\/recipes)?|\/staff|\/privacy|\/terms)$/
   const hideShell = !knownPathPattern.test(location.pathname)
   const mainClassName = isHomePage ? 'page-main page-main--home' : 'page-main'
 
@@ -66,6 +67,7 @@ function AppShell() {
             }
           />
           <Route path="/results/search" element={<SearchResultsPage />} />
+          <Route path="/users/:userId" element={<PublicUserProfilePage />} />
           <Route
             path="/connect"
             element={

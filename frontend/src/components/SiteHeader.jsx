@@ -176,8 +176,8 @@ function SiteHeader() {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search recipes"
-            aria-label="Search recipes"
+            placeholder="Search recipes or users"
+            aria-label="Search recipes or users"
           />
           <button type="submit" className="search-button">
             Search

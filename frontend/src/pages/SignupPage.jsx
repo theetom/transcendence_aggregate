@@ -53,6 +53,7 @@ function SignupPage() {
     setFieldErrors((current) => ({
       ...current,
       [field]: '',
+      ...(['username', 'email'].includes(field) ? { password: '' } : {}),
       ...(['password', 'password_confirm'].includes(field) ? { password_confirm: '' } : {}),
     }))
     setFormError('')
@@ -71,9 +72,9 @@ function SignupPage() {
     const errors = {}
     if (!username.trim()) errors.username = 'Enter a username.'
     if (!email.trim()) errors.email = 'Enter an email address.'
-    if (!password) {
+    if (!password.trim()) {
       errors.password = 'Enter a password.'
-    } else if (password.trim().length < 8) {
+    } else if (Array.from(password).length < 8) {
       errors.password = 'Use at least 8 characters for your password.'
     }
     if (!passwordConfirm) {
@@ -203,8 +204,11 @@ function SignupPage() {
             }}
             placeholder="Create a password"
             aria-invalid={Boolean(fieldErrors.password)}
-            aria-describedby={fieldErrors.password ? 'signup-password-error' : undefined}
+            aria-describedby={fieldErrors.password ? 'signup-password-help signup-password-error' : 'signup-password-help'}
           />
+          <p id="signup-password-help">
+            Use at least 8 characters. Avoid common passwords, numbers only, and passwords similar to your username or email.
+          </p>
           <SignupFieldError id="signup-password-error" message={fieldErrors.password} />
         </div>
 

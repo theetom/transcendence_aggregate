@@ -39,6 +39,7 @@ export async function requestRecipeApi(path, { signal, method = 'GET', requiresA
     }
     throw Object.assign(new Error(messages[response.status] || 'Unable to complete the request. Try again later.'), {
       status: response.status,
+      code: typeof errorData?.code === 'string' ? errorData.code : null,
       fieldErrors: response.status === 400 && errorData
         && typeof errorData === 'object' && !Array.isArray(errorData)
         ? errorData
@@ -79,6 +80,7 @@ export function readRecipeSummary(data) {
     || typeof data.rejected !== 'boolean'
     || typeof data.rejection_reason !== 'string'
     || typeof data.deletion_requested !== 'boolean'
+    || !Number.isSafeInteger(data.content_revision) || data.content_revision < 1
     || (data.rejected
       ? data.approved || !data.rejection_reason.trim()
       : data.rejection_reason !== '')) {

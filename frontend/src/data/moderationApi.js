@@ -24,6 +24,7 @@ async function saveRecipeDecision(recipe, action, reason = '') {
   }
   const approved = action === 'approve'
   const matchesDecision = (record) => record.id === recipe.id
+    && record.content_revision === recipe.content_revision
     && record.approved === approved && record.rejected === !approved
     && record.rejection_reason === reason
     && !record.deletion_requested
@@ -33,7 +34,9 @@ async function saveRecipeDecision(recipe, action, reason = '') {
     const data = await requestRecipeApi(`/api/recipes/${recipe.id}/${action}/`, {
       method: 'POST',
       requiresAuth: true,
-      body: approved ? undefined : { reason },
+      body: approved
+        ? { content_revision: recipe.content_revision }
+        : { content_revision: recipe.content_revision, reason },
     })
     responseReceived = true
     const savedRecipe = readRecipeSummary(data)
@@ -47,6 +50,13 @@ async function saveRecipeDecision(recipe, action, reason = '') {
     }
     return details
   } catch (error) {
+    if (error.status === 409 && error.code === 'recipe_changed') {
+      throw Object.assign(new Error("The recipe's contents changed. Reload and review them again."), {
+        requiresReload: true,
+        recipeChanged: true,
+        status: error.status,
+      })
+    }
     if (action === 'reject' && error.status === 400) {
       const reasonErrors = error.fieldErrors?.reason
       error.message = Array.isArray(reasonErrors) ? reasonErrors.join(' ') : 'Enter a reason using 1 to 1,000 characters.'

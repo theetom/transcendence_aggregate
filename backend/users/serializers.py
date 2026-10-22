@@ -4,6 +4,7 @@ from uuid import uuid4
 from rest_framework import serializers
 from rest_framework.authtoken.serializers import AuthTokenSerializer
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q
 from django.contrib.auth.password_validation import validate_password
 
@@ -36,14 +37,31 @@ class UsernameOrEmailAuthTokenSerializer(AuthTokenSerializer):
 class UserSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = User
-		exclude = ["password", "last_login"]
+		fields = ["id", "username", "first_name", "last_name", "email"]
+		read_only_fields = fields
+
 
 class UserProfileSerializer(serializers.ModelSerializer):
-	user = UserSerializer()
+	user = UserSerializer(read_only=True)
 
 	class Meta:
 		model = UserProfile
-		fields = "__all__"
+		fields = ["id", "user", "bio", "profile_picture"]
+		read_only_fields = fields
+
+
+class CurrentUserSerializer(UserSerializer):
+	class Meta(UserSerializer.Meta):
+		fields = UserSerializer.Meta.fields + ["is_staff", "date_joined"]
+		read_only_fields = fields
+
+
+class CurrentUserProfileSerializer(UserProfileSerializer):
+	user = CurrentUserSerializer(read_only=True)
+
+	class Meta(UserProfileSerializer.Meta):
+		fields = UserProfileSerializer.Meta.fields + ["favorites"]
+		read_only_fields = fields
 
 
 class ProfilePictureField(serializers.ImageField):
@@ -102,8 +120,8 @@ class UserProfileUpdateSerializer(serializers.Serializer):
 class SignupSerializer(serializers.Serializer):
 	username = serializers.CharField(max_length=150)
 	email = serializers.EmailField(required=True, allow_blank=False)
-	password = serializers.CharField(write_only=True, min_length=8)
-	password_confirm = serializers.CharField(write_only=True)
+	password = serializers.CharField(write_only=True, min_length=8, trim_whitespace=False)
+	password_confirm = serializers.CharField(write_only=True, trim_whitespace=False)
 
 	def validate_username(self, value):
 		if User.objects.filter(username=value).exists():
@@ -116,9 +134,15 @@ class SignupSerializer(serializers.Serializer):
 		return value
 
 	def validate(self, attrs):
+		if not attrs["password"].strip():
+			raise serializers.ValidationError({"password": "Enter a password."})
 		if attrs["password"] != attrs["password_confirm"]:
 			raise serializers.ValidationError(
 				{"password_confirm": "Passwords do not match."}
 			)
-		validate_password(attrs["password"])
+		candidate_user = User(username=attrs["username"], email=attrs["email"])
+		try:
+			validate_password(attrs["password"], user=candidate_user)
+		except DjangoValidationError as error:
+			raise serializers.ValidationError({"password": error.messages}) from error
 		return attrs

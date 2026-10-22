@@ -4,6 +4,7 @@ import RecipePreviewCard from '../components/RecipePreviewCard'
 import { approveRecipe, rejectRecipe, rejectRecipeDeletion } from '../data/moderationApi'
 import { deleteRecipe, getCurrentProfile, getRecipeDetails, getRecipeEditPath, requestRecipeDeletion } from '../data/recipeApi'
 import { authTokenStorageKey, formatDate } from '../data/siteData'
+import { getUserProfilePath } from '../data/userApi'
 import useTransientMessage from '../hooks/useTransientMessage'
 
 function getImageSource(imageRecord) {
@@ -59,6 +60,30 @@ function getReviewCountLabel(recipe) {
 function getRecordDate(value) {
   const date = typeof value === 'string' ? value.split('T')[0] : ''
   return date && !Number.isNaN(Date.parse(`${date}T12:00:00`)) ? formatDate(date) : null
+}
+
+function RecipeChangedDialog({ onClose }) {
+  const dialogRef = useRef(null)
+
+  useEffect(() => {
+    if (!dialogRef.current.open) dialogRef.current.showModal()
+  }, [])
+
+  return (
+    <dialog
+      ref={dialogRef}
+      className="recipe-changed-dialog"
+      aria-labelledby="recipe-changed-title"
+      aria-describedby="recipe-changed-message"
+      onClose={onClose}
+    >
+      <h2 id="recipe-changed-title">Recipe changed</h2>
+      <p id="recipe-changed-message">The recipe's contents changed. Reload and review them again.</p>
+      <button type="button" className="button button--primary" onClick={() => dialogRef.current.close()}>
+        Got it
+      </button>
+    </dialog>
+  )
 }
 
 function RejectionForm({ disabled, onReject, onCancel }) {
@@ -396,7 +421,11 @@ function RecipeContent({ recipe, isStaff, canManage, roleStatus, status, isSubmi
               ) : (authorName.charAt(0).toUpperCase() || '?')}
             </div>
             <div className="recipe-shell__author-copy">
-              <h3>{authorName || 'Author information is unavailable.'}</h3>
+              <h3>
+                {Number.isSafeInteger(author?.id) && author.id > 0 ? (
+                  <Link to={getUserProfilePath(author.id)}>{authorName || author.username}</Link>
+                ) : (authorName || 'Author information is unavailable.')}
+              </h3>
               {author?.username ? <p>@{author.username}</p> : null}
               {author ? <p><strong>Email:</strong> {author.email || 'Not provided'}</p> : null}
               {authorSummary ? <p>{authorSummary}</p> : null}
@@ -491,6 +520,7 @@ function RecipeDetails({ recipeId }) {
     : '')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [requiresReload, setRequiresReload] = useState(false)
+  const [showRecipeChanged, setShowRecipeChanged] = useState(false)
   const actionInFlight = useRef(false)
   const isMounted = useRef(false)
   const isStaff = viewer?.is_staff === true
@@ -587,6 +617,7 @@ function RecipeDetails({ recipeId }) {
       if (isMounted.current) {
         setStatus(error.message)
         if (error.requiresReload) setRequiresReload(true)
+        if (error.recipeChanged) setShowRecipeChanged(true)
       }
     } finally {
       actionInFlight.current = false
@@ -623,6 +654,7 @@ function RecipeDetails({ recipeId }) {
     if (actionInFlight.current || !requiresReload) return
     actionInFlight.current = true
     setIsSubmitting(true)
+    setShowRecipeChanged(false)
     setConfirmation('')
     setStatus('Checking recipe status...')
 
@@ -672,20 +704,24 @@ function RecipeDetails({ recipeId }) {
   }
 
   return (
-    <RecipeContent
-      recipe={recipe}
-      isStaff={isStaff}
-      canManage={canManage}
-      roleStatus={roleStatus}
-      status={status || confirmation}
-      isSubmitting={isSubmitting}
-      requiresReload={requiresReload}
-      onApprove={() => handleDecision('approve')}
-      onReject={(reason) => handleDecision('reject', reason)}
-      onRejectDeletion={handleDeletionRejection}
-      onReload={handleReload}
-      onDelete={handleDelete}
-    />
+    <>
+      {showRecipeChanged ? <RecipeChangedDialog onClose={() => setShowRecipeChanged(false)} /> : null}
+      <RecipeContent
+        key={`${recipe.id}:${recipe.content_revision}`}
+        recipe={recipe}
+        isStaff={isStaff}
+        canManage={canManage}
+        roleStatus={roleStatus}
+        status={status || confirmation}
+        isSubmitting={isSubmitting}
+        requiresReload={requiresReload}
+        onApprove={() => handleDecision('approve')}
+        onReject={(reason) => handleDecision('reject', reason)}
+        onRejectDeletion={handleDeletionRejection}
+        onReload={handleReload}
+        onDelete={handleDelete}
+      />
+    </>
   )
 }
 

@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework import serializers, status
 
 from .models import Recipe, Category, Ingredient, RecipeImage
-from .serializers import RecipeSummarySerializer, RecipeDetailedSerializer, RecipeUpdateSerializer, RecipeRejectionSerializer, CategorySerializer, IngredientSerializer
+from .serializers import RecipeSummarySerializer, RecipeDetailedSerializer, RecipeUpdateSerializer, RecipeDecisionSerializer, RecipeRejectionSerializer, CategorySerializer, IngredientSerializer
 from reviews.serializers import ReviewSerializer
 
 logger = logging.getLogger(__name__)
@@ -182,6 +182,10 @@ def recipe_approve(request, recipe_id):
 			status=status.HTTP_403_FORBIDDEN
 		)
 
+	serializer = RecipeDecisionSerializer(data=request.data)
+	if not serializer.is_valid():
+		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 	with transaction.atomic():
 		try:
 			recipe = Recipe.objects.select_for_update().get(pk=recipe_id)
@@ -194,6 +198,15 @@ def recipe_approve(request, recipe_id):
 		if recipe.deletion_requested:
 			return Response(
 				{"error": "Review this recipe's deletion request before its approval status."},
+				status=status.HTTP_409_CONFLICT,
+			)
+
+		if recipe.content_revision != serializer.validated_data["content_revision"]:
+			return Response(
+				{
+					"code": "recipe_changed",
+					"error": "The recipe's contents changed. Reload and review them again.",
+				},
 				status=status.HTTP_409_CONFLICT,
 			)
 
@@ -234,6 +247,15 @@ def recipe_reject(request, recipe_id):
 		if recipe.deletion_requested:
 			return Response(
 				{"error": "Review this recipe's deletion request before its approval status."},
+				status=status.HTTP_409_CONFLICT,
+			)
+
+		if recipe.content_revision != serializer.validated_data["content_revision"]:
+			return Response(
+				{
+					"code": "recipe_changed",
+					"error": "The recipe's contents changed. Reload and review them again.",
+				},
 				status=status.HTTP_409_CONFLICT,
 			)
 
@@ -437,6 +459,8 @@ def _recipe_edit_or_delete(request, recipe_id):
 				created_files.append((photo.image.storage, photo.image.name))
 				photo.save()
 
+			recipe.content_revision += 1
+			recipe.save(update_fields=["content_revision"])
 			if not request.user.is_staff or resubmit:
 				recipe.approved = False
 				recipe.rejected = False

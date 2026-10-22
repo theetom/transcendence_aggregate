@@ -15,6 +15,7 @@ from rest_framework.generics import get_object_or_404
 from .models import UserProfile
 from .serializers import (
     SignupSerializer,
+    CurrentUserProfileSerializer,
     UserProfileSerializer,
     UserProfileUpdateSerializer,
     UsernameOrEmailAuthTokenSerializer,
@@ -31,7 +32,7 @@ class WebsiteLoginView(ObtainAuthToken):
 
 @api_view(["GET"])
 def users_list(request):
-    users = UserProfile.objects.all()
+    users = UserProfile.objects.select_related("user").order_by("user__username", "user_id")
     serializer = UserProfileSerializer(users, many=True)
     return Response(serializer.data)
 
@@ -69,7 +70,7 @@ def logout(request):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 def _current_profile_data(profile):
-    data = UserProfileSerializer(profile).data
+    data = CurrentUserProfileSerializer(profile).data
     submitted_recipes = (
         Recipe.objects.filter(user_id=profile.user_id)
         .prefetch_related("images")
@@ -133,8 +134,28 @@ def user_me(request):
 
     return response
 
+def _public_profile_data(profile):
+    data = UserProfileSerializer(profile).data
+    approved_recipes = (
+        Recipe.objects.filter(user_id=profile.user_id, approved=True)
+        .prefetch_related("images", "categories", "recipe_ingredients__ingredient", "reviews")
+        .order_by("-date_created", "-id")
+    )
+    data["approved_recipes"] = RecipeSummarySerializer(approved_recipes, many=True).data
+    return data
+
+
 @api_view(["GET"])
-def user_detail(request, user_name):
-    users = UserProfile.objects.get(username=user_name)
-    serializer = UserProfileSerializer(users, many=True)
-    return Response(serializer.data)
+def user_detail(request, username):
+    profile = get_object_or_404(
+        UserProfile.objects.select_related("user"), user__username=username,
+    )
+    return Response(_public_profile_data(profile))
+
+
+@api_view(["GET"])
+def user_detail_by_id(request, user_id):
+    profile = get_object_or_404(
+        UserProfile.objects.select_related("user"), user_id=user_id,
+    )
+    return Response(_public_profile_data(profile))

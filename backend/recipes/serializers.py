@@ -80,6 +80,7 @@ class RecipeImageSerializer(serializers.ModelSerializer):
 
 
 class RecipeDetailedSerializer(serializers.ModelSerializer):
+	content_revision = serializers.IntegerField(read_only=True)
 	user = serializers.PrimaryKeyRelatedField(read_only=True)
 	author = serializers.SerializerMethodField()
 	approved = serializers.BooleanField(read_only=True)
@@ -116,6 +117,7 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 			"rejected",
 			"rejection_reason",
 			"deletion_requested",
+			"content_revision",
 			"description",
 			"date_created",
 			"user",
@@ -205,7 +207,11 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 		return recipe
 
 
-class RecipeRejectionSerializer(serializers.Serializer):
+class RecipeDecisionSerializer(serializers.Serializer):
+	content_revision = serializers.IntegerField(min_value=1)
+
+
+class RecipeRejectionSerializer(RecipeDecisionSerializer):
 	reason = serializers.CharField(
 		required=True,
 		allow_blank=False,
@@ -284,6 +290,7 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
 
 
 class RecipeSummarySerializer(serializers.ModelSerializer):
+	content_revision = serializers.IntegerField(read_only=True)
 	approved = serializers.BooleanField(read_only=True)
 	rejected = serializers.BooleanField(read_only=True)
 	rejection_reason = serializers.CharField(read_only=True)
@@ -310,6 +317,7 @@ class RecipeSummarySerializer(serializers.ModelSerializer):
 			"rejected",
 			"rejection_reason",
 			"deletion_requested",
+			"content_revision",
 			"ingredients",
 			"categories",
 			"images",
