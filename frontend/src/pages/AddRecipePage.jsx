@@ -347,6 +347,7 @@ function AddRecipePage({ editMode = false }) {
     payload.append('steps', JSON.stringify(recipeData.steps))
 
     if (editMode) {
+      payload.append('content_revision', String(originalRecipe.content_revision))
       payload.append('retained_image_ids', JSON.stringify(savedPictures.map((picture) => picture.id)))
       if (originalRecipe.rejected) payload.append('resubmit', 'true')
     }

@@ -380,13 +380,25 @@ def _recipe_edit_or_delete(request, recipe_id):
 			}
 			allowed_fields = {
 				"title", "description", "ingredients", "categories", "steps",
-				"retained_image_ids", "resubmit",
+				"retained_image_ids", "resubmit", "content_revision",
 			}
 			if set(data) - allowed_fields:
 				return Response(
 					{"non_field_errors": ["Only recipe contents and photos can be edited."]},
 					status=status.HTTP_400_BAD_REQUEST,
 				)
+			revision_serializer = RecipeDecisionSerializer(data=data)
+			if not revision_serializer.is_valid():
+				return Response(revision_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+			if recipe.content_revision != revision_serializer.validated_data["content_revision"]:
+				return Response(
+					{
+						"code": "recipe_changed",
+						"error": "This recipe changed since you opened it. Reload and check it again before saving.",
+					},
+					status=status.HTTP_409_CONFLICT,
+				)
+			data.pop("content_revision")
 			for field in ("ingredients", "categories", "steps", "retained_image_ids"):
 				if field in data and isinstance(data[field], str):
 					try:

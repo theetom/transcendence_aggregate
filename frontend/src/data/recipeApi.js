@@ -290,6 +290,11 @@ export async function updateRecipe(recipeId, payload, signal) {
     })
     return readRecipeDetails(data, id)
   } catch (error) {
+    if (error.status === 409 && error.code === 'recipe_changed') {
+      error.message = 'This recipe changed since you opened it. Reload and check it again before saving.'
+      error.requiresReload = true
+      throw error
+    }
     if ([400, 401, 403, 404, 405, 413].includes(error.status)) {
       if (error.status === 400) error.message = 'Check the recipe fields and try again.'
       if (error.status === 413) error.message = 'The upload is too large. Choose smaller photos.'
