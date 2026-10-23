@@ -1,11 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import RecipePreviewCard from '../components/RecipePreviewCard'
 import { readRecipeSummary } from '../data/recipeApi'
-import {
-  getCategoryPath,
-  landingRecipeCategories,
-} from '../data/siteData'
 
 function HomePage() {
   const location = useLocation()
@@ -129,34 +125,6 @@ function HomePage() {
         )}
       </section>
 
-      <section
-        id="categories"
-        className="landing-plain__section landing-plain__section--categories"
-        aria-labelledby="landing-top-categories-title"
-      >
-        <div className="landing-plain__titlebar">
-          <h2 id="landing-top-categories-title">Categories</h2>
-        </div>
-
-        <div className="category-browser__top-grid">
-          {landingRecipeCategories.map((category) => (
-            <Link
-              key={category.id}
-              id={category.id}
-              to={getCategoryPath(category.slug)}
-              className="landing-plain__popular-card landing-plain__card-button category-browser__tile category-browser__tile--top"
-            >
-              <div
-                className="landing-plain__image-placeholder category-browser__image"
-                aria-hidden="true"
-              >
-                {category.label}
-              </div>
-              <div className="landing-plain__caption">{category.name}</div>
-            </Link>
-          ))}
-        </div>
-      </section>
     </div>
   )
 }

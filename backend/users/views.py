@@ -100,7 +100,7 @@ def logout(request):
     request.auth.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
-def _current_profile_data(profile):
+def _current_profile_data(profile, request):
     data = CurrentUserProfileSerializer(profile).data
     submitted_recipes = (
         Recipe.objects.filter(user_id=profile.user_id)
@@ -119,7 +119,7 @@ def _current_profile_data(profile):
         )
     data["authored_reviews"] = [
         {
-            **ReviewSerializer(review).data,
+            **ReviewSerializer(review, context={"review_viewer": request.user}).data,
             "recipe": {"id": review.recipe_id, "title": review.recipe.title},
         }
         for review in authored_reviews
@@ -170,7 +170,7 @@ def user_me(request):
         profile = get_object_or_404(
             UserProfile.objects.select_related("user"), user=request.user,
         )
-        return Response(_current_profile_data(profile))
+        return Response(_current_profile_data(profile, request))
 
     new_file = None
     try:
@@ -198,7 +198,7 @@ def user_me(request):
             else:
                 serializer.save()
 
-            response = Response(_current_profile_data(profile))
+            response = Response(_current_profile_data(profile, request))
     except Exception:
         if new_file is not None:
             storage, name = new_file

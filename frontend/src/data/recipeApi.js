@@ -210,6 +210,7 @@ function readRecipeReview(data) {
     || !Number.isSafeInteger(data.user) || data.user < 1
     || !Number.isSafeInteger(data.grade) || data.grade < 0
     || typeof data.comment !== 'string' || typeof data.timestamp !== 'string'
+    || typeof data.can_delete !== 'boolean'
     || data.author?.id !== data.user
     || typeof data.author.username !== 'string' || !data.author.username.trim()
     || typeof data.author.name !== 'string' || !data.author.name.trim()) {
@@ -277,6 +278,39 @@ export async function submitRecipeReview(recipeId, payload, reviewerId) {
       throw error
     }
     throw Object.assign(new Error('Your review could not be confirmed. Reload and check the reviews before posting again.'), {
+      requiresReload: true, status: error.status,
+    })
+  }
+}
+
+export async function deleteRecipeReview(recipeId, reviewId) {
+  const id = readRecipeId(recipeId)
+  const targetReviewId = readRecipeId(reviewId)
+  let responseReceived = false
+
+  try {
+    await requestRecipeApi(`/api/recipes/${id}/${targetReviewId}/`, {
+      method: 'DELETE', requiresAuth: true, expectedStatus: 204,
+    })
+    responseReceived = true
+    const details = await getRecipeDetails(id)
+    if (details.reviews.some((review) => review.id === targetReviewId)) {
+      throw new Error('The review deletion could not be confirmed.')
+    }
+    return details
+  } catch (error) {
+    if (!responseReceived && [400, 401, 403, 404, 405].includes(error.status)) {
+      if (error.status === 403) {
+        error.message = 'You cannot delete this review. Reload to check your permissions.'
+        error.requiresReload = true
+      }
+      if (error.status === 404) {
+        error.message = 'This review or recipe is no longer available. Reload to refresh the reviews.'
+        error.requiresReload = true
+      }
+      throw error
+    }
+    throw Object.assign(new Error('The review deletion could not be confirmed. Reload and check the reviews before trying again.'), {
       requiresReload: true, status: error.status,
     })
   }

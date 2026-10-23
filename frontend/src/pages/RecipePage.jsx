@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import RecipePreviewCard from '../components/RecipePreviewCard'
 import RecipeReviewForm from '../components/RecipeReviewForm'
 import { approveRecipe, rejectRecipe, rejectRecipeDeletion } from '../data/moderationApi'
-import { deleteRecipe, getCurrentProfile, getRecipeDetails, getRecipeEditPath, requestRecipeDeletion, setRecipeFavorite, submitRecipeReview } from '../data/recipeApi'
+import { deleteRecipe, deleteRecipeReview, getCurrentProfile, getRecipeDetails, getRecipeEditPath, requestRecipeDeletion, setRecipeFavorite, submitRecipeReview } from '../data/recipeApi'
 import { authTokenStorageKey, formatDate } from '../data/siteData'
 import { getUserProfilePath } from '../data/userApi'
 import useTransientMessage from '../hooks/useTransientMessage'
@@ -145,7 +145,7 @@ function RejectionForm({ disabled, onReject, onCancel }) {
 function RecipeContent({
   recipe, viewer, isCheckingViewer, isStaff, canManage, roleStatus, status,
   isSubmitting, requiresReload, onApprove, onReject, onRejectDeletion, onReload, onDelete,
-  isPostingReview, reviewStatus, reviewErrors, reviewNeedsReload, reviewFormKey, onReview, onClearReviewError,
+  isPostingReview, reviewStatus, reviewErrors, reviewNeedsReload, reviewFormKey, onReview, onDeleteReview, onClearReviewError,
   favoriteIds, favoriteStatus, isSavingFavorite, favoriteNeedsReload, onFavorite,
 }) {
   const [failedAuthorPhoto, setFailedAuthorPhoto] = useState('')
@@ -536,6 +536,19 @@ function RecipeContent({
                     <time dateTime={comment.timestamp}>{getRecordDate(comment.timestamp)}</time>
                   </div>
                   <p className="comment-card__text">{comment.comment}</p>
+                  {viewer && comment.can_delete ? (
+                    <div className="review-request__actions">
+                      <button
+                        type="button"
+                        className="button button--ghost"
+                        aria-label={`Delete review by ${comment.author.name}`}
+                        onClick={() => onDeleteReview(comment)}
+                        disabled={isSubmitting || requiresReload}
+                      >
+                        Delete review
+                      </button>
+                    </div>
+                  ) : null}
                 </article>
               ))}
             </div>
@@ -702,6 +715,36 @@ function RecipeDetails({ recipeId }) {
     }
   }
 
+  async function handleDeleteReview(review) {
+    if (actionInFlight.current || requiresReload || !viewer || !recipe
+      || review.can_delete !== true || !recipe.reviews.some((item) => item.id === review.id)) return
+    if (!window.confirm('Delete this review and its star rating? This cannot be undone.')) return
+    actionInFlight.current = true
+    setIsSubmitting(true)
+    setReviewConfirmation('')
+    setReviewStatus('Deleting review...')
+
+    try {
+      const savedRecipe = await deleteRecipeReview(recipe.id, review.id)
+      if (isMounted.current) {
+        setRecipe(savedRecipe)
+        setReviewStatus('')
+        setReviewConfirmation('Review deleted.')
+      }
+    } catch (error) {
+      if (isMounted.current) {
+        setReviewStatus(error.message)
+        if (error.requiresReload) {
+          setRequiresReload(true)
+          setReviewNeedsReload(true)
+        }
+      }
+    } finally {
+      actionInFlight.current = false
+      if (isMounted.current) setIsSubmitting(false)
+    }
+  }
+
   function handleClearReviewError(field) {
     setReviewErrors((current) => ({ ...current, [field]: undefined }))
     if (!requiresReload && !actionInFlight.current) {
@@ -850,7 +893,7 @@ function RecipeDetails({ recipeId }) {
           setReviewErrors({})
           setReviewFormKey((current) => current + 1)
           setReviewStatus('')
-          setReviewConfirmation('Reviews refreshed. Check the list before posting again.')
+          setReviewConfirmation('Reviews refreshed. Check the list before trying again.')
         } else if (favoriteNeedsReload) {
           setFavoriteIds(latestProfile.favorites)
           setViewer(latestProfile.user)
@@ -925,6 +968,7 @@ function RecipeDetails({ recipeId }) {
         reviewNeedsReload={reviewNeedsReload}
         reviewFormKey={reviewFormKey}
         onReview={handleReview}
+        onDeleteReview={handleDeleteReview}
         onClearReviewError={handleClearReviewError}
         favoriteIds={favoriteIds}
         favoriteStatus={favoriteStatus || favoriteConfirmation}

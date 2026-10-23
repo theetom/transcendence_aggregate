@@ -105,7 +105,7 @@ def recipe_intake(request):
 						status=status.HTTP_400_BAD_REQUEST,
 					)
 
-		serializer = RecipeDetailedSerializer(data=data)
+		serializer = RecipeDetailedSerializer(data=data, context={"review_viewer": request.user})
 		if not serializer.is_valid():
 			return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -480,7 +480,7 @@ def _recipe_edit_or_delete(request, recipe_id):
 				recipe.rejection_reason = ""
 				recipe.save(update_fields=["approved", "rejected", "rejection_reason"])
 			# Include response serialization in the same all-or-nothing transaction.
-			response = Response(RecipeDetailedSerializer(recipe).data)
+			response = Response(RecipeDetailedSerializer(recipe, context={"review_viewer": request.user}).data)
 	except Exception:
 		for storage, name in created_files:
 			try:
@@ -514,7 +514,7 @@ def _recipe_review(request, recipe_id):
 				status=status.HTTP_403_FORBIDDEN,
 			)
 
-		serializer = ReviewSerializer(data=request.data)
+		serializer = ReviewSerializer(data=request.data, context={"review_viewer": request.user})
 		if not serializer.is_valid():
 			return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -550,7 +550,7 @@ def recipe_detail(request, recipe_id):
 			status=status.HTTP_403_FORBIDDEN
 		)
 
-	serializer = RecipeDetailedSerializer(recipe)
+	serializer = RecipeDetailedSerializer(recipe, context={"review_viewer": request.user})
 	return Response(serializer.data)
 
 """ import json
