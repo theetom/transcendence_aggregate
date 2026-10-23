@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import RecipePreviewCard from '../components/RecipePreviewCard'
 import { readRecipeSummary } from '../data/recipeApi'
+import useLiveRefresh from '../hooks/useLiveRefresh'
 
 function HomePage() {
   const location = useLocation()
@@ -11,41 +12,34 @@ function HomePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    const controller = new AbortController()
+  useLiveRefresh(async (signal) => {
+    try {
+      const response = await fetch('/api/recipes/', { signal, cache: 'no-store' })
 
-    async function loadHomePageData() {
-      try {
-        const response = await fetch('/api/recipes/', { signal: controller.signal })
-
-        if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`)
-        }
-
-        const data = await response.json()
-        if (controller.signal.aborted) return
-        if (!Array.isArray(data.recently_added)) {
-          throw new Error('Recently added recipes could not be read.')
-        }
-        const recentlyAdded = data.recently_added.map(readRecipeSummary)
-        if (recentlyAdded.some((recipe) => recipe.approved !== true)) {
-          throw new Error('Recently added recipes could not be read.')
-        }
-        setBestAverageRecipes(Array.isArray(data.best_average) ? data.best_average.map(readRecipeSummary) : [])
-        setMostReviewedRecipes(Array.isArray(data.most_reviews) ? data.most_reviews.map(readRecipeSummary) : [])
-        setRecentlyAddedRecipes(recentlyAdded)
-      } catch (loadError) {
-        if (controller.signal.aborted || loadError.name === 'AbortError') return
-        console.error('Failed to load homepage data:', loadError)
-        setError('Unable to load recipes right now.')
-      } finally {
-        if (!controller.signal.aborted) setIsLoading(false)
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`)
       }
-    }
 
-    loadHomePageData()
-    return () => controller.abort()
-  }, [])
+      const data = await response.json()
+      if (signal.aborted) return
+      if (!Array.isArray(data.recently_added)) {
+        throw new Error('Recently added recipes could not be read.')
+      }
+      const recentlyAdded = data.recently_added.map(readRecipeSummary)
+      if (recentlyAdded.some((recipe) => recipe.approved !== true)) {
+        throw new Error('Recently added recipes could not be read.')
+      }
+      setBestAverageRecipes(Array.isArray(data.best_average) ? data.best_average.map(readRecipeSummary) : [])
+      setMostReviewedRecipes(Array.isArray(data.most_reviews) ? data.most_reviews.map(readRecipeSummary) : [])
+      setRecentlyAddedRecipes(recentlyAdded)
+      setError('')
+    } catch (loadError) {
+      if (signal.aborted || loadError.name === 'AbortError') return
+      setError('Unable to load recipes right now.')
+    } finally {
+      if (!signal.aborted) setIsLoading(false)
+    }
+  }, { immediate: true })
 
   useEffect(() => {
     if (!location.hash) {

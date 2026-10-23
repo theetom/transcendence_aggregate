@@ -34,7 +34,7 @@ function RecipePreviewCard({ recipe, layout = 'vertical' }) {
         <div className="landing-plain__caption recipe-preview-card__meta">{ingredients}</div>
       ) : null}
       <div className="landing-plain__caption recipe-preview-card__meta">
-        {typeof recipe.average_score === 'number'
+        {recipe.number_of_reviews > 0 && typeof recipe.average_score === 'number'
           ? `Avg: ${recipe.average_score.toFixed(1)}`
           : 'Avg: n/a'}
         {' · '}

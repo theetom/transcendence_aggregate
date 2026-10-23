@@ -19,6 +19,7 @@ export async function requestRecipeApi(path, { signal, method = 'GET', requiresA
     response = await fetch(path, {
       method,
       signal,
+      ...(method === 'GET' ? { cache: 'no-store' } : {}),
       headers,
       body: body === undefined || isFormData ? body : JSON.stringify(body),
     })

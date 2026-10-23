@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { getCurrentProfile, getManagedRecipes, getRecipePath } from '../data/recipeApi'
 import useTransientMessage from '../hooks/useTransientMessage'
+import useLiveRefresh from '../hooks/useLiveRefresh'
 
 function AdminPage() {
   const location = useLocation()
@@ -55,7 +56,35 @@ function AdminPage() {
     return () => controller.abort()
   }, [attempt])
 
+  const cancelRefresh = useLiveRefresh(async (signal) => {
+    try {
+      const profile = await getCurrentProfile(signal)
+      if (signal.aborted) return
+      if (profile.user.is_staff !== true) {
+        setRecipes(null)
+        setAccess('denied')
+        setStatus('Only admins can manage recipes.')
+        setCanRetry(false)
+        return
+      }
+      const latestRecipes = await getManagedRecipes(signal)
+      if (signal.aborted) return
+      setRecipes(latestRecipes)
+      setStatus('')
+      setCanRetry(false)
+    } catch (error) {
+      if (signal.aborted) return
+      if ([401, 403].includes(error.status)) {
+        setRecipes(null)
+        setAccess(error.status === 403 ? 'denied' : 'unavailable')
+      }
+      setStatus(error.message)
+      setCanRetry(![401, 403].includes(error.status))
+    }
+  }, { enabled: access === 'staff' && recipes !== null, refreshKey: attempt })
+
   function retry() {
+    cancelRefresh()
     setRecipes(null)
     setAccess('checking')
     setStatus('Checking account...')
@@ -115,6 +144,7 @@ function AdminPage() {
       </section>
 
       <section className="page-section">
+        {recipes && status ? <p className="status-banner" role="status">{status}</p> : null}
         {!visibleRecipes ? (
           <div className="empty-state">
             <p role="status" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>

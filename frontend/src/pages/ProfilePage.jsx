@@ -4,6 +4,7 @@ import RecipePreviewCard from '../components/RecipePreviewCard'
 import { getCurrentProfile, getRecipeDetails, getRecipePath, readAuthoredReviews, readRecipeSummary, requestRecipeApi, setRecipeFavorite, updateCurrentProfile } from '../data/recipeApi'
 import { formatDate } from '../data/siteData'
 import useTransientMessage from '../hooks/useTransientMessage'
+import useLiveRefresh from '../hooks/useLiveRefresh'
 
 const recipePreviewLimit = 3
 const profilePhotoTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
@@ -37,7 +38,7 @@ function ProfileFieldError({ field, message }) {
   ) : null
 }
 
-function ProfileEditor({ profile, onSaved, onCancel }) {
+function ProfileEditor({ profile, onSaved, onCancel, onSavingChange }) {
   const [draft, setDraft] = useState({
     first_name: profile.user.first_name ?? '',
     last_name: profile.user.last_name ?? '',
@@ -127,6 +128,7 @@ function ProfileEditor({ profile, onSaved, onCancel }) {
     const controller = new AbortController()
     saveController.current = controller
     saving.current = true
+    onSavingChange(true)
     setIsSaving(true)
     setSaveStatus('Saving profile...')
 
@@ -150,6 +152,7 @@ function ProfileEditor({ profile, onSaved, onCancel }) {
     } finally {
       saving.current = false
       saveController.current = null
+      onSavingChange(false)
       if (mounted.current && !controller.signal.aborted) setIsSaving(false)
     }
   }
@@ -305,133 +308,191 @@ function ProfilePage({ showAllRecipes = false }) {
   const [profileMessage, setProfileMessage] = useTransientMessage(() => location.state?.recipeDeleted ? 'Recipe deleted.' : '')
   const favoriteRemovalInFlight = useRef(false)
   const profileMounted = useRef(false)
+  const initialProfileRequest = useRef(null)
+  const profileSaveInFlight = useRef(false)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [liveStatus, setLiveStatus] = useState('')
 
-  useEffect(() => {
-    const controller = new AbortController()
-    profileMounted.current = true
-
-    async function loadProfile() {
-      let currentProfile
-      try {
-        currentProfile = await getCurrentProfile(controller.signal)
-      } catch (error) {
-        if (!controller.signal.aborted) setStatus(error.message)
-        return
-      }
-
-      if (controller.signal.aborted) return
-      setProfile(currentProfile)
-      setStatus('')
-
-      try {
-        setAuthoredReviews(readAuthoredReviews(currentProfile))
-        setReviewStatus('')
-      } catch (error) {
-        setReviewStatus(error.message)
-      }
-
-      const needsApprovedLookup = currentProfile.submitted_recipes === undefined
-      if (!needsApprovedLookup) {
-        try {
-          const submitted = readProfileRecipes(currentProfile.submitted_recipes)
-          setRecipes(submitted.filter((recipe) => recipe.approved === true))
-          setPendingRecipes(submitted.filter((recipe) => recipe.approved === false && recipe.rejected === false))
-          setRejectedRecipes(submitted.filter((recipe) => recipe.rejected === true))
-          setRecipeStatus('')
-          setPendingStatus('')
-        } catch (error) {
-          setRecipeStatus(error.message)
-          setPendingStatus(error.message)
+  async function loadProfile(signal, background = false) {
+    if (background && (profileSaveInFlight.current || favoriteRemovalInFlight.current)) return
+    let currentProfile
+    try {
+      currentProfile = await getCurrentProfile(signal)
+    } catch (error) {
+      if (!signal.aborted) {
+        if (background) setLiveStatus(error.message)
+        else setStatus(error.message)
+        if ([401, 403].includes(error.status)) {
+          setProfile(null)
+          setStatus(error.message)
         }
-      } else {
-        setPendingStatus('Your pending recipes are not available yet.')
       }
-
-      let favoriteIds = null
-      if (currentProfile.favorite_recipes !== undefined) {
-        try {
-          const savedRecipes = readProfileRecipes(currentProfile.favorite_recipes)
-          const availableIds = new Set(savedRecipes.map((recipe) => recipe.id))
-          setFavorites(savedRecipes)
-          setUnavailableFavoriteIds(currentProfile.favorites.filter((id) => !availableIds.has(id)))
-          setFavoriteStatus('')
-        } catch (error) {
-          setFavoriteStatus(error.message)
-        }
-      } else if (Array.isArray(currentProfile.favorites)
-        && currentProfile.favorites.every((id) => Number.isInteger(id) && id > 0)) {
-        if (currentProfile.favorites.length === 0) {
-          setFavorites([])
-          setUnavailableFavoriteIds([])
-          setFavoriteStatus('')
-        } else {
-          favoriteIds = currentProfile.favorites
-        }
-      } else {
-        setFavoriteStatus('Your saved favorites are not available yet.')
-      }
-
-      if (!needsApprovedLookup && !favoriteIds) return
-
-      let approvedSummaries
-      try {
-        approvedSummaries = readProfileRecipes(await requestRecipeApi('/api/recipes/all_recipes/', {
-          signal: controller.signal,
-          requiresAuth: true,
-        }))
-        if (approvedSummaries.some((recipe) => recipe.approved !== true)) {
-          throw new Error('The approved recipe list could not be read. Reload to try again.')
-        }
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          if (needsApprovedLookup) setRecipeStatus(error.message)
-          if (favoriteIds) setFavoriteStatus(error.message)
-        }
-        return
-      }
-
-      if (controller.signal.aborted) return
-      if (favoriteIds) {
-        const savedIds = new Set(favoriteIds)
-        const availableFavorites = approvedSummaries.filter((recipe) => savedIds.has(recipe.id))
-        const availableIds = new Set(availableFavorites.map((recipe) => recipe.id))
-        setFavorites(availableFavorites)
-        setUnavailableFavoriteIds(favoriteIds.filter((id) => !availableIds.has(id)))
-        setFavoriteStatus('')
-      }
-
-      if (!needsApprovedLookup) return
-      if (!Number.isInteger(currentProfile.user.id) || currentProfile.user.id < 1) {
-        setRecipeStatus('Your account details could not be read. Reload to try again.')
-        return
-      }
-
-      // Older profile responses omit submissions. Details identify the author
-      // of each approved recipe; never use the admin pending list for this view.
-      try {
-        const details = await Promise.all(approvedSummaries.map(async (summary) => {
-          const recipe = await getRecipeDetails(summary.id, controller.signal)
-          if (recipe.id !== summary.id || !Number.isInteger(recipe.user) || recipe.user < 1) {
-            throw new Error('Recipe ownership could not be confirmed. Reload to try again.')
-          }
-          return recipe
-        }))
-        if (controller.signal.aborted) return
-        setRecipes(details.filter((recipe) =>
-          recipe.user === currentProfile.user.id && recipe.approved === true,
-        ))
-        setRecipeStatus('')
-      } catch (error) {
-        if (!controller.signal.aborted) setRecipeStatus(error.message)
-      }
+      return
     }
 
-    loadProfile()
+    if (signal.aborted) return
+    if (background && profile && currentProfile.user.id !== profile.user.id) {
+      setProfile(null)
+      setStatus('Your signed-in account changed. Reload this page to continue.')
+      return
+    }
+    if (background && currentProfile.profile_picture !== profile?.profile_picture) setPictureFailed(false)
+    setLiveStatus('')
+    setProfile(currentProfile)
+    setStatus('')
+
+    try {
+      setAuthoredReviews(readAuthoredReviews(currentProfile))
+      setReviewStatus('')
+    } catch (error) {
+      setReviewStatus(error.message)
+      if (background) setLiveStatus(error.message)
+    }
+
+    const needsApprovedLookup = currentProfile.submitted_recipes === undefined
+    if (!needsApprovedLookup) {
+      try {
+        const submitted = readProfileRecipes(currentProfile.submitted_recipes)
+        setRecipes(submitted.filter((recipe) => recipe.approved === true))
+        setPendingRecipes(submitted.filter((recipe) => recipe.approved === false && recipe.rejected === false))
+        setRejectedRecipes(submitted.filter((recipe) => recipe.rejected === true))
+        setRecipeStatus('')
+        setPendingStatus('')
+      } catch (error) {
+        setRecipeStatus(error.message)
+        setPendingStatus(error.message)
+        if (background) setLiveStatus(error.message)
+      }
+    } else {
+      setPendingStatus('Your pending recipes are not available yet.')
+    }
+
+    let favoriteIds = null
+    if (currentProfile.favorite_recipes !== undefined) {
+      try {
+        const savedRecipes = readProfileRecipes(currentProfile.favorite_recipes)
+        const availableIds = new Set(savedRecipes.map((recipe) => recipe.id))
+        setFavorites(savedRecipes)
+        setUnavailableFavoriteIds(currentProfile.favorites.filter((id) => !availableIds.has(id)))
+        setFavoriteStatus('')
+      } catch (error) {
+        setFavoriteStatus(error.message)
+        if (background) setLiveStatus(error.message)
+      }
+    } else if (Array.isArray(currentProfile.favorites)
+      && currentProfile.favorites.every((id) => Number.isInteger(id) && id > 0)) {
+      if (currentProfile.favorites.length === 0) {
+        setFavorites([])
+        setUnavailableFavoriteIds([])
+        setFavoriteStatus('')
+      } else {
+        favoriteIds = currentProfile.favorites
+      }
+    } else {
+      setFavoriteStatus('Your saved favorites are not available yet.')
+    }
+
+    if (!needsApprovedLookup && !favoriteIds) return
+
+    let approvedSummaries
+    try {
+      approvedSummaries = readProfileRecipes(await requestRecipeApi('/api/recipes/all_recipes/', {
+        signal,
+        requiresAuth: true,
+      }))
+      if (approvedSummaries.some((recipe) => recipe.approved !== true)) {
+        throw new Error('The approved recipe list could not be read. Reload to try again.')
+      }
+    } catch (error) {
+      if (!signal.aborted) {
+        if (background) setLiveStatus(error.message)
+        if ([401, 403].includes(error.status)) {
+          setProfile(null)
+          setStatus(error.message)
+        }
+        if (needsApprovedLookup) setRecipeStatus(error.message)
+        if (favoriteIds) setFavoriteStatus(error.message)
+      }
+      return
+    }
+
+    if (signal.aborted) return
+    if (favoriteIds) {
+      const savedIds = new Set(favoriteIds)
+      const availableFavorites = approvedSummaries.filter((recipe) => savedIds.has(recipe.id))
+      const availableIds = new Set(availableFavorites.map((recipe) => recipe.id))
+      setFavorites(availableFavorites)
+      setUnavailableFavoriteIds(favoriteIds.filter((id) => !availableIds.has(id)))
+      setFavoriteStatus('')
+    }
+
+    if (!needsApprovedLookup) return
+    if (!Number.isInteger(currentProfile.user.id) || currentProfile.user.id < 1) {
+      setRecipeStatus('Your account details could not be read. Reload to try again.')
+      return
+    }
+
+    // Older profile responses omit submissions. Details identify the author
+    // of each approved recipe; never use the admin pending list for this view.
+    try {
+      const details = await Promise.all(approvedSummaries.map(async (summary) => {
+        const recipe = await getRecipeDetails(summary.id, signal)
+        if (recipe.id !== summary.id || !Number.isInteger(recipe.user) || recipe.user < 1) {
+          throw new Error('Recipe ownership could not be confirmed. Reload to try again.')
+        }
+        return recipe
+      }))
+      if (signal.aborted) return
+      setRecipes(details.filter((recipe) =>
+        recipe.user === currentProfile.user.id && recipe.approved === true,
+      ))
+      setRecipeStatus('')
+    } catch (error) {
+      if (!signal.aborted) {
+        setRecipeStatus(error.message)
+        if (background) setLiveStatus(error.message)
+        if (error.status === 401) {
+          setProfile(null)
+          setStatus(error.message)
+        }
+      }
+    }
+  }
+
+  const initialProfileLoader = useRef(loadProfile)
+  useEffect(() => {
+    const controller = new AbortController()
+    initialProfileRequest.current = controller
+    profileMounted.current = true
+    void initialProfileLoader.current(controller.signal).finally(() => {
+      if (profileMounted.current && initialProfileRequest.current === controller) {
+        initialProfileRequest.current = null
+        setIsLoadingProfile(false)
+      }
+    })
     return () => {
       profileMounted.current = false
       controller.abort()
     }
   }, [])
+
+  const cancelRefresh = useLiveRefresh((signal) => loadProfile(signal, true), {
+    enabled: Boolean(profile) && !isLoadingProfile && !isSavingProfile
+      && removingFavoriteId === null && !favoriteRemovalNeedsReload,
+    refreshKey: showAllRecipes,
+  })
+
+  function cancelProfileReads() {
+    cancelRefresh()
+    initialProfileRequest.current?.abort()
+  }
+
+  function handleProfileSaving(value) {
+    profileSaveInFlight.current = value
+    if (value) cancelProfileReads()
+    if (profileMounted.current) setIsSavingProfile(value)
+  }
 
   const joinedDate = typeof profile?.user.date_joined === 'string'
     ? profile.user.date_joined.split('T')[0]
@@ -445,6 +506,7 @@ function ProfilePage({ showAllRecipes = false }) {
   async function handleRemoveUnavailableFavorite(recipeId) {
     if (favoriteRemovalInFlight.current || favoriteRemovalNeedsReload || !profile
       || !unavailableFavoriteIds.includes(recipeId)) return
+    cancelProfileReads()
     favoriteRemovalInFlight.current = true
     setRemovingFavoriteId(recipeId)
     setFavoriteRemovalError('')
@@ -499,6 +561,7 @@ function ProfilePage({ showAllRecipes = false }) {
         <section className="page-hero">
           <h1>{pageTitle}</h1>
         </section>
+        {profile && liveStatus ? <p className="status-banner" role="status">{liveStatus}</p> : null}
 
         {showAllRecipes ? (
           <div className="profile-page__add-recipe-row">
@@ -559,6 +622,7 @@ function ProfilePage({ showAllRecipes = false }) {
                   {isEditingProfile ? (
                     <ProfileEditor
                       profile={profile}
+                      onSavingChange={handleProfileSaving}
                       onSaved={handleProfileSaved}
                       onCancel={() => setIsEditingProfile(false)}
                     />

@@ -7,6 +7,7 @@ import { deleteRecipe, deleteRecipeReview, getCurrentProfile, getRecipeDetails, 
 import { authTokenStorageKey, formatDate } from '../data/siteData'
 import { getUserProfilePath } from '../data/userApi'
 import useTransientMessage from '../hooks/useTransientMessage'
+import useLiveRefresh from '../hooks/useLiveRefresh'
 
 function getImageSource(imageRecord) {
   const candidates = [imageRecord?.image, imageRecord?.src, imageRecord?.url, imageRecord?.imageUrl]
@@ -87,8 +88,7 @@ function RecipeChangedDialog({ onClose }) {
   )
 }
 
-function RejectionForm({ disabled, onReject, onCancel }) {
-  const [reason, setReason] = useState('')
+function RejectionForm({ disabled, reason, onReasonChange, onReject, onCancel }) {
   const [error, setError] = useState('')
 
   function handleSubmit(event) {
@@ -118,7 +118,7 @@ function RejectionForm({ disabled, onReject, onCancel }) {
           id="recipe-rejection-reason"
           value={reason}
           onChange={(event) => {
-            setReason(event.target.value)
+            onReasonChange(event.target.value)
             setError('')
           }}
           rows={4}
@@ -147,6 +147,8 @@ function RecipeContent({
   isSubmitting, requiresReload, onApprove, onReject, onRejectDeletion, onReload, onDelete,
   isPostingReview, reviewStatus, reviewErrors, reviewNeedsReload, reviewFormKey, onReview, onDeleteReview, onClearReviewError,
   favoriteIds, favoriteStatus, isSavingFavorite, favoriteNeedsReload, onFavorite,
+  reviewDraft, onReviewDraftChange, rejectionReason, onRejectionReasonChange,
+  liveStatus,
 }) {
   const [failedAuthorPhoto, setFailedAuthorPhoto] = useState('')
   const [showRejectionForm, setShowRejectionForm] = useState(false)
@@ -212,6 +214,7 @@ function RecipeContent({
       </section>
 
       {roleStatus ? <p className="status-banner" role="status">{roleStatus}</p> : null}
+      {liveStatus ? <p className="status-banner" role="status">{liveStatus}</p> : null}
 
       {isStaff || canManage || recipe.rejected === true ? (
         <section className="page-section">
@@ -312,8 +315,13 @@ function RecipeContent({
                     <div id="recipe-rejection-form">
                       <RejectionForm
                         disabled={isSubmitting || requiresReload}
+                        reason={rejectionReason}
+                        onReasonChange={onRejectionReasonChange}
                         onReject={onReject}
-                        onCancel={() => setShowRejectionForm(false)}
+                        onCancel={() => {
+                          setShowRejectionForm(false)
+                          onRejectionReasonChange('')
+                        }}
                       />
                     </div>
                   ) : null}
@@ -503,6 +511,8 @@ function RecipeContent({
             viewer ? (
               <RecipeReviewForm
                 key={reviewFormKey}
+                draft={reviewDraft}
+                onDraftChange={onReviewDraftChange}
                 disabled={isSubmitting || requiresReload}
                 isSubmitting={isPostingReview}
                 fieldErrors={reviewErrors}
@@ -598,6 +608,9 @@ function RecipeDetails({ recipeId }) {
   const [reviewErrors, setReviewErrors] = useState({})
   const [reviewNeedsReload, setReviewNeedsReload] = useState(false)
   const [reviewFormKey, setReviewFormKey] = useState(0)
+  const [reviewDraft, setReviewDraft] = useState({ grade: '', comment: '' })
+  const [rejectionReason, setRejectionReason] = useState('')
+  const [liveStatus, setLiveStatus] = useState('')
   const [favoriteIds, setFavoriteIds] = useState([])
   const [favoriteStatus, setFavoriteStatus] = useState('')
   const [favoriteConfirmation, setFavoriteConfirmation] = useTransientMessage('')
@@ -646,10 +659,52 @@ function RecipeDetails({ recipeId }) {
     }
   }, [recipeId])
 
+  const cancelRefresh = useLiveRefresh(async (signal) => {
+    if (actionInFlight.current) return
+    const token = window.sessionStorage.getItem(authTokenStorageKey)
+    try {
+      const latestProfile = token ? await getCurrentProfile(signal) : null
+      if (signal.aborted || actionInFlight.current) return
+      if (window.sessionStorage.getItem(authTokenStorageKey) !== token
+        || (viewer && latestProfile?.user.id !== viewer.id)) {
+        throw Object.assign(new Error('Your signed-in account changed. Reload this page to continue.'), { status: 401 })
+      }
+      setViewer(latestProfile?.user ?? null)
+      setFavoriteIds(latestProfile?.favorites ?? [])
+      setRoleStatus('')
+      if (!recipe.approved && latestProfile?.user.is_staff !== true
+        && recipe.user !== latestProfile?.user.id) {
+        setRecipe(null)
+        setLoadStatus('This recipe is no longer available to your account.')
+        return
+      }
+      const latestRecipe = await getRecipeDetails(recipeId, signal)
+      if (signal.aborted || actionInFlight.current
+        || window.sessionStorage.getItem(authTokenStorageKey) !== token) return
+      setLiveStatus(latestRecipe.content_revision !== recipe.content_revision
+        ? 'This recipe was updated by another user. Review the current contents before taking action.'
+        : '')
+      setRecipe(latestRecipe)
+    } catch (error) {
+      if (signal.aborted || actionInFlight.current) return
+      if ([401, 403, 404].includes(error.status)) {
+        setRecipe(null)
+        setLoadStatus(error.message)
+        if (error.status === 401) {
+          setViewer(null)
+          setFavoriteIds([])
+        }
+      } else {
+        setLiveStatus('Unable to refresh this recipe. Showing the last loaded version.')
+      }
+    }
+  }, { enabled: Boolean(recipe) && !isCheckingViewer && !isSubmitting && !requiresReload, refreshKey: recipeId })
+
   async function handleFavorite() {
     if (actionInFlight.current || requiresReload || !viewer || !recipe) return
     const desiredFavorite = !favoriteIds.includes(recipe.id)
     if (desiredFavorite && !recipe.approved) return
+    cancelRefresh()
     actionInFlight.current = true
     setIsSubmitting(true)
     setIsSavingFavorite(true)
@@ -682,6 +737,7 @@ function RecipeDetails({ recipeId }) {
 
   async function handleReview(payload) {
     if (actionInFlight.current || requiresReload || !viewer || !recipe?.approved) return false
+    cancelRefresh()
     actionInFlight.current = true
     setIsSubmitting(true)
     setIsPostingReview(true)
@@ -719,6 +775,7 @@ function RecipeDetails({ recipeId }) {
     if (actionInFlight.current || requiresReload || !viewer || !recipe
       || review.can_delete !== true || !recipe.reviews.some((item) => item.id === review.id)) return
     if (!window.confirm('Delete this review and its star rating? This cannot be undone.')) return
+    cancelRefresh()
     actionInFlight.current = true
     setIsSubmitting(true)
     setReviewConfirmation('')
@@ -760,6 +817,7 @@ function RecipeDetails({ recipeId }) {
       ? `${recipe.deletion_requested ? 'Approve deletion of' : 'Delete'} "${recipe.title}"? This permanently removes the recipe and its reviews.`
       : `Request deletion of "${recipe.title}"? An admin must approve before the recipe is removed.`
     if (!window.confirm(prompt)) return
+    cancelRefresh()
     actionInFlight.current = true
     setIsSubmitting(true)
     setConfirmation('')
@@ -793,6 +851,7 @@ function RecipeDetails({ recipeId }) {
   async function handleDecision(decision, reason) {
     if (actionInFlight.current || requiresReload || !isStaff
       || recipe?.approved !== false || recipe?.rejected !== false || recipe.deletion_requested) return
+    cancelRefresh()
     actionInFlight.current = true
     setIsSubmitting(true)
     setConfirmation('')
@@ -806,6 +865,7 @@ function RecipeDetails({ recipeId }) {
         setRecipe(savedRecipe)
         setStatus('')
         setConfirmation(decision === 'approve' ? 'Recipe approved.' : 'Recipe rejected.')
+        setRejectionReason('')
       }
     } catch (error) {
       if (isMounted.current) {
@@ -821,6 +881,7 @@ function RecipeDetails({ recipeId }) {
 
   async function handleDeletionRejection() {
     if (actionInFlight.current || requiresReload || !isStaff || !recipe?.deletion_requested) return
+    cancelRefresh()
     actionInFlight.current = true
     setIsSubmitting(true)
     setConfirmation('')
@@ -846,6 +907,7 @@ function RecipeDetails({ recipeId }) {
 
   async function handleReload() {
     if (actionInFlight.current || !requiresReload) return
+    cancelRefresh()
     actionInFlight.current = true
     setIsSubmitting(true)
     setShowRecipeChanged(false)
@@ -947,7 +1009,7 @@ function RecipeDetails({ recipeId }) {
     <>
       {showRecipeChanged ? <RecipeChangedDialog onClose={() => setShowRecipeChanged(false)} /> : null}
       <RecipeContent
-        key={`${recipe.id}:${recipe.content_revision}`}
+        key={recipe.id}
         recipe={recipe}
         viewer={viewer}
         isCheckingViewer={isCheckingViewer}
@@ -955,6 +1017,7 @@ function RecipeDetails({ recipeId }) {
         canManage={canManage}
         roleStatus={roleStatus}
         status={status || confirmation}
+        liveStatus={liveStatus}
         isSubmitting={isSubmitting}
         requiresReload={requiresReload}
         onApprove={() => handleDecision('approve')}
@@ -967,6 +1030,10 @@ function RecipeDetails({ recipeId }) {
         reviewErrors={reviewErrors}
         reviewNeedsReload={reviewNeedsReload}
         reviewFormKey={reviewFormKey}
+        reviewDraft={reviewDraft}
+        onReviewDraftChange={setReviewDraft}
+        rejectionReason={rejectionReason}
+        onRejectionReasonChange={setRejectionReason}
         onReview={handleReview}
         onDeleteReview={handleDeleteReview}
         onClearReviewError={handleClearReviewError}

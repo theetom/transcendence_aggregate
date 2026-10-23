@@ -14,9 +14,8 @@ function ReviewFieldError({ id, message }) {
   return <p id={id} className="status-banner recipe-review-form__error" role="alert">{message}</p>
 }
 
-function RecipeReviewForm({ disabled, isSubmitting, fieldErrors = {}, onClearFieldError, onSubmit }) {
-  const [grade, setGrade] = useState('')
-  const [comment, setComment] = useState('')
+function RecipeReviewForm({ disabled, isSubmitting, draft, onDraftChange, fieldErrors = {}, onClearFieldError, onSubmit }) {
+  const { grade, comment } = draft
   const [localErrors, setLocalErrors] = useState({})
   const [isWaiting, setIsWaiting] = useState(false)
   const [submissionUncertain, setSubmissionUncertain] = useState(false)
@@ -56,8 +55,7 @@ function RecipeReviewForm({ disabled, isSubmitting, fieldErrors = {}, onClearFie
     try {
       const saved = await onSubmit({ grade: numericGrade, comment: trimmedComment })
       if (mounted.current && saved === true) {
-        setGrade('')
-        setComment('')
+        onDraftChange({ grade: '', comment: '' })
         setLocalErrors({})
       }
     } catch {
@@ -85,7 +83,7 @@ function RecipeReviewForm({ disabled, isSubmitting, fieldErrors = {}, onClearFie
           disabled={controlsDisabled}
           value={grade}
           onChange={(event) => {
-            setGrade(event.target.value)
+            onDraftChange({ grade: event.target.value, comment })
             clearFieldError('grade')
           }}
           aria-invalid={Boolean(gradeError)}
@@ -108,7 +106,7 @@ function RecipeReviewForm({ disabled, isSubmitting, fieldErrors = {}, onClearFie
           disabled={controlsDisabled}
           value={comment}
           onChange={(event) => {
-            setComment(event.target.value)
+            onDraftChange({ grade, comment: event.target.value })
             clearFieldError('comment')
           }}
           aria-invalid={Boolean(commentError)}

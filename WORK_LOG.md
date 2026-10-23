@@ -2,6 +2,10 @@
 
 This file is the running log for work done in this repository.
 
+## Documentation preference — October 24, 2026
+
+- User explicitly directs: create additional Markdown files only when necessary. Do not create separate Markdown guides merely as a deliverable or call their creation a benefit. Reuse this existing required WORK_LOG.md for session checkpoints and saved testing instructions when sufficient.
+
 ## Project Snapshot
 
 - Repository: `42_ft_transcendence`
@@ -97,7 +101,17 @@ Use this protocol whenever the user asks for a code explanation, logic walkthrou
 
 - At the start of every future Codex session in this repository, read `WORK_LOG.md` before suggesting or applying changes.
 
-## Next-session priorities — October 23, 2026 (Trello cleanup before module planning)
+## Next-session priorities — October 24, 2026 (mandatory compliance before module planning)
+
+- **USER STOPPED FOR THE NIGHT — card3 testing saved here; separate guide deleted.** User defers all testing/work until next time. Canonical full procedure is in the final October24 entry, Saved card3 testing procedure for next time. scripts/MULTI_USER_TEST.md was removed at explicit request; do not recreate it. Retain scripts/verify-multi-user.js and scripts/multi-user-workers.py, neither executed. No worker/services/API/database/data/Git changes occurred. Card1/card2 accepted; card3 remains prepared/untested; cards4–8/modules pending. Create extra Markdown files only when necessary; reuse this required log. Stop after requested save/deletion; resume only when user returns.
+
+- **CARD2 USER-ACCEPTED — automatic shared-view refresh.** User says every supplied specific check works, accepting broad5second/focus updates and draft retention within that tested scope. Recipe reviews/rating/count/status/capabilities, staff queues/all lists, home/search and own/public profile recipe lists/favorites/history refresh through existing permissions. Prior source/diff/whitespace reviews passed; current app source and user's generated exports preserved. Assistant did not run the browser/service/API/database tests. This user acceptance supersedes older card2 pending notes; genuine simultaneous-request acceptance is the selected card3 and remains pending its own results.
+
+- **CARD1 FUNCTIONALITY USER-ACCEPTED — consistent review averages/counts.** User confirms the proposed normal rating/deletion/empty checks work and the acting page updates without reload. Preserve that acceptance; do not repeat those checks or infer a controlled overlapping-worker test. Source snapshot/zero guard/empty display implemented in serializers.py and RecipePreviewCard.jsx, numeric API/accepted30day rankings unchanged, CRLF preserved and source/whitespace review passed. Card2 now implements the separate other-browser freshness behavior; broader real concurrency/performance/integrity verification remains card3. No schema/data/test/Git changes made by the assistant for card1.
+
+- **LATEST AGREED RESUME CHECKPOINT — eight mandatory-work cards saved; user continuing later.** User accepts the clarified eight-card list and asks to remember it. Canonical numbered list is in the final 'Agreed resume checkpoint — eight mandatory-work cards' entry. Goal is full mandatory compliance, with existing accepted work preserved and missing/live-unverified evidence identified. Card6 is desktop Chrome browser resizing and keyboard accessibility; no physical-mobile testing. Multi-user/concurrency remains first priority; required14point modules remain a separate later phase. This turn saves context only: do not start implementation or tests; resume from user's chosen card when they return. All existing backend/testing boundaries remain.
+
+- **LATEST REQUESTED AUDIT COMPLETE — mandatory compliance not yet certified; multi-user is the primary concern.** User accepts Most-reviewed ('yeah they work so nvm'), so both ranking tests remain accepted. User then requests full mandatory review and specifically asks about simultaneous multi-user support. Source audit only, no application fixes/tests executed. Main write protections exist (per-user tokens/request.user, transactions/recipe+profile+review locks, advisory signup/catalog locks, stale recipe/moderation revision checks). No automatic cross-client updates: other open pages need reload. Conditional non-prefetched summary averaging read/delete race can produce division by zero with genuinely overlapping workers; not runtime-reproduced or evidence of database corruption. No simultaneous-session/performance acceptance recorded. Full mandatory gaps also include stale policy-page scaffolding, incomplete README/team facts, backend create ingredient-name length validation, likely phone-header overflow and missing search focus indication; Chrome/console/fresh deployment/team evidence and14points remain unverified. Do not reopen accepted media/sharing/admin features or implement fixes from audit alone. Next select scoped fixes/update behavior and user-led concurrency verification; all earlier runtime/testing boundaries remain.
 
 - **LATEST CORRECTION SOURCE COMPLETE — landing Categories removed; review authors can delete their own reviews.** User now explicitly adds self-review deletion, superseding earlier prohibition and test instructions for ordinary reviewer B. Final permissions: staff any review; review author own review on any recipe; recipe owner other nonstaff reviews on own recipe, still no staff-review deletion. Updated shared capability/backend DELETE scope plus both frontend gates; removed only HomePage Categories section/unused imports. Root/independent saved-source reviews found no blocker; scoped CRLF-aware whitespace check passed. No runtime/test/build/service/database/data/Git mutation; preserve user-generated shared export changes. Next user normal startup, check landing section absent and B can cancel/delete B's own review on A's recipe while unable to delete C's; confirm rating/count/reload/history, owner staff protection and staff rights. No migration required; earlier unrelated admin/category/media/sharing/README/module scope boundaries retained.
 
@@ -4658,3 +4672,522 @@ These are saved directions, not actions performed or successful results. Give th
 - User wants to save progress and asks what Git commit message to use; no staging/commit/push authorization inferred. Read latest WORK_LOG, actual latest commit/status and unstaged/cached diff stats/numstat. HEAD is1ad5bbb, 'updated worklog'; index is empty. Existing pending source comprises review DELETE/API/capability/context, self-author/recipe-owner/staff permissions, confirmation/saved list/count/average refresh and HomePage Categories removal. Shared manifest/archive changes and one newly untracked shared PNG are also present, alongside WORK_LOG. Did not read archive records or modify shared files.
 - Suggested title: feat: add review deletion and remove landing categories. Body: allow authors to delete own reviews; recipe owners delete nonstaff reviews on own recipes and staff any review; add deletion confirmation and saved review/rating refresh; remove landing Categories section; include updated shared database snapshot, recipe photo and work log. Independent source reviewer checked scope/wording and found no omission, recommending 'include updated' rather than claiming a generation operation was performed.
 - Only WORK_LOG.md changed for this message request. Suggestion is not a saved/uploaded commit. No source/config/schema/data edit, runtime/user acceptance claim, tests/build/app/helper/browser/services/API/database/migration/export/import, real deletion or Git staging/commit/push. Preserve all existing pending files/user-generated data; next awaits user's save/next instruction rather than starting deferred work.
+
+## 2026-10-23 — Audit add-recipe API photo upload Trello card
+
+- User supplies backend /api/recipes/add_recipe/ photo-upload card with six requirements and old frontend-blocked statement, asking whether done. Read latest WORK_LOG before actual route/intake/model/serializer/frontend submission/validation/display/media source. Status audit only, no fixes/new tests/implementation authorization inferred. One independent read-only agent checked frontend multipart/photo/display/serving alignment while root checked backend; no edits/runtime by agent.
+- All supplied requirements implemented in saved source: multipart/form/form-JSON parsers; authenticated POST receives scalar title plus JSON-string ingredients/categories/steps and repeated images file fields. Backend requires1–2 photos, validates nonempty genuine image bytes/accepted JPEG/PNG/GIF/WebP/5MiB per file before serializer.save; absent/invalid/type/size/count errors returned400 under images. Creates RecipeImage(recipe=recipe), saves storage/image rows under existing recipe transaction and cleans newly stored files on failure. RecipeDetailedSerializer includes images via RecipeImageSerializer fields id/image, returning saved URLs with201 after saving.
+- Frontend AddRecipePage sends FormData to exact slashed /api/recipes/add_recipe/ endpoint and repeats images per file; browser supplies multipart boundary. Validates required photos/format/count/size, displays field messages and returned status/body, and successful creation navigates to submitted confirmation. No obsolete unsupported-photo submission block exists. Existing RecipePage gallery, recipe cards and edit prefill consume saved image URLs; MEDIA_ROOT=/app/media and MEDIA_URL=/media/ match shared django_media volume and actual frontend/nginx.conf /media alias. Keep accepted serving behavior unchanged.
+- Root/independent source reviews found no card gap. Recommend mark Done and remove/update old 'does not save photos'/'frontend currently blocks' description. This records implementation/source evidence, not a fresh successful upload/no-photo runtime test. Existing prior photo acceptance/boundaries retained without reopening them.
+- Root and agent each had an exploratory search naming absent top-level nginx, exiting2; confirmed file inventory then identified/read actual frontend/nginx.conf successfully. Only WORK_LOG.md changed. No source/config/schema/data/photo edit, tests/build/lint/syntax/app/helper/browser/services/API/database/migration/export/import/upload, Trello changes or Git staging/commit/push. Await user's next supplied card; preserve all existing source/user-generated data and accepted scope boundaries.
+
+## 2026-10-23 — Audit public/self user serializer discussion card
+
+- User asks whether supplied Discussion - /api/users/ card is resolved: agree purposes/access/fields and shared versus separate serializers, exclude password hashes and restrict private information. Read latest WORK_LOG before current users serializers/routes/views and DRF settings, then confirmed earlier recorded public-email agreement. Status/discussion audit only, no new privacy policy or backend changes authorized/inferred.
+- Decision already reflected in code: public UserSerializer selects id/username/first_name/last_name/email; public UserProfileSerializer selects profile id/user/bio/profile_picture. CurrentUserSerializer inherits shared base but adds is_staff/date_joined; CurrentUserProfileSerializer adds favorites. Own-profile view adds own submitted_recipes and visibility-filtered authored_reviews. Thus separate public/current-user serializers reuse selected common fields, matching different visibility/purposes rather than identical responses.
+- /api/users/ GET is a public profile directory (default AllowAny), using only public serializer; no password hash, internal role/active/superuser/group/permission metadata or favorites/private collections. /api/me/ GET/PATCH requires IsAuthenticated and selects profile by request.user, returning own public fields plus own role/join date/favorites/submissions/reviews. Update serializer limits editable fields and rejects unsupported fields. Both response paths omit password hashes. Existing public email is intentional under recorded accepted policy; do not silently redefine it or reopen completed admin acceptance.
+- Root and independent read-only reviewer confirmed structure/access/fields with no blocker. Recommend mark discussion Done. Only WORK_LOG.md changed; no Trello card modification, application/config/schema/data edit, tests/build/lint/syntax/app/helper/browser/services/API/database/migration/export/import or Git mutation. Source-only audit, no new live API result claimed. Next follows user's next card; all accepted scope/testing/backend and quota boundaries preserved.
+
+## 2026-10-23 — Interpret undescribed authentication Trello card
+
+- User supplies only title 'authentification' and asks what partner likely meant and what needs implementation. Read latest WORK_LOG before signup/login/logout/route/serializer/token/frontend sources and saved requirement notes. Exact partner intent cannot be established from a title; likely basic account signup/login/logout and identifying signed-in API callers. Explanation/status only, no new auth/module/backend feature authorized or started.
+- Current source implements signup with username/email/password/confirmation and Django create_user password storage; frontend/backend password validation; login by email/password or username/password through custom token auth serializer; token storage/Authorization headers for authenticated calls; logout deletes token and frontend clears session storage. Own-account/favorite/review/create/edit/delete paths have their existing identity checks, staff/owner permissions separately implemented. No new live auth or security certification claimed and no accepted permissions reopened.
+- Independent documentation-only reviewer read local ft_transcendence.pdf via installed pypdf, without writing files or running application code. Printedp9/PDF10 requires email/password signup/login, hashed/salted passwords, frontend/backend validation and HTTPS. Printedp14/PDF15 lists OAuth2.0 and complete2FA as separate optional minor modules; basic authentication does not itself establish the broader standard-user-management module or14points. This is local subject/source evidence, not a module selection or score certification.
+- Recommendation: clarify empty card as 'Basic authentication: signup, login and logout' with completed baseline checklist, then mark Done for that scope. OAuth/external-provider login or2FA should be separate selected module cards if wanted, not inferred from the bare title. Only WORK_LOG.md changed. No application/config/schema/data edit, tests/build/lint/syntax/app/helper/browser/services/API/database/migration/export/import, account/token mutation, Trello edit or Git staging/commit/push. Await user's next card/instruction; preserve accepted scopes and existing testing/backend boundaries.
+
+## 2026-10-23 — Recover acceptance for profile-edit permissions test card
+
+- User supplies 'Test profile-edit permissions after admin controls', four checks (own edit, nonowner denial including direct request, direct bypass blocked, intended admin behavior), showing25%, and asks if test finished. Read latest WORK_LOG before historical acceptance search and current own-profile/public routes/update serializer/UI/admin source. Initial broad log search output truncated; focused headings, exact latest acceptance lines and targeted earlier-scope context recovered the decisive record.
+- October22 'Clarify admin-control completion boundary' explicitly includes own-versus-public profile edit behavior in agreed admin7 completion. The immediately following 'Close admin control and start password-validation consistency' states user explicitly says permission checks are done and marks admin-control scope COMPLETE, superseding older pending-admin7 reminders. Root and independent read-only reviewer confirmed this hierarchy. Treat card Done based on user's prior overall acceptance; do not reopen or request repeat accepted checks merely because Trello still shows25%.
+- Source remains consistent: /api/me/ GET/PATCH requires authentication and queries only user=request.user; UserProfileUpdateSerializer allows only first_name/last_name/bio/profile_picture and rejects extra identity/role fields; public users detail endpoints are GET-only and public frontend has no editor. Website self-profile API also remains self-only for staff; separate Django UserAdmin follows Django account permissions. This is not a new grant of staff editing other people's profile through website /api/me/.
+- Evidence limit: log records user's overall completed-checks acceptance, not individual successful direct-request traces for every row. Earlier failed Console prechecks are not passing traces; later explicit acceptance supersedes pending status, without inventing test output. No fresh tests or direct requests run today. Only WORK_LOG.md changed, with no application/config/schema/data edit, tests/build/lint/syntax/app/helper/browser/services/API/database/migration/export/import, Trello edit or Git mutation. Next follows user's next card/instruction; preserve completed admin scope and other agreed boundaries.
+
+## 2026-10-23 — Clarify direct-request profile test evidence
+
+- User specifically asks about the direct-request part of the profile-edit test card. Read latest WORK_LOG, original direct-test/precheck entries and later overall acceptance, plus actual own-profile lookup/serializer guards. Earlier documented Console snippet targeted another user's recipe PUT and managed/pending staff list GETs, not profile PATCH. Its recorded precheck failure did not send those requests. Later general permission-complete acceptance remains valid, but there is no separately recorded successful profile direct-request result.
+- Clarify previous Done recommendation was based on user's overall acceptance, not independently observed per-request evidence. Current server code protects direct profile requests: /api/me/ authenticates and binds profile to request.user; attempted user_id/id selector fields are unsupported and rejected400 before update/save; public /api/users/id/<user-id>/ profile handler is GET-only, so a validly authenticated PATCH is rejected405. These are source-derived expectations, not executed/observed responses. A direct request bypasses frontend controls, not server checks.
+- Only WORK_LOG.md changed. No new implementation/test started, no direct HTTP request, account/profile write, tests/build/lint/syntax/app/helper/browser/services/API/database/migration/export/import, Trello/Git mutation. Independent read-only reviewer confirmed both expected400/405 rejection paths and the distinction between source protection and unrecorded individual test results. Do not claim individual profile direct tests passed or reopen the accepted broader admin scope automatically; await user's next instruction if they want explicit user-run verification.
+
+## 2026-10-23 — Provide direct profile-request test instructions
+
+- User explicitly asks how to test the two direct profile-request protections; provide user-run browser Console instructions rather than automatically sending requests or modifying accounts. Read latest WORK_LOG, actual session-storage key/routes and own-profile lookup/serializer rejection before drafting. Current key is recipe-site-auth-token; no token/password/private profile output requested or printed by proposed script.
+- Prepared Console IIFE to run on any page of the user's running recipe website while signed in as a normal account: obtains session token locally, GET /api/me/ validates successful response/nonstaff/positive own ID, GET /api/users/ validates array and selects a different valid positive nested user.id. This avoids manual URL/ID placeholders and the earlier wrong-page precheck problem. Sequential PATCH to /api/users/id/<other-id>/ with{} expects405; PATCH /api/me/ with only unsupported user_id expects400. Supplies no first_name/last_name/bio/profile_picture or other editable field. Output table compares actual/expected status; logs only failed-request error bodies, never token, self-profile or unexpected success response content.
+- Independent source-only reviewer confirmed request meaning/safety and recommended valid/different ID guards plus suppressing unexpected success profile responses; incorporated. These tests check read-only public-profile methods and server rejection of attempts to retarget self-profile. Source predicts rejection before save; this is not an executed test or a claim of observed400/405. Pending user result table establishes that specific evidence. Existing overall admin acceptance otherwise preserved.
+- Only WORK_LOG.md changed. No test script/source file added or application/config/schema/data edit, tests/build/lint/syntax/app/helper/browser/services/API/database/migration/export/import/account writes or real HTTP requests executed; no Trello/Git mutation. User next opens F12/Console on website and runs supplied snippet, then reports result table. Keep all other accepted scope/testing/backend boundaries.
+
+## 2026-10-23 — User confirms direct profile-request rejection tests passed
+
+- User supplies actual browser Console output from the provided direct-request script. PATCH https://localhost:8443/api/users/id/2/ returned405 with detail 'Method "PATCH" not allowed.'; PATCH https://localhost:8443/api/me/ with another account's user_id returned400 with user_id validation errors. Result table explicitly shows both actual statuses match expected statuses and both rows PASS. Record these as observed user-run results, not assistant-executed tests.
+- This supplies the previously missing individual evidence for the two named checks: another profile's public URL does not accept editing; self-profile API rejects attempts to choose another account through user_id. Red405/400 browser messages are expected server refusals in these tests. Do not infer additional payload/method/admin attack cases or a database before/after inspection from this output. Earlier overall profile/admin acceptance remains, and the current profile-edit permission test card can remain Done with these direct-request checks now explicitly confirmed.
+- Only WORK_LOG.md changed to save results and close this evidence gap. No application/config/schema/data edit, tests/build/lint/syntax/app/helper/browser/services/API/database/migration/export/import/account write or HTTP request executed by assistant; no Trello/Git mutation. No additional implementation or repeated testing started. Next follows user's next selected Trello card/instruction; all existing accepted scope/testing/backend and quota boundaries retained.
+
+## 2026-10-23 — Audit Best-rated test card and recover favorites acceptance
+
+- User first supplies 'Test favorites on the profile page' (correct owner/add/remove/reload/recipe links) asking whether done; that turn was interrupted after commentary and before any tools/commands/edits. User then supplies 'Test Best-rated recipes' (last30day average, descending order, approved+recent-review only, correct display/count/links), asking status. Preserve both questions, with Best-rated primary. Read latest WORK_LOG then targeted query/serializer/card/home source and historical acceptance evidence; no testing/fixes authorized or executed from this status question. Initial broad history output truncated; focused headings/exact favorites acceptance and bounded ranking matches recovered relevant entries.
+- Best-rated implementation source-complete: backend/recipes/views.py recipe_landing_page cutoff timezone.now()-30days; approved=True; filtered Avg/Count on reviews.timestamp>=cutoff; recent count>0; descending recent average, descending count tie-break and ascending ID, top5. RecipeSummarySerializer uses annotated recent scores/counts for ranking objects; HomePage preserves best_average order; RecipePreviewCard displays one-decimal average/review count and uses numeric recipe-ID links. Root plus independent read-only reviewer found no concrete checklist implementation gap. No historical dedicated best-rated ranking/30day-boundary/exclusion/ordering test pass located; October20 acceptance notes explicitly leave this user-run. Recommend implementation Done, specific Test Best-rated card still unconfirmed/To test, rather than claiming new missing functionality or completed runtime checks.
+- Favorites follow-up: October22 'Match favorite previews to compact pending cards; accept functionality report' records user saying 'Functionality is good' and accepts favorites/history at that general level. Current source uses authenticated request.user profile membership, persistent add/remove, own-profile saved ID lookup on reload and stable numeric recipe links. That supports existing general functional acceptance; no separate four-row result trace is recorded, and no new isolation/persistence/link test pass inferred. Do not reopen accepted favorites implementation unnecessarily or claim independent tests were executed.
+- Only WORK_LOG.md changed for audit/checkpoint. No application/config/schema/data change, tests/build/lint/syntax/app/helper/browser/services/API/database/migration/export/import/favorite mutations, Trello edit or Git mutation. No new test dataset/expired review dates created. Next follows user's chosen verification/card/instruction; maintain source-only assistant testing and all accepted scope/backend/quota boundaries.
+
+## 2026-10-23 — Accept user's Best-rated test completion
+
+- User responds 'yea it works fine' to the Best-rated checklist audit and its pending user acceptance. Accept this as the user's confirmation that Best-rated recipes works; the 'Test Best-rated recipes' card can now be marked Done. This supersedes the preceding unconfirmed/To test status. No individual dated-review dataset, screenshots, API traces or independent tests supplied/executed; do not invent those details or repeat accepted checks.
+- Read latest checkpoint and updated only WORK_LOG.md to save user acceptance. No application/config/schema/data edit, tests/build/lint/syntax/app/helper/browser/services/API/database/migration/export/import/favorite/rating mutation, Trello edit or Git staging/commit/push. Existing favorites general acceptance and all other agreed boundaries remain; await user's next selected card/instruction.
+
+## 2026-10-23 — Accept Most-reviewed and begin mandatory-requirements audit
+
+- User supplied Most-reviewed corrected-ranking test checklist; initial read-only query/log/serializer/frontend review confirmed implementation, and independent reviewer was asked to check. Before the prior turn completed, user explicitly said 'yeah they work so nvm', accepting Most-reviewed behavior, then requested a current implementation review against project description mandatory requirements. Mark Most-reviewed test card Done based on this user acceptance, superseding earlier October20 pending-runtime notes and reviewer's earlier pending conclusion. Best-rated acceptance remains complete. No synthetic dataset/API trace/assistant runtime pass inferred.
+- User then quotes mandatory simultaneous multi-user support and identifies it as primary concern. Preserve broader mandatory review request while prioritizing account isolation, concurrent writes, cross-client freshness and evidence for performance/integrity. This authorizes audit/reporting, not application fixes, services, tests or module implementation. Read latest WORK_LOG/AGENTS and current read-only status (only WORK_LOG modified; prior code/data saved outside this audit, no assistant Git operation inferred). Inventory confirmed source/README/PDF paths.
+- Read local ft_transcendence.pdf via installed pypdf, PDF pages6–12 including mandatory printedpp8–9 and14-point gate. Existing duplicate/Group dictionary warnings were emitted during successful read; no file extraction added. Delegated independent source-only backend/concurrency, frontend/legal/responsiveness and delivery/docs/HTTPS/env/Git evidence reviews. No app/test/import/helper/service/API/database operation, private .env/key/archive/account records or new module work.
+- Preliminary audit findings under review: request.user isolation and explicit transaction/record/version guards support shared writes; no automatic cross-client refresh exists in page sources, acting browser re-fetches its own changes only. Full simultaneous-session/performance tests are not recorded. 'When applicable' is conditional; lack of WebSockets alone is not treated as automatic subject failure or justification to impose chat/game scope. Broader concrete candidates include unfinished README/team facts, stale legal-page scaffold copy, mobile/header/focus behavior and ingredient-name validation; root review/final reporting pending. Only WORK_LOG.md changed so far, no source/data/config or Git mutation.
+
+### Final checkpoint — mandatory review, prioritizing multi-user support
+
+- Root and three independent source-only reviewers finished backend/concurrency, frontend/legal/responsiveness/update propagation and delivery/docs/Git/HTTPS/env audits. Root read exact mandatory printedpp8–9/PDF9–10, team printedp4/PDF5 and README printedpp27–29/PDF28–30, plus submission printedp31/PDF32; pypdf emitted existing duplicate/Group warnings but reads succeeded. No temporary extraction/source/report file added. Daemon restart interrupted before final checkpoint; recovered by rereading latest WORK_LOG and read-only status/diff stats, confirming only WORK_LOG modified and no application work to repeat.
+- MULTI-USER SOURCE SUPPORT: settings.py TokenAuthentication identifies each caller; users/views.py own profile and favorites bind request.user. Signup advisory lock covers availability/create. Ingredient/category helper has separate transaction advisory lock. Recipe edit/delete and review POST/DELETE/moderation/favorite operations take recipe-first row locks; profile/review/reviewer locks coordinate targeted writes. Atomic DB changes, schema constraints and required content_revision checks protect common overlapping edits and staff decisions. User earlier accepted stale-editor guard and profile permissions; those results remain accepted but are not full simultaneous-load proof.
+- MULTI-USER LIMITATIONS: no WebSocket/SSE/polling/focus refresh/BroadcastChannel implementation found. HomePage data fetches on mount, RecipePage on mount/recipeId, own profile on mount/local saves, AdminPage on mount/manual retry. Acting browser re-fetches saved review/moderation results; other already-open clients remain stale until reload/reopen. Subject's 'when applicable' is conditional; absence of a realtime transport is not automatically a universal failure, but current shared review/score/status/queue updates cannot demonstrate automatic connected-client propagation. No multiple-independent-session performance/integrity test or live browser evidence gathered. Compose Gunicorn command does not specify workers/threads; its normal single synchronous worker serializes requests, and source inspection cannot certify responsiveness/load capacity. Do not present multiple logins or one user's two-tab test as full concurrency acceptance.
+- CONDITIONAL CONCURRENCY DEFECT: backend/recipes/serializers.py get_average_score around357–363 checks reviews.exists() before separately iterating and dividing by reviews.count(). For non-prefetched callers (public recipe list, staff managed list, own submitted summaries), if a genuinely concurrent writer deletes the last review between exists and iteration, the iteration can cache an empty list and denominator becomes0, raising500. Detail GET's prefetched reviews and annotated ranking responses avoid this specific path. Default single-worker execution reduces current overlap reachability, but the calculation is unsafe when requests/workers genuinely overlap; no reproduction or observed corruption claimed. Recommend a consistent review snapshot/aggregate before concurrent deployment acceptance; no fix applied.
+- OPERATIONAL CONCURRENCY LIMIT: scripts/share-postgres.py export_snapshot deliberately stops/restarts backend while snapshot/photos are saved; active clients can receive temporary API errors during export. This is existing accepted maintenance behavior, not a newly authorized sharing redesign or proof that normal steady-state simultaneous requests fail. No export/helper execution occurred in audit.
+- OTHER CONCRETE MANDATORY GAPS: PrivacyPage.jsx17–28 still says Django/MariaDB will be connected and calls frontend a preview; TermsPage.jsx9,23–27 contains development-note/future-backend copy. Printedp8 requires relevant non-placeholder policies; links alone do not finish this. README.md first line still has [team 42 logins to confirm], roles/contributors/management/modules remain pending, features/limitations are stale (favorites called unfinished); exact printedpp27–29 required content not complete. RecipeIngredientSerializer.name at serializers.py44 has no max_length despite Ingredient.name100, so direct101-character input can reach PostgreSQL length error/500 rather than400; UI ingredient maxLength100 exists, making backend the gap. Phone header retains four-column desktop grid at App.css1982 without mobile override; source predicts overflow/crushed search at narrow widths, actual rendering untested. App.css195–196 removes search input focus outline without replacement, an accessibility gap. No source fixes made.
+- POSITIVES/EVIDENCE LIMITS: frontend/backend/PostgreSQL structure and relational schema present; password/email auth and permitted self-profile fields implemented; custom CSS/Tailwind styling exists; Compose/start script provides documented one-command container startup, HTTP redirects to HTTPS with internal-only backend/database, .env variants ignored and .env.example tracked. Read-only metadata checks found no tracked env/key/certificate secrets; private values/archive/DB records not inspected. Team author aliases show contributions but actual4–5 roster/roles/mapping/all members' understanding need team evidence. Latest-stable-Chrome, clean normal-operation console, actual responsive/accessibility render, fresh-machine TLS/startup and performance need live evidence.14-point module plan remains separate/not certified; no extra optional features prescribed.
+- Verification actually performed: local document/source/reference reads and read-only Git status/history/index/ignore metadata; all independent reviewers returned no file edits/runtime operations. Only WORK_LOG.md changed. No tests/build/lint/syntax/app imports/app/helper/browser/services/API/database/migration/export/import, account/review/data/photo operation, source/config/schema change, Trello edit or Git mutation. Best-rated and Most-reviewed user acceptance preserved. Next is user's chosen scoped fix (suggest concurrency averaging + applicable cross-client update behavior first), then user-led simultaneous normal/normal/staff sessions to check isolation, owner/staff overlapping edit/decision, parallel review add/delete, membership correctness, no server errors/lost data and responsiveness. Do not begin fixes, app testing, README rewrite or module work without user's next instruction.
+
+## 2026-10-23 — Draft Trello cards for remaining mandatory work
+
+- User asks for an actionable remaining-work list in Trello card format after mandatory/multi-user audit. Read latest completed audit checkpoint; planning/copy-ready text only, not application implementation or direct Trello writes. Independent source reviewer cross-checked scope/completeness without tools/edits/runtime, recommending conditional race wording, live-update applicability first and team-wide Git contribution evidence.
+- Eight cards planned: (1) fix consistent review averages under overlapping reads/last-review deletion; (2) agree applicable shared-view update scope/delay, then implement appropriate refresh preserving unsaved forms/permissions; (3) user-led simultaneous two-normal-plus-staff acceptance with account isolation, parallel reviews/favorites, owner/staff edit-decision conflicts, actual overlap/responsiveness and recorded results; (4) enforce backend100-character ingredient-name limit with clear400 and existing client limit alignment; (5) replace Privacy/Terms scaffold with accurate current data visibility/use/moderation/deletion behavior and accessible links; (6) repair phone header layout and visible keyboard search focus, verify representative widths; (7) finalize required README/actual team roles/work organization/feature attribution/AI use/Git author-to-member mapping, with chosen-module table completed after later module plan; (8) fresh-checkout single-command/HTTPS/latest-stable-Chrome/normal-console and final representative-flow acceptance.
+- These are pending implementation/verification/documentation tasks, not completed checks. Source-identified averaging race has not been reproduced; mobile overflow remains predicted until rendered. Live refresh is conditional on subject's 'when applicable', not a forced WebSocket/chat/game module. Preserve accepted rankings/profile permissions/admin/media/sharing/category scope; do not turn maintenance/export behavior or every optional module into mandatory new work.14-point module selection/evidence remains separate next phase, not certified by these baseline cards.
+- Only WORK_LOG.md changed to save plan. No source/config/schema/data/README/legal/CSS edits, tests/build/lint/syntax/app/helper/browser/services/API/database/migration/export/import, external Trello card creation or Git mutation. Await user's selected card/instruction before implementing or executing tests; retain all existing testing/backend authorization and quota boundaries.
+
+## 2026-10-23 — Recover response lost in VS Code
+
+- User reports the previous response disappeared and asks to generate it again. Read opening instructions/priorities and the latest audit/card-planning checkpoint; initial whole-file read was truncated, then bounded reads recovered the latest checkpoint. Reconstruct the eight copy-ready Trello cards from that saved record rather than claiming a verbatim transcript was recovered.
+- Repeated scope: consistent review averaging under concurrent deletion; determine applicable shared-view updates; user-led simultaneous-session acceptance; backend ingredient-name length validation; current Privacy/Terms content; mobile header and search focus; required README/team facts; fresh-start/HTTPS/Chrome/console acceptance. Preserve conditional/unreproduced concurrency and mobile findings and the separate later 14-point module plan.
+- Only WORK_LOG.md changed for this recovery entry. Verification performed: reading saved work-log instructions and latest audit/plan. No new source audit, application/config/data edit, runtime/test/build/service/helper/API/database action, Trello write, staging/commit/push or other Git mutation. Next remains user's selected card/instruction; all previously accepted features and testing/backend boundaries remain in force.
+
+## 2026-10-23 — Tie mobile check and remaining scope to exact mandatory clauses
+
+- User challenges whether mobile is in the subject and reiterates that the purpose of this work is full mandatory compliance. Re-read latest checkpoint, located local ft_transcendence.pdf with rg, and extracted PDF pages7–11 read-only using pypdf. Existing duplicate /Group dictionary warnings appeared; extraction succeeded. No application imports or runtime actions occurred.
+- Exact source: Chapter III.3 Technical requirements, printedp9/PDFp10, explicitly says this section is mandatory and requires 'A frontend that is clear, responsive, and accessible across all devices.' Thus phone usability and keyboard focus belong to mandatory responsive/accessibility checks; the previous specific header overflow remains a source prediction, not a reproduced rendering defect. No separate mobile application or unrelated redesign is prescribed by this clause.
+- Preserve user's goal as complete mandatory compliance, not an optional-polish queue. Remaining tasks/checks must cite the applicable subject clause and distinguish confirmed source gaps, conditional requirements, and missing live evidence. ChapterIII also covers full README, frontend/backend/database, meaningful all-member Git contributions/work distribution, single-command container deployment, latest stable Chrome/clean console, relevant accessible policies, simultaneous users/conflicts/performance/integrity/applicable real-time updates, styling solution, ignored local secrets plus env example, relational schema, secure email/password auth and validation on both sides, and external HTTPS. Previously accepted features remain accepted; this clarification does not authorize fixes/tests or certify completion. Required14module points remain the separately planned next phase.
+- Only WORK_LOG.md edited to record evidence/scope. No code/config/schema/data/README/policy/CSS edit, test/build/lint/app/helper/service/API/database/export/import, Trello or Git mutation. Next remains clause-based mandatory review/reporting or user's selected scoped fix; retain source-only assistant testing and existing backend boundaries.
+
+## 2026-10-23 — Respect desktop-only evaluation and verification constraint
+
+- User states their evaluation is on desktop Windows/Linux/macOS and they will not test on mobile. Accept desktop-only verification; do not require phone hardware, a separate mobile-device test campaign or a mobile application. Do not claim this changes the subject's exact mandatory 'responsive, and accessible across all devices' clause or proves the predicted narrow-header defect exists.
+- Reframe the proposed sixth card as 'Check browser-width layout and keyboard navigation': browser resizing and focus/navigation checks can be performed in desktop Chrome. This is a wording/scope clarification to the copy-ready plan, not an external Trello update, an executed check, a complete responsive-compliance certification, or authorization for CSS changes. Keep the main simultaneous-user/concurrency concern prioritized and the rest of mandatory compliance visible.
+- Read latest checkpoint and edited only WORK_LOG.md. No source/config/schema/data changes, app/browser/test/build/helper/service/API/database/export/import actions, physical-device testing or Git/Trello mutation. Await user's next selected action; previous accepted features and source-only assistant testing/backend boundaries remain.
+
+## 2026-10-23 — Clarify final eight-card mandatory-work list
+
+- User asks whether the remaining mandatory list must change after the desktop-evaluation clarification. Read latest saved audit/plan/constraints. Same eight work areas remain; revise wording and verification scope rather than invent new features or physical-mobile tests. This is a plan/reporting request, not implementation or runtime-testing authorization.
+- Current proposed cards: (1) safe review averaging under concurrent deletion (source-identified conditional race, not reproduced); (2) define applicable cross-client updates and implement the required behavior; (3) user-led simultaneous independent-session acceptance for isolation/conflicts/integrity/responsiveness; (4) backend ingredient-name100-character validation; (5) accurate accessible Privacy/Terms; (6) desktop browser-width layout and keyboard accessibility checks, fixing established focus issue/any confirmed layout defects; (7) required README/team/work-organization/contribution facts and Git evidence; (8) final clause-by-clause mandatory acceptance, covering fresh-checkout single-command containers, HTTPS, latest stable Chrome and console plus confirmation of frontend/backend/database, styling, schema, ignored env/example, secure auth and frontend/backend input validation already represented in source. Mark satisfied/missing/unverified on evidence rather than call every existing feature unfinished.
+- Existing source-backed/accepted requirements remain implemented/accepted within their recorded scope. Eight work cards are not a claim of full compliance or a complete inventory of missing implementation; final checks must establish runtime evidence and identify any remaining gap. Keep the mandatory real-time 'when applicable' condition, source-only assistant testing, accepted admin/profile/ranking/media/sharing/category boundaries and later separate required14point module phase.
+- Only WORK_LOG.md changed to save revised wording/checkpoint; no new source audit, application/config/schema/data/document implementation, test/build/browser/service/helper/API/database/export/import, actual Trello edits or Git mutations. Next is user's selected scoped card/action, with concurrency the current priority.
+
+## 2026-10-23 — Agreed resume checkpoint — eight mandatory-work cards
+
+### Task and agreement
+
+- User accepts the clarified list and asks to remember it so they can continue later. Save this as the canonical next-session list; no deferred implementation or testing begins in this turn. Goal is full mandatory compliance, using satisfied/missing/unverified evidence for each subject clause.
+
+### Agreed list — all eight cards pending
+
+1. **Fix unsafe review averaging during concurrent deletion.** Addresses the source-identified conditional race in summary averaging; no runtime reproduction or corruption has been observed.
+2. **Define and implement shared updates where applicable.** Follow the subject's conditional real-time requirement; choose applicable views/delay and preserve unsaved forms and permissions. No automatic connected-client refresh exists currently.
+3. **Verify simultaneous multi-user operation.** User-led independent normal/normal/staff sessions to check account isolation, overlapping actions, conflict/stale-action handling, data integrity and responsiveness. Distinguish actual overlap from multiple logins or one account's tabs; record results.
+4. **Enforce backend ingredient-name validation.** Apply the existing100-character model/frontend limit in backend create/edit validation; invalid101-character input should return a clear400 without partial saves.
+5. **Replace Privacy and Terms placeholder content.** Provide accurate, relevant content for current project behavior and keep both pages accessible.
+6. **Check browser resizing and keyboard accessibility on desktop.** Verification stays in desktop Chrome in the user's Windows/Linux/macOS evaluation context. Fix confirmed layout/focus problems; do not require physical-phone tests. Narrow-header overflow is still a source prediction; missing search-focus indication is source-identified. The subject still requires responsive/accessibility behavior across devices.
+7. **Complete README, team information and Git contribution evidence.** Include required team identities/roles/contributions/work organization and actual all-member Git evidence. Preserve feature acceptance; update stale documentation. Finish module-specific facts after the separate module phase.
+8. **Complete the final mandatory-requirements checklist.** Verify fresh-checkout single-command container startup, HTTPS, latest stable Chrome compatibility and console behavior; account for every mandatory clause, including frontend/backend/database, styling, schema, ignored local env plus example, secure email/password auth and both-side input validation. Existing implemented/accepted requirements retain their recorded status; explicitly identify remaining unverified checks.
+
+### Boundaries and next session
+
+- Multi-user/concurrency is the current priority; begin with the user's chosen scoped card when they return. This checkpoint is a saved plan, not a claim of mandatory acceptance or approval to execute all fixes/tests. Existing source-only assistant testing and backend-edit authorization boundaries remain; accepted admin/profile/ranking/media/sharing/category scope stays accepted.
+- Required **14-point module selection/implementation/evidence remains a separate later phase**; the baseline list does not certify those points or make them optional.
+- Updated only WORK_LOG.md: added an opening latest-priority pointer and this canonical list/checkpoint. Verification: read the prior final audit/planning checkpoints and read back the saved new checkpoint. No application/config/schema/data/README/CSS/policy implementation, runtime/tests/build/browser/service/helper/API/database/migration/export/import, real Trello edits, staging/commit/push or other Git mutation. Stop here after saving; user will continue later.
+
+## 2026-10-24 — Start card1: review averages during simultaneous changes
+
+- User returns with the first agreed Trello card and says to do this first. Scope: safe consistent review average/count, last-review deletion, empty/no-rating presentation and overlapping-read/deletion acceptance. This explicitly authorizes the selected backend serializer correction and necessary preview display change, superseding historical backend restrictions only for this scope. No other card begins.
+- Read latest WORK_LOG checkpoint before investigation, AGENTS.md, original testing rule, read-only Git status, actual serializer/callers/ranking annotations/detail prefetch/review model/API readers and UI display. Starting status: only WORK_LOG.md modified; no prior application edits to overwrite. No nested AGENTS files found under backend/frontend. Existing recipe/review tests.py are placeholders; no tests added or executed.
+- Confirmed summary and detail fallback methods each use a separate exists check, review iteration and count call; fallback review-count field separately queries again. Non-prefetched fallback reads can race with deletion, while prefetched detail currently avoids this path. Accepted ranking queries annotate recent average and count together and must remain unchanged. Preview cards currently display numeric0.0 for zero reviews; detail already displays No ratings yet when count0. API detail reader requires a finite numeric average, so preserve the existing empty numeric0.0 sentinel and adjust presentation by count.
+- Planned edit: shared serializer mixin takes one list snapshot and caches both calculated fields for the current recipe representation, resets between representations including many=True reuse; both serializers share it and summary retains the existing recent-annotation overrides. Preview average displays n/a when count0. No new schema/migration/view/permission/transport/data change planned. Implementation and final source review remain pending at this entry.
+- Verification so far is source/status reads only. Under AGENTS.md and saved user-led testing rule, no tests/build/lint/syntax/app imports/app/helper/browser/service/API/database/migration/export/import or Git/Trello mutation performed. Live simultaneous-request acceptance remains user-led, not a pass inferred from source. Next: apply the scoped edits, record results and review saved source/diff.
+
+### Scoped source edits applied
+
+- Updated backend/recipes/serializers.py with RecipeReviewStatisticsMixin shared by detailed/summary serializers. Each to_representation resets its serializer-local cache; first fallback field materializes recipe.reviews.all() once, derives count via len and average from the same list, guards zero before division, then both fields reuse that pair for the recipe. Identity guard also prevents cross-recipe cache reuse. Removed both unsafe exists/iteration/count fallback implementations; summary's existing recent_average_score/recent_number_of_reviews overrides remain intact. Serializer edit used exact byte replacements and preserved CRLF throughout.
+- Updated frontend/src/components/RecipePreviewCard.jsx: show a numeric average only when number_of_reviews>0; empty cards now select existing Avg: n/a text and retain0reviews. Backend empty average remains0.0 and count0 to preserve the existing API reader; detail's existing No ratings yet presentation remains unchanged.
+- No views/models/migrations/permissions/ranking queries/services/data or other feature changes. Both source edits executed successfully; only these two files plus WORK_LOG.md changed by this task. Final saved-source/diff/CRLF-aware whitespace review remains pending. No runtime/tests/build/lint/syntax/app/helper/browser/API/database/export/import or Git/Trello mutation executed.
+
+### Final checkpoint — source complete, live acceptance pending
+
+- Reviewed exact saved diff/source and all summary/detail consumers: public list, staff managed/pending lists, own submitted summaries, public-profile/author summaries, landing/ranking results and recipe detail. Default snapshot uses one materialized review query or existing prefetched reviews; both metrics derive from the same list, so deletion after loading cannot alter the denominator or count. Empty list returns average0.0/count0 without dividing. Each to_representation resets cache so many=True reuse and repeated representation calls cannot retain the prior recipe's statistics; recipe-identity check adds protection. Ranked average/count continue using the paired existing30day annotations without loading fallback reviews. No issue found in this saved-source review.
+- Reviewed presentation/API compatibility: unchanged numeric empty-average contract satisfies readRecipeDetails; detail already hides the average at count0; shared preview card now selects Avg: n/a at count0 while showing0reviews. Positive-count averages/review pluralization/ranking order remain unchanged. No migration or configuration change required.
+- Actual verification performed: source/call-site/reference reads, read-only git status/diff and `git -c core.whitespace=cr-at-eol diff --check -- backend/recipes/serializers.py frontend/src/components/RecipePreviewCard.jsx WORK_LOG.md` (exit0, no findings). Serializer byte replacement required original all-CRLF and wrote replacement bytes with CRLF; diff is limited to the intended mixin/method changes. Final status shows exactly WORK_LOG.md, backend/recipes/serializers.py and frontend/src/components/RecipePreviewCard.jsx modified. No new test or other source file added, no app/runtime execution or live evidence produced.
+- Card checklist: consistent average/count, last-review zero guard and empty/no-rating presentation are source-complete; their live acceptance and the overlapping-read/deletion no-server-error check remain pending user-run results. Under the saved testing rule, assistant did not run tests/build/lint/syntax/imports/app/helper/browser/services/API/database/migration/export/import or alter any review/account/recipe/photo data; no Git or Trello mutation.
+- Next user runs their normal startup and checks a chosen approved recipe with disposable test reviews: grades2and4 give average3.0/count2; removing4 leaves2.0/count1; removing the last gives0reviews/Avg:n/a in previews and No ratings yet in details after reload. Another independent session can read affected recipe lists/profile summaries while deletions happen as a smoke check; genuinely overlapping-worker acceptance is still distinct and not established by merely opening two sessions, especially with the unchanged default single-worker command. Do not alter worker settings or start stress tests from this fix. Record actual observations when supplied, then follow the user's next selected card; no automatic live-update/other feature implementation begins.
+
+## 2026-10-24 — Explain review-average race and changed behavior
+
+- User asks what the four implementation-summary bullets actually mean and what the old problem/new behavior is. Read latest WORK_LOG checkpoint and exact saved snapshot/ranking/UI source; explanation only, no new application edit or test.
+- Explain the conditional non-prefetched path precisely: recipe.reviews.all() originally represented a query, exists() checked the database before iteration loaded reviews. With genuine overlapping deletion of the last review between those steps, iteration could load/cache an empty result and count() on that evaluated result is0, producing0/0 and an unexpected500. Do not imply the average's evaluated queryset necessarily performs an independent later COUNT query. The separate number_of_reviews field previously read recipe.reviews.count() anew and could also disagree with an average calculated before deletion. These are source-derived failure possibilities, not observed/reproduced server errors.
+- Explain actual three-line snapshot calculation with plain meanings for list/len/sum and the zero guard. The same temporary in-memory review list supplies both metrics for that recipe response and the resulting pair is reused, reset on the next representation. Deletion can still proceed; an overlapping response may consistently show the before-deletion pair or after-deletion empty pair depending on when its list loaded. The next fresh request after deletion sees current data; existing open pages still require reload, automatic connected-client updates remain card2. Snapshot is response-local data, not persistent backup/synchronization or a new database lock.
+- Empty API numbers remain average0.0/count0 for compatibility; UI count check represents absence of ratings as n/a rather than a real zero-star rating. Existing Best-rated/Most-reviewed30day filtering/average/count/order behavior remains unchanged. Card1 stays source-complete/live acceptance pending and other seven cards remain pending.
+- Only WORK_LOG.md updated to save explanation/checkpoint. Verification this turn: targeted saved-source/work-log reads only. No app/code/config/schema/data change, test/build/lint/syntax/import/helper/browser/service/API/database/migration/export/import or Git/Trello mutation. Next remains user-led acceptance or user's further explanation/instruction; no implementation/test work starts automatically.
+
+## 2026-10-24 — Accept card1 functionality and begin card2 shared updates
+
+- User reports the proposed rating/deletion/empty checks work and their page updated without manual reload. Accept these user-run functional results, including the existing acting-browser follow-up fetch; do not infer another browser updated or genuine server-side overlap was tested. User explicitly requests the next selected card: define/implement automatic shared updates, choose applicable views/delay, preserve unfinished forms/permissions and user-confirm another browser updates. No other mandatory card begins; card3 retains broader concurrency acceptance.
+- Read latest WORK_LOG first, current AGENTS, read-only status, frontend file inventory, page effects/mutation handlers/API readers and review/profile form reset logic. Status also includes user-generated data/shared-database/manifest.json and shared-data changes after their testing; do not inspect private contents or overwrite them. Preserve prior card1 serializer/preview changes and accepted features. No nested AGENTS files were found in prior inventory; no delegated agents used.
+- Asked two optional async choices for view scope and2/5/10second interval. No response received during independent source review; after giving time to answer, stated provisional broad scope and5second visible-tab polling plus immediate return/focus refresh. This is a working assumption within authorized card2, not an invented recorded agreement; incorporate any reply. Provisional views: recipe reviews/rating/count/status and viewer capabilities, staff queues, homepage rankings/recent recipes, search results and own/public profile recipe lists/history/favorites where applicable. Network time adds to polling delay. No physical mobile testing or new realtime backend transport needed for this implementation scope.
+- Planned source architecture: shared visibility-aware non-overlapping refresh hook, abort/cleanup on hidden tabs/unmount/route changes and synchronous cancellation before local writes. Refresh current permission-sensitive data through existing authenticated GET endpoints; drop protected content on lost access. Keep failed/uncertain-write explicit-reload guards. Keep review/rejection text in parent state so background content/status changes cannot discard it; profile editor local draft/photo state should stay mounted and untouched while only writes pause refresh; leave AddRecipePage's unsaved editor and revision token intact. Background failures must not clear good data or create console logging loops.
+- No source edit at this entry beyond WORK_LOG. No tests/build/lint/syntax/app/helper/browser/services/API/database/migration/export/import/data writes or Git/Trello mutation executed. Next apply scoped frontend hook/integration changes, log each group and perform source/diff/whitespace review; cross-browser acceptance remains user-led.
+
+### Shared refresh foundation and first view integrations applied
+
+- Added frontend/src/hooks/useLiveRefresh.js: one request at a time per mounted hook,5second delay after completion, optional immediate initial load, current callback ref, synchronous abort handle for mutations/retries, hidden-tab abort/pause, focus/visibility return refresh and route/unmount cleanup. Pages retain responsibility for user-visible error handling; timer survives refresh errors.
+- Integrated HomePage.jsx (initial/background loads without periodic loading resets, no-store fetch, removed recurring console.error), AdminPage.jsx (background role recheck/managed list, preserve filter, clear protected list on401/403/nonstaff, retry cancels pending reads) and PublicUserProfilePage.jsx (background public profile/approved recipes, preserve good data on transient failure, clear on denied/missing profile, controlled retry). recipeApi.js GET requests now use cache:no-store for current shared data; mutations unchanged.
+- These source edits executed successfully. Other broad-scope integrations, draft protections and final review remain in progress. No tests/build/lint/syntax/app/helper/browser/services/API/database/export/import, source execution or Git/Trello/data mutations.
+
+### Search and recipe-detail integration applied
+
+- SearchResultsPage.jsx now uses immediate/live refresh keyed by actual query/retry, keeps query isolation and abort guards, and no longer clears results into Loading on every timer. Existing matching/title/profile links and users-first zero-recipe ordering remain.
+- RecipePage.jsx now refreshes current viewer/favorites then recipe details through existing API readers, checks account identity/token, applies new reviews/averages/counts/status/capabilities/content and preserves manual uncertain-write recovery. No-access/deleted responses clear the recipe; other errors retain last data with a refresh notice. Each local favorite/review/delete/moderation/recovery action synchronously aborts pending background reads; refresh pauses while actions/requiresReload are active. Current recipe editor is untouched.
+- RecipeReviewForm.jsx draft grade/comment are controlled by recipe-page state; rejection reason likewise lives in the recipe-page parent. RecipeContent key is recipe ID only, so revision changes no longer remount the whole content and discard drafts. Parent drafts survive conditional form unmounts; explicit cancel or confirmed successful submission clears appropriate input. A content-revision refresh shows a review-current-contents notice; backend version checks remain authoritative.
+- This group applied successfully. Profile integration and final source review remain pending; these are source changes, not executed cross-browser results. No runtime/test/build/lint/syntax/import/app/helper/service/browser/API/database/export/import, data or Git/Trello mutation.
+
+### Own-profile integration applied
+
+- ProfilePage.jsx shares its existing current-profile/submission/history/favorite-resolution loader between initial load and background refresh. Polling starts after the complete initial load, keeps existing ownership-safe legacy fallback and stable recipe previews, and refreshes approved/pending/rejected lists, authored history and favorite membership/availability. Token-auth failures/account identity changes clear the private profile; transient failures keep displayed data with a notice.
+- ProfileEditor remains mounted with its own draft/name/bio/file/preview state while profile props/lists refresh; no effect resets draft from new profile data. Added save-busy callback/ref/state so a save synchronously cancels both initial/background reads and pauses polling until completion. Unavailable-favorite removal likewise cancels reads/pauses refresh and preserves explicit uncertain-removal recovery. New profile-picture URL resets only failed-image display.
+- The profile edit executed successfully via guarded source replacements; no separate file or backend/API/schema change. Implementation across proposed views is applied; final saved-source/race/cleanup/draft/permission review and whitespace check remain next. No tests/build/lint/syntax/import/app/helper/browser/services/API/database/migration/export/import/data/Git/Trello mutation.
+
+### Source-review refinements applied
+
+- Normalized callback indentation in HomePage/SearchResults/PublicUserProfile; removed stale rerun flag when a fresh hook request starts. Recipe refresh notices now render for all viewers independently of owner/staff-only management status. When a refreshed account role no longer permits viewing the currently private recipe, clear cached private content before another recipe fetch; backend permission checks remain unchanged.
+- Profile background parse/fallback errors now surface a refresh notice while retaining good data; observed authentication failures also clear the protected profile in fallback paths. Captured initial profile loader in a ref to keep the mount-only effect stable, and cleaned signal shorthand. Staff role-denial refresh clears stale retry state. All edits applied successfully; final diff/source/whitespace review still in progress.
+- No tests/build/lint/syntax/import/app/helper/browser/services/API/database/migration/export/import/data or Git/Trello mutation; user scope/interval response has not yet arrived, so broad5second behavior remains the stated provisional implementation choice.
+
+### Final checkpoint — card2 source complete; cross-browser acceptance next
+
+- Source implementation complete under the stated provisional scope and5second interval; optional async view/interval questions still have no response, so do not call these explicit user agreement or silently mark those checklist items accepted. Views covered: recipe review list/average/count/current content/status/permissions/favorites, staff queue/all lists/counts, homepage ranked/recent lists, query-isolated search, public approved recipe lists/profile fields, own approved/pending/rejected lists/favorite membership/availability/authored history/profile fields. No automatic edits to the AddRecipePage form or viewed content_revision; its accepted stale-save guard remains.
+- Timing/cleanup source review: hook schedules the next request5seconds after the current request finishes (network latency adds), avoids a concurrent refresh in the active hook cycle, refreshes on visible return/focus, aborts/pauses on hidden and cleans up on unmount/key changes. Repeated focus events during a healthy request do not start duplicates; an aborted hidden request can refresh immediately on return after it settles. GET no-store avoids browser cached data. Source defaults live in frontend/src/hooks/useLiveRefresh.js.
+- Draft/write source review: review grade/comment and rejection reason are recipe-page state, reset by deliberate cancel/confirmed success as applicable, not by revision-driven content remount; RecipeContent uses recipe-ID identity, with revision-change notice. ProfileEditor retains its own initialized draft/file/object-URL state while props/list data refresh. All seven recipe mutation/recovery paths synchronously cancel background requests; background setters check aborted/action state; saves and requiresReload suspend refresh. Profile save/removal cancel initial/background reads, use synchronous busy refs and pause until completion, preserving explicit uncertain-removal recovery. Backend revision tokens/permission methods and all API mutation contracts are unchanged.
+- Permission/error review: staff refresh rechecks current staff role and clears the managed list on denial/auth loss. Recipe refresh rechecks current account identity/role, clears cached private content on lost eligibility and clears unavailable/deleted recipe on401/403/404; backend review can_delete is refreshed. Own-profile auth/account switch and public-profile denied/missing cases clear protected/unavailable content. Other transient failures keep underlying good data and expose existing/new notices; no recurring console.error added. Existing field validators/fallback ownership checks remain. No issue found in final root saved-source/diff review; no independent agent or runtime review claimed.
+- Files added/edited for card2: new frontend/src/hooks/useLiveRefresh.js; frontend/src/components/RecipeReviewForm.jsx; frontend/src/data/recipeApi.js; frontend/src/pages/{HomePage,AdminPage,RecipePage,ProfilePage,PublicUserProfilePage,SearchResultsPage}.jsx; WORK_LOG.md. New hook is untracked and must be included in later user-led Git delivery; no staging/commit/push performed. Prior card1 serializer/preview changes remain; user's data/shared-database/{manifest.json,shared-data} modifications were preserved and neither read nor changed by assistant.
+- Actual verification: source/reference/diff/status reads; tracked scoped `git -c core.whitespace=cr-at-eol diff --check -- frontend/src WORK_LOG.md backend/recipes/serializers.py` returned0/no findings. New-file `git -c core.whitespace=cr-at-eol diff --no-index --check /dev/null frontend/src/hooks/useLiveRefresh.js` returned1 (new-file difference), no whitespace findings/output; record exit accurately. No tests/build/lint/syntax/imports/app/helper/browser/services/API/database/migration/export/import, account/review/photo/data mutation, Git state mutation or external Trello write. No live delivery timing/performance/Chrome/draft pass inferred.
+- Next user-led acceptance after normal startup: connect two independent normal/staff browser sessions to the SAME running website/backend. Keep a review draft in browserA; add/delete a permitted review inB and confirm A's reviews/average/count change after roughly5seconds plus response time with grade/text intact. Staff approve/reject a pending recipe while its owner profile/detail is open and verify status/list transitions; verify staff queue changes for another session's submission/decision/deletion request and homepage/search/public-profile approved lists refresh. Type profile fields/select a photo while another session changes recipe status; confirm draft/preview remain, then save/cancel normally. Check returning to a hidden tab refreshes without manual reload and existing unauthorized actions remain blocked. Record observed results before marking card2 done. Genuine overlapping-worker load/race acceptance remains separate card3; no tests/worker changes/other mandatory-card implementation starts automatically.
+
+- Final error-path refinement: SearchResultsPage.jsx now retains prior same-query recipe/user arrays on transient refresh failure, with its existing error/retry UI; never reuse an old query's results and clear on401/403/404. This aligns its stored-data behavior with the other refresh pages. Saved source and scoped whitespace check reviewed after this edit; no runtime execution. Source-complete/live acceptance pending status and all boundaries above remain.
+
+## 2026-10-24 — Provide specific user-run cross-browser test steps
+
+- User asks for specific instructions for the card2 checks. Read latest WORK_LOG before current route/UI/form/hook/start-script source. Explain user-run actions only; no assistant application/service/test execution. Latest developer mode permits proactive delegation, so one independent read-only agent checked manual acceptance sequencing/labels/pitfalls; it made no file edits or runtime calls and found no additional implementation issue.
+- Test setup: normal Chrome window signed in as ordinary accountA, incognito window signed in as staffB; SAME running site/backend and actual same recipe URL, original signed-in tab in each (auth is sessionStorage). User usual startup sh scripts/start.sh rebuilds/starts current code and includes existing shared-data steps; refresh once for setup if old app was already open. Then no manual reload during assertions; tile observing windows, selected tab visible/unminimized, allow roughly5seconds plus request time (about10seconds practical). New tabs/windows may require their own explicit sign-in; do not assume browser-wide token sharing.
+- Exact review/draft test: use an approved zero-review recipe in both tabs; A chooses2stars/types distinctive unsubmitted draft; B posts5stars/distinctive test comment. A should automatically display that comment,5.0/count1, preserve grade/text. B deletes only B's new test review and confirms; A should return to no rating/count0 and retain draft. If nonempty baseline used instead, compare to recorded baseline and do not promise the numeric average must change when it already equals the new grade.
+- Exact queue/profile draft test: B leaves /staff Pending open before A submits a new ordinary-user recipe. Minimal actual required inputs: title LiveUpdateApprove, Ingredient1 Water, Quantity1, Unit cup, Category1 Test, Step1 Pour water into a cup, Picture1 one valid JPEG/PNG/GIF/WebP <=5MiB; click Add recipe. Optional extra rows may stay blank. B's already-open queue should acquire the title. A uses Go back to profile, sees Pending Approval, opens Edit profile/types a Bio and optionally selects profile photo without saving. B opens queued title and clicks Approve. A's existing profile should move recipe to Approved recipes and retain draft/photo preview, then user Cancel can discard deliberately. This does not prove the owner's separate recipe-detail status view unless observed before decision; use a second pending LiveUpdateReject with A detail open and B Reject/reason/Confirm rejection to verify that view/reason.
+- Queue-removal proof needs another already-authenticated staff observer window on /staff while B decides in its original window; same staff account can be explicitly signed into the extra window. Reopening the deciding window's queue after approval is a fresh mount and must not be claimed as cross-client queue-refresh evidence.
+- Other shared-view instructions use the approved disposable LiveUpdateApprove recipe: A opens homepage Recently Added, search for LiveUpdateApprove, or A's public profile via recipe author link BEFORE B changes that recipe title through Edit recipe/Save changes (staff preserves approved status). Keep the title prefix and use numbered suffixes to repeat per view; existing observer title/card should update automatically. Newly approved zero-review recipes need not appear in Best-rated/Most-reviewed, and a new review need not force a ranking position change. For hidden-tab return, hide an already-open observer page, make another B change, then return to the original tab without reload; expect a request/current result after focus/visibility return.
+- These are prepared expected outcomes, not performed/passed checks. Only WORK_LOG.md changed to preserve instructions/checkpoint. Root/delegate verification was source reading only; no app/source/config/data edit, tests/build/lint/syntax/import/app/helper/browser/services/API/database/migration/export/import, real review/account/recipe/photo writes or Git/Trello mutations. Card2 stays source-complete with user-led live results pending; card1 acceptance and other seven/eight-card phase boundaries retained.
+
+## 2026-10-24 — Accept card2 and prepare card3 simultaneous-user verification
+
+- User states 'Everything works' after the specific shared-update procedure, then explicitly selects card3 (two normal sessions/staff, profile/favorite isolation, overlapping review/favorite changes, stale edits/decisions, no lost data/errors/delays, recorded setup/actions/results) and requests exact testing steps after preparation. Accept card2 user-run functionality, current broad5second/focus refresh and draft behavior; no individual traces or server-overlap claim inferred from general acceptance. This supersedes its prior pending user-acceptance wording. Card3 user-led runtime results remain pending.
+- Read latest WORK_LOG first, current AGENTS/status and actual backend/API/auth/locking/revision/deployment sources. Two independent agents performed read-only backend and manual-acceptance reviews; neither found a new blocking selected-scope correctness defect or edited/executed app/tests. All chosen mutations bind authenticated request.user; recipe-first locks serialize review/favorite/edit/moderation operations, own-profile locks coordinate writes, snapshot metrics and content revisions provide the existing protections. Two-success owner-edit/staff-approval ordering can be valid; do not require exactly one winner there. Owner/staff competing EDITs with same original revision should have one success/one409; old captured staff approval after owner edit should409.
+- One broad rg call included nonexistent alternative Compose filenames and a read guessed backend/requirements.txt; those returned errors2/1 despite successful useful reads. Corrected to inventory-confirmed docker-compose.yml/backend/Dockerfile and their inline package installation, with no file added/changed by failures. Existing user-generated shared export changes and all prior application edits remain preserved; no private values/data inspected.
+- Confirmed compose execs Gunicorn under init:true without worker/thread overrides; normal source defaults to one synchronous worker, so client windows/Promise.all alone do not prove simultaneous server execution. Consulted primary Gunicorn config/arbiter and Docker/Tini source/docs for explicit temporary-user-run procedure. Initial docs.gunicorn.org/en/stable signal/settings URLs404; official GitHub source succeeded: Gunicorn Workers default WEB_CONCURRENCY or1, WorkerClass sync; master TTIN adds1/TTOU removes1. Important: Tini ignores TTIN/TTOU, so do NOT instruct docker compose kill with those signals; any optional helper must identify/validate and signal the actual Gunicorn master directly.
+- Authorized source-only preparation: persistent opt-in scripts/verify-multi-user.js browser Console helper (agent-owned) plus root-owned scripts/multi-user-workers.py guarded temporary worker-count helper and scripts/MULTI_USER_TEST.md procedure. No helper runs automatically, no application/business-logic/Compose/startup config change, no temporary test folders/copied app/new containers. User will run workers/helper/browser steps deliberately; source generation/review is not execution or acceptance. Helpers must suppress tokens/passwords/profile bodies, touch only user-selected disposable review/favorite fixtures, preserve captured revision for stale staff test, record safe statuses/timings/final checks and stop rather than retry uncertain writes.
+- Preparation is in progress; no new helper/source file existed at this initial log entry. No tests/build/lint/syntax/import/app/helper/browser/service/API/database/migration/export/import/data operations or Git/Trello mutation executed by assistant. Next create/review the scoped opt-in artifacts, log each file, provide specific steps and await user results; do not mark card3 done from source.
+
+### Temporary worker inspection/control helper added (not executed)
+
+- Added scripts/multi-user-workers.py as a user-run stdin script for the existing backend container. It reads only /proc process command/parent metadata, requires a unique expected Gunicorn master/parent layout, prints master/worker PIDs/count, and offers explicit status/three/one modes. Changing count sends master TTIN/TTOU one at a time and waits for the expected next count; unexpected layout/count/restart/timeout stops with an error. It imports only Python standard library, reads no private env/DB values, changes no startup/config/volume or application code and does not create another container.
+- File creation succeeded; independent read-only source review requested. No invocation/syntax/import/runtime check performed. This artifact enables a user-selected temporary multi-worker acceptance setup and does not itself prove any HTTP/database overlap or performance result. User must record original worker count before a change and restore that count afterward; guide will explain unsupported layouts rather than guess. Browser helper and detailed guide still in progress.
+
+### Browser helper added; worker source review refined
+
+- Agent added scripts/verify-multi-user.js (source only, not executed), exposing prepare/command/run/verify/report plus captureDecision/staleApprove. It uses current-browser private session token and actual current recipe-detail ID; normal A/B and staffS roles, disposable Multi-user test title prefix, approved/empty baseline, coordinated future-time request rounds, exact final review/favorite/identity/Bio checks, safe status/timing records, no automatic retries/cleanup or arbitrary review deletions. Agent static review/pending-prefix guard still in progress at this entry; root review remains.
+- Independent source review of scripts/multi-user-workers.py found no blocking normal-layout defect. It prints process count/PIDs only, not worker application-readiness or proven HTTP overlap. Original-count restoration is specifically1->3->1; root added a guard so three refuses an initial2, while one can restore1 from a partial2/3 adjustment. Script remains unexecuted. Extra workers consume resources; user must record baseline count, avoid simultaneous restart/reload/worker management, inspect after a timeout and restore only changes they made. No permanent deployment setting changed.
+- Browser helper route corrected during independent source inspection to actual /api/recipes/<recipe_id>/<review_id>/ DELETE; an earlier task-description guess /api/reviews/... was not used in executed code or HTTP. No app/API/database/service/test/Git operation occurred. Root guide writing and source review are next.
+
+### Specific user-run procedure added; browser source refinements recorded
+
+- Added scripts/MULTI_USER_TEST.md with exact baseline worker status/temporary1->3->1 commands, two ordinary/staff session setup, explicit Bio isolation markers, required disposable recipe/category/photo inputs, browser helper installation and shared-deadline rounds, expected final ratings/counts/favorites/unchanged other account data, original-editor stale409 check and captured-old-revision staff409 check. Includes safe report collection, expected conflict interpretation, actual mixed edit/approval ordering and pending-results status; no runtime pass asserted.
+- Tightened worker three mode to reject an unexpected initial2; one can still restore1 after a partial adjustment. Instructions require recorded baseline1 before changing/restoring1, or preserve an already3 configuration without restoring1. Process-count evidence is distinguished from application readiness/actual HTTP overlap and capacity. No running worker settings were changed.
+- Agent source-only refinements to scripts/verify-multi-user.js: current-account role/identity/baseline preflight, approved/pending disposable-title guards, all-settled read-pair collection, explicit operation-validation report rows, and halt on unexpected/protocol-invalid/uncertain writes. Agent reads source back now; root review next. No helper execution or syntax/import checks performed.
+
+### Browser helper source finalized; detailed guide clarified
+
+- Author finalized scripts/verify-multi-user.js and stopped editing. Additional exact evidence guards: unique loaded review IDs, remembered original A1/B1 IDs after round1, exact local validated201 creation IDs, round2 retention of original B1/removal of original A1, distinct normal/staff author identities, bounded target summary metrics without comparing separately timed snapshots. Safe capturedDecision report records staff user ID, pending recipe/title, captured/current revisions, attempted status/code and after revision; no private context/token/Bio/response contents exported. Dispatch guard rejects clock offsets exceeding1second in either direction before writes; this is a coordination validity check, not an application latency threshold. Root first-pass source read found no blocking route/write flaw; second independent helper/guide review requested.
+- Updated scripts/MULTI_USER_TEST.md to use Chrome Console copy(multiUserCheck.report()) and paste each report into notes before copying the next, exact ordinary/staff save button labels and confirmation, and a deliberately fresh staff-helper install before the independent captured-decision check. Only documentation and opt-in helper source changed; no helper/worker/app/request/test execution occurred.
+
+### Root saved-source and whitespace review completed
+
+- Root read the full browser helper in sections and all later source refinements, guarded worker helper, real config/review routes and guide calls. Confirmed DELETE route, controlled fixture prefix/empty state, token/role/account checks, bound review authors, all-settled parallel operations/no retry, exact created/original review IDs and final average/count/favorite/Bio checks. Captured staff decision uses immutable saved revision rather than current polling-updated UI; report preserves safe pending setup/revision/status metadata. Raw profile/Bio/token values remain closure-local and are omitted from export. No blocking issue found in root static review; independent final browser-helper/guide review pending.
+- Actual checks: read-only status/source/diff metadata; `git -c core.whitespace=cr-at-eol diff --check -- WORK_LOG.md` exit0/no findings. Each new script/guide checked with no-index whitespace diff against /dev/null: exit1 for new-file difference, no whitespace findings/output (recorded accurately, not test failure or execution). New helpers/guide are untracked source files awaiting later user-led Git delivery. All prior source/user-generated shared data changes remain; no application/Compose/Dockerfile/startup configuration or data modified by card3 preparation.
+- No tests/build/lint/syntax/parser/import/app/helper/browser/service/API/database/migration/export/import, credentials/account/review/recipe/photo writes or Git/Trello state mutation executed. This is preparation/review evidence only; runtime case results, actual server-side overlap/readiness and observed responsiveness remain user-led/pending.
+
+### Independent review corrected a verification gap
+
+- Independent helper reviewer found its intermediate summary check accepted any nonnegative count/1–5average, so an impossible summary could be marked a passed operation. Root tightened scripts/verify-multi-user.js to the actual allowed (count,average) pairs: round1 (0,0),(1,2),(1,4),(2,3); round2 (2,3),(1,4),(3,11/3),(2,4.5), with floating tolerance. These account for valid commit orderings without comparing different-time detail/summary snapshots.
+- Added shared summaryFor GET/lookup helper and an explicit final summary check in each session's verify() after all round requests settle; detail-only success cannot hide the original non-prefetched summary defect. Updated scripts/MULTI_USER_TEST.md expected results accordingly. All edits are to opt-in verification artifacts/log, not application behavior. No helper/test/runtime/HTTP/database or Git mutation executed; final review/checkpoint remain next.
+
+### Final checkpoint — card3 verification artifacts ready; no runtime pass claimed
+
+- Independent backend/worker-helper/browser-helper/guide reviews completed with no remaining blocking selected-path/source safety issue reported after the summary-validation gap was corrected. Root reviewed the exact final allowed intermediate pairs and final settled-summary assertions, frozen captured-decision metadata and matching guide calls. No production application logic/configuration fix was needed or applied for this acceptance card.
+- Artifacts added: scripts/verify-multi-user.js, scripts/multi-user-workers.py, scripts/MULTI_USER_TEST.md. Browser installation runs no requests; prepare/capture/verify read, and explicit scheduled run/staleApprove perform the documented real API actions using each current browser's token privately. Only user-selected title-prefixed disposable recipe reviews/favorites are targeted. No unrelated review deletion, profile write, silent cleanup/retry or credential export. A1/B1/B2 response IDs and expected allowed states are retained/verified. Source-only worker helper requires known master/parent/count, adjusts only on explicit user invocation, cannot establish readiness/HTTP overlap from process counts, and documents1->3->1 plus stop/inspection after uncertainty.
+- Full guide covers ordinary A/B and staffS same-backend setup/Bio markers, approved empty and separate pending fixtures with required category/photo inputs, one shared future command across3visible tabs for each review/favorite/read round, exact final detail+summary/favorite/identity results, competing authorized owner/staff editor409/draft check, separately captured staff409 despite polling, safe per-session JSON export, worker baseline/restoration and original-deployment responsiveness after restoration. Expected409 is a protected refusal; mixed edit/approval two-success ordering is valid and not misclassified as failure. Manual stale-editor verification and source/coordination/process-count evidence are distinguished from exhaustive real transaction/load proof.
+- Verification actually performed: confirmed local source/routes/config/process-parent assumptions by reading, root plus independent static reviews, primary Gunicorn/Tini/Docker source/docs reads and scoped whitespace diffs. Tracked WORK_LOG whitespace check exit0; all three untracked new-file no-index checks exit1 for differences with no whitespace findings. Final edited source/guide read-back and whitespace review follow checkpoint write. No tests/build/lint/syntax/JavaScript parsing/Python imports/helper/app/browser/service/API/database/migration/export/import or review/profile/recipe/photo/data action executed by assistant. No temporary test folders/copied apps/new containers, staging/commit/push or external Trello write.
+- Current delivery state: three new card3 artifacts are untracked and must be included in later user-led Git delivery, along with prior untracked frontend hook/current accepted application work; user-generated manifest/shared-data modifications were preserved. Card1 functionality and card2 user acceptance remain accepted; card3 stays **prepared / awaiting user-run results**; cards4–8 and required14point module phase remain pending. Next user follows the linked guide/explicit steps, sends worker outputs/three round reports/stale-decision report/editor outcomes and responsiveness observations. Record actual results before marking card3 Done; do not begin new fixes/tests/other cards automatically.
+
+## 2026-10-24 — Stop for the night; remove unnecessary standalone Markdown guide
+
+- User explicitly requests deletion of scripts/MULTI_USER_TEST.md, says to create Markdown files only when necessary, and postpones testing because they are going to sleep. Acknowledge the unnecessary standalone guide. Save all steps in the existing required WORK_LOG.md instead; do not begin deferred implementation/testing or recreate the separate guide.
+- Read latest checkpoint and complete guide. Added the standing documentation preference near the opening and replaced the latest-priority pointer with this stopping/resume checkpoint. Full guide content is preserved below (headings nested for this log); script commands, fixtures, expected results, report collection and worker restoration remain available next session.
+- Keep scripts/verify-multi-user.js and scripts/multi-user-workers.py unchanged. Both are opt-in source-only helpers, not executed. Current accepted state remains card1 functionality/card2 shared updates user-confirmed; card3 prepared and awaiting user-run results; cards4–8 and required14-point module phase remain pending.
+
+### Saved card3 testing procedure for next time
+
+### Three-session multi-user acceptance
+
+Status: prepared for the user to run; no result has been recorded yet.
+
+Use two ordinary accounts, **A** and **B**, and a staff account, **S**. Use three
+browser windows connected to the **same running website/backend**. Sign in in
+each original tab and check its username on `/profile`; authentication is stored
+per tab. Keep the participating tabs selected, visible and unminimized during
+the timed rounds. Do not restart services or change worker counts during a round.
+
+The helpers run only when you explicitly invoke them. The browser helper makes
+real review/favorite requests on a dedicated test recipe. It does not change your
+Bio, delete unrelated reviews or automatically retry a failed write. The worker
+helper temporarily adjusts the existing backend's processes; it does not change
+Compose, startup configuration or stored data.
+
+#### 1. Load the code and record the server setup
+
+Use your usual `sh scripts/start.sh` if the latest application changes have not
+been loaded. This includes the project's existing shared-data startup steps.
+
+In the project Bash/WSL terminal, this command only reads the backend process
+layout and prints the actual worker count/PIDs:
+
+```sh
+docker compose exec -T backend python - status < scripts/multi-user-workers.py
+```
+
+Save its output. The configured default is one synchronous Gunicorn worker.
+One worker queues requests, so concurrent browser activity alone cannot establish
+overlapping server execution. [Gunicorn's worker defaults](https://github.com/benoitc/gunicorn/blob/master/gunicorn/config.py)
+and [master signal handlers](https://github.com/benoitc/gunicorn/blob/master/gunicorn/arbiter.py)
+describe the relevant behavior.
+
+If the recorded count is **1**, enable three workers for this controlled test:
+
+```sh
+docker compose exec -T backend python - three < scripts/multi-user-workers.py
+```
+
+This asks the identified Gunicorn master to add two workers and waits for their
+processes to appear. It consumes additional memory until restored. A count of
+three does not by itself establish readiness or successful overlapping requests;
+wait for the website to respond normally before continuing.
+
+If the original count is already **3**, leave it unchanged and record that fact.
+If the count/layout is different, or a helper reports STOP, report its output
+before proceeding. Do not repeatedly send signals after an uncertain result.
+
+The script signals Gunicorn directly: the container's init process does not
+forward these particular signals. [Tini signal handling](https://github.com/krallin/tini/blob/master/src/tini.c)
+
+#### 2. Check profile isolation and prepare two disposable recipes
+
+1. A: `/profile` → **Edit profile** → set Bio to `MULTI_USER_A` → **Save profile**.
+2. B: do the same with Bio `MULTI_USER_B`.
+3. Return to each own profile. Each must retain its own username and Bio marker.
+   Staff S must remain the staff account. Use test accounts if you want to keep
+   existing profile content untouched.
+4. A creates **Multi-user test Oct24**. Minimal required fields: Ingredient1
+   `Water`, Quantity `1`, Unit `cup`, Category1 `Test`, Step1
+   `Pour water into a cup.`, and one valid photo no larger than5MiB.
+5. S approves it through `/staff`. Leave this approved recipe with **zero reviews**.
+6. A creates a second recipe, **Multi-user test pending Oct24**, using the same
+   required inputs. Leave this second recipe pending for the conflict checks.
+
+Only the participating test sessions should modify these fixtures during the
+test. Keep the approved fixture separate from pending/editing fixtures: reviews
+on a recipe withdrawn from public approval are correctly refused.
+
+#### 3. Install the browser helper in each session
+
+1. Open **Multi-user test Oct24** in each session, using the same actual recipe
+   address. Keep each account's signed-in tab.
+2. In VS Code open `scripts/verify-multi-user.js`, select all and copy it.
+3. In each browser open Developer Tools → **Console**, paste the file and execute
+   it. Installing it does not start the test rounds.
+4. Prepare each role, using the same run label in all windows:
+
+```js
+// Window A
+await multiUserCheck.prepare('A', 'oct24-test1')
+
+// Window B
+await multiUserCheck.prepare('B', 'oct24-test1')
+
+// Window S
+await multiUserCheck.prepare('S', 'oct24-test1')
+```
+
+Check the printed usernames/IDs: A and B must be different ordinary accounts;
+S must be staff. Tokens, Bio contents and full private profiles are not printed.
+
+#### 4. Coordinated round 1: review additions and separate favorites
+
+In A run:
+
+```js
+multiUserCheck.command(1)
+```
+
+It prints a `multiUserCheck.run(1, ...);` command scheduled90seconds ahead.
+Copy **that exact printed command** into A, B and S before the deadline. Do not
+call `command(1)` separately in each window: that would produce different times.
+Leave all three participating tabs visible.
+
+At the scheduled time:
+
+- A posts its own2-star test review and adds this recipe to A's favorites.
+- B posts its own4-star test review and removes it from B's favorites.
+- S reads recipe/profile/summary data without modifying reviews or favorites.
+
+Wait until **all three windows finish**. Then run in each:
+
+```js
+await multiUserCheck.verify(1)
+```
+
+Expected: two distinct normal authors, exactly the two test reviews, average3.0
+and count2 in both detail and summary responses. A has the favorite, B does not,
+S's favorites are unchanged, and each
+account's other favorite IDs and Bio stay unchanged. All displayed checks should
+pass. Individual intermediate responses may legitimately precede another
+request's commit; evaluate final state after all windows finish.
+
+#### 5. Coordinated round 2: deletion, addition, favorite changes and reads
+
+Keep the same tabs/helper state. In A run `multiUserCheck.command(2)` and paste
+the one printed `run(2, ...)` command into all three windows before its deadline.
+
+- A deletes only its stored2-star test review and removes A's favorite.
+- B adds its own5-star review and adds B's favorite.
+- S reads during the changes.
+
+After all three finish, run in each:
+
+```js
+await multiUserCheck.verify(2)
+copy(multiUserCheck.report())
+```
+
+Expected: A's review is absent; B's4- and5-star reviews remain; count2,
+average4.5 in detail and summary responses; A does not have the favorite, B does,
+S is unchanged. The copy command
+puts that window's JSON report on your clipboard. Paste each into notes before
+copying the next window's report, and keep all three before leaving these pages.
+They contain setup, statuses, client
+start/finish times, durations and checks, with no tokens or private profile data.
+
+If a write fails or its outcome is uncertain, stop and keep the report. Do not
+repeat a timed round or re-prepare on partially modified data to hide a failure.
+
+#### 6. Competing recipe editors
+
+Use **Multi-user test pending Oct24**, owned by A.
+
+1. A opens **Edit recipe**.
+2. S opens **Edit recipe** for the same recipe **before either saves**. B is not
+   authorized to edit A's recipe and is not the competing editor.
+3. A changes the name to **Multi-user test pending saved by A**, clicks
+   **Save and submit for approval**, and confirms.
+4. In S's older editor change Quantity from1 to2 and click **Save changes**.
+5. Expected: S receives the recipe-changed refusal (HTTP409); S's draft remains.
+   After explicit **Reload recipe**, A's saved title remains and S's stale
+   quantity has not replaced it. Reload deliberately discards the old draft.
+
+This deterministic stale-form check preserves the original viewed revisions.
+You may also attempt both saves close together: with the same starting revision,
+only one edit should succeed and the other should receive409. Record the actual
+order/statuses; do not assume which account wins.
+
+#### 7. Deliberately stale staff approval
+
+Automatic updates refresh S's current recipe revision. Merely leaving S's page
+open and later clicking Approve does not reliably test an old revision.
+
+1. After keeping the earlier reports, open S's **detail page** for the pending
+   fixture. Reload once to start this separate check with a fresh helper, paste
+   `scripts/verify-multi-user.js` again, then run:
+
+   ```js
+   await multiUserCheck.captureDecision()
+   ```
+
+2. A opens its editor again, changes the name to
+   **Multi-user test pending second owner save**, clicks **Save and submit for
+   approval**, and confirms. Wait for A's successful save.
+3. S stays on the same detail page. Do **not** capture again. Run:
+
+   ```js
+   await multiUserCheck.staleApprove()
+   copy(multiUserCheck.report())
+   ```
+
+Paste that separate staff report into your notes too. Expected: HTTP409 with
+`recipe_changed`; the new contents remain and the recipe
+stays pending. The helper first verifies that a newer revision exists, so a
+forgotten owner save cannot accidentally approve an unchanged pending recipe.
+An expected409 is a passed conflict protection. An unexpected successful old
+approval,500, missing successful review or wrong-account favorite is a failure.
+
+Do not require exactly one success for a mixed owner-edit/staff-approval race:
+approval may happen first and a later valid owner edit can return it to pending.
+
+#### 8. Record results and restore the temporary worker count
+
+Send the three round reports, stale-decision report, worker-count output and
+editor result. State whether all sessions remained responsive and any request
+felt unacceptably slow; the helper records client durations without inventing a
+project latency threshold. Scheduled client requests and multiple workers permit
+overlap, but do not prove every transaction interleaving or certify load capacity.
+
+If the original count was1 and you changed it to3, restore1 after all requests
+have finished:
+
+```sh
+docker compose exec -T backend python - one < scripts/multi-user-workers.py
+docker compose exec -T backend python - status < scripts/multi-user-workers.py
+```
+
+These gracefully reduce the worker count and inspect it. They do not remove data
+or volumes. Do not run `one` if the server originally had three workers.
+After restoring the original count, keep the three accounts signed in and use
+their profiles, recipe pages and favorites normally. Record responsiveness under
+that original deployment separately from the temporary three-worker round.
+Remove only the explicitly created test reviews/recipes afterward if desired;
+leave existing unrelated data unchanged. Card3 remains pending until actual
+observations are recorded in WORK_LOG.md.
+
+### Final stop checkpoint
+
+- Successfully deleted scripts/MULTI_USER_TEST.md at the user's explicit request after confirming the entire procedure was saved above. No new Markdown file was created; only existing WORK_LOG.md updated and the requested standalone guide removed. Historical earlier creation entries remain as history and are superseded by this deletion.
+- Verification performed: read saved log/guide, confirmed complete saved procedure text in WORK_LOG.md before deletion, and confirmed guide path no longer exists after deletion. This was file-save/deletion verification only, not application testing. No application/config/schema/data/helper change, tests/build/lint/syntax/import/helper/app/browser/service/API/database/migration/export/import, worker adjustment or Git/Trello mutation performed.
+- User is stopping for sleep. End work now; do not start tests, runtime checks, implementation, other cards or more documentation work. Next time read this checkpoint and use the saved steps with the user when they resume. Do not claim card3 passed without their results, and do not recreate an unnecessary separate Markdown guide.
+
+## 2026-10-24 — Provide commit message; keep card3 deferred until cue
+
+- User reiterates to resume card3 only on their next cue, and requests a commit message for changes after the latest commit. This authorizes a read-only Git summary and response, not resuming tests/implementation or staging/committing/pushing.
+- Read latest stop checkpoint, git log -1, status, HEAD diff name/status/stat and untracked-file names. Latest commit:8dc8428, 'feat: add review deletion and remove landing categories'. Current changes after HEAD: consistent snapshot-based review averages/counts and unrated preview display; periodic/focus shared-view updates across recipe/staff/home/search/profile pages with preserved drafts/canceled stale reads; opt-in multi-user/temporary-worker verification helpers; user's changed shared database export; existing WORK_LOG checkpoints/preferences. Review deletion/landing-category removal are already in HEAD and should not be claimed as new features in this message. Deleted standalone guide was never tracked and is not a new committed-file deletion.
+- Proposed title: 'feat: add shared recipe updates and safe review statistics'. Body covers shared-view refresh, draft/stale-read protection, consistent averages/counts/unrated display, opt-in acceptance helpers and updated shared database snapshot. Do not claim card3 tests passed; its helpers are prepared only.
+- Only existing WORK_LOG.md updated for the required checkpoint. No new Markdown file, application/helper/config/data edit, tests/build/lint/syntax/import/helper/browser/services/API/database/migration/export/import, Git staging/commit/push/state mutation or Trello write. User's actual commit remains manual. Card3 stays deferred until explicit cue, with full saved testing steps in this log; stop after providing the requested message.

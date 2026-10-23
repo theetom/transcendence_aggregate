@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import RecipePreviewCard from '../components/RecipePreviewCard'
 import SectionTitle from '../components/SectionTitle'
 import { getApprovedRecipes } from '../data/recipeApi'
 import { getPublicUsers, getUserProfilePath } from '../data/userApi'
+import useLiveRefresh from '../hooks/useLiveRefresh'
 
 function SearchResultsPage() {
   const [searchParams] = useSearchParams()
@@ -18,43 +19,32 @@ function SearchResultsPage() {
     userError: '',
   })
 
-  useEffect(() => {
-    const controller = new AbortController()
-    let active = true
-    setSearchState({ query, status: 'loading', recipes: [], users: [], recipeError: '', userError: '' })
+  useLiveRefresh(async (signal) => {
+    const [recipeResult, userResult] = await Promise.allSettled([
+      getApprovedRecipes(signal),
+      getPublicUsers(signal),
+    ])
+    if (signal.aborted) return
 
-    async function loadSearch() {
-      const [recipeResult, userResult] = await Promise.allSettled([
-        getApprovedRecipes(controller.signal),
-        getPublicUsers(controller.signal),
-      ])
-      if (!active) return
-
-      const searchTitle = query.toLowerCase()
-      const searchUser = searchTitle.replace(/^@/, '')
-      setSearchState({
-        query,
-        status: 'ready',
-        recipes: recipeResult.status === 'fulfilled'
-          ? recipeResult.value.filter((recipe) => recipe.title.toLowerCase().includes(searchTitle)) : [],
-        users: userResult.status === 'fulfilled'
-          ? userResult.value.filter((profile) => (
-            [profile.user.username, profile.user.first_name, profile.user.last_name]
-              .join(' ').toLowerCase().includes(searchUser)
-          )) : [],
-        recipeError: recipeResult.status === 'rejected'
-          ? recipeResult.reason.message || 'Unable to load recipes right now.' : '',
-        userError: userResult.status === 'rejected'
-          ? userResult.reason.message || 'Unable to load users right now.' : '',
-      })
-    }
-
-    loadSearch()
-    return () => {
-      active = false
-      controller.abort()
-    }
-  }, [query, reloadKey])
+    const searchTitle = query.toLowerCase()
+    const searchUser = searchTitle.replace(/^@/, '')
+    setSearchState((current) => ({
+      query,
+      status: 'ready',
+      recipes: recipeResult.status === 'fulfilled'
+        ? recipeResult.value.filter((recipe) => recipe.title.toLowerCase().includes(searchTitle))
+        : current.query === query && ![401, 403, 404].includes(recipeResult.reason.status) ? current.recipes : [],
+      users: userResult.status === 'fulfilled'
+        ? userResult.value.filter((profile) => (
+          [profile.user.username, profile.user.first_name, profile.user.last_name]
+            .join(' ').toLowerCase().includes(searchUser)
+        )) : current.query === query && ![401, 403, 404].includes(userResult.reason.status) ? current.users : [],
+      recipeError: recipeResult.status === 'rejected'
+        ? recipeResult.reason.message || 'Unable to load recipes right now.' : '',
+      userError: userResult.status === 'rejected'
+        ? userResult.reason.message || 'Unable to load users right now.' : '',
+    }))
+  }, { immediate: true, refreshKey: `${query}:${reloadKey}` })
 
   const isCurrentQuery = searchState.query === query
   const isLoading = !isCurrentQuery || searchState.status === 'loading'

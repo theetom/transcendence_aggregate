@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import RecipePreviewCard from '../components/RecipePreviewCard'
 import { getPublicProfile } from '../data/userApi'
+import useLiveRefresh from '../hooks/useLiveRefresh'
 
 function PublicUserProfile({ userId }) {
   const location = useLocation()
@@ -11,25 +12,21 @@ function PublicUserProfile({ userId }) {
   const searchQuery = typeof location.state?.searchQuery === 'string' ? location.state.searchQuery : ''
   const searchPath = searchQuery ? `/results/search?q=${encodeURIComponent(searchQuery)}` : '/results/search'
 
-  useEffect(() => {
-    const controller = new AbortController()
-
-    async function loadProfile() {
-      try {
-        const profile = await getPublicProfile(userId, controller.signal)
-        if (!controller.signal.aborted) setLoadState({ status: 'ready', profile, error: '' })
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setLoadState({ status: 'error', profile: null, error: error.message })
-        }
+  const cancelRefresh = useLiveRefresh(async (signal) => {
+    try {
+      const profile = await getPublicProfile(userId, signal)
+      if (!signal.aborted) setLoadState({ status: 'ready', profile, error: '' })
+    } catch (error) {
+      if (!signal.aborted) {
+        setLoadState((current) => current.profile && ![401, 403, 404].includes(error.status)
+          ? { ...current, error: error.message }
+          : { status: 'error', profile: null, error: error.message })
       }
     }
-
-    loadProfile()
-    return () => controller.abort()
-  }, [userId, reloadKey])
+  }, { immediate: true, enabled: loadState.status !== 'error', refreshKey: `${userId}:${reloadKey}` })
 
   function handleRetry() {
+    cancelRefresh()
     setLoadState({ status: 'loading', profile: null, error: '' })
     setFailedPicture('')
     setReloadKey((current) => current + 1)
@@ -50,6 +47,7 @@ function PublicUserProfile({ userId }) {
 
         {profile ? (
           <>
+            {loadState.error ? <p className="status-banner" role="status">{loadState.error}</p> : null}
             <section className="page-section">
               <article className="detail-panel detail-panel--profile-section">
                 <div className="profile-page__information">

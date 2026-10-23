@@ -99,7 +99,31 @@ class RecipeImageSerializer(serializers.ModelSerializer):
 		fields = ["id", "image"]
 
 
-class RecipeDetailedSerializer(serializers.ModelSerializer):
+class RecipeReviewStatisticsMixin:
+	def to_representation(self, recipe):
+		# List serializers reuse the same child; keep each response snapshot local.
+		self._review_statistics = None
+		return super().to_representation(recipe)
+
+	def _get_review_statistics(self, recipe):
+		cached = getattr(self, "_review_statistics", None)
+		if cached is None or cached[0] is not recipe:
+			# Both fields use one materialized snapshot, even if reviews change later.
+			reviews = list(recipe.reviews.all())
+			count = len(reviews)
+			average = sum(review.grade for review in reviews) / count if count else 0.0
+			cached = (recipe, average, count)
+			self._review_statistics = cached
+		return cached[1], cached[2]
+
+	def get_average_score(self, recipe):
+		return self._get_review_statistics(recipe)[0]
+
+	def get_number_of_reviews(self, recipe):
+		return self._get_review_statistics(recipe)[1]
+
+
+class RecipeDetailedSerializer(RecipeReviewStatisticsMixin, serializers.ModelSerializer):
 	content_revision = serializers.IntegerField(read_only=True)
 	user = serializers.PrimaryKeyRelatedField(read_only=True)
 	author = serializers.SerializerMethodField()
@@ -183,16 +207,6 @@ class RecipeDetailedSerializer(serializers.ModelSerializer):
 	def validate_categories(self, categories):
 		validate_unique_names([category["name"] for category in categories], "Categories")
 		return categories
-
-	#  for all reviews
-	def get_average_score(self, recipe):
-		reviews = recipe.reviews.all()
-		if not reviews.exists():
-			return 0.0
-		return sum(review.grade for review in reviews) / reviews.count()
-
-	def get_number_of_reviews(self, recipe):
-		return recipe.reviews.count()
 
 	def validate_steps(self, steps):
 		step_numbers = [step["step_number"] for step in steps]
@@ -317,7 +331,7 @@ class RecipeUpdateSerializer(serializers.ModelSerializer):
 		return instance
 
 
-class RecipeSummarySerializer(serializers.ModelSerializer):
+class RecipeSummarySerializer(RecipeReviewStatisticsMixin, serializers.ModelSerializer):
 	content_revision = serializers.IntegerField(read_only=True)
 	approved = serializers.BooleanField(read_only=True)
 	rejected = serializers.BooleanField(read_only=True)
@@ -353,17 +367,14 @@ class RecipeSummarySerializer(serializers.ModelSerializer):
 			"number_of_reviews",
 		]
 
-	# only for last month see views
+	# Preserve the last-30-days annotations supplied by the ranking views.
 	def get_average_score(self, recipe):
 		if hasattr(recipe, "recent_average_score"):
 			return recipe.recent_average_score or 0.0
-		reviews = recipe.reviews.all()
-		if not reviews.exists():
-			return 0.0
-		return sum(review.grade for review in reviews) / reviews.count()
+		return super().get_average_score(recipe)
 
 	def get_number_of_reviews(self, recipe):
 		if hasattr(recipe, "recent_number_of_reviews"):
 			return recipe.recent_number_of_reviews
-		return recipe.reviews.count()
+		return super().get_number_of_reviews(recipe)
 
