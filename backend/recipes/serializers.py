@@ -41,7 +41,7 @@ def validate_positive_quantity(value):
 
 
 class RecipeIngredientSerializer(serializers.ModelSerializer):
-	name = serializers.CharField(source="ingredient.name")
+	name = serializers.CharField(source="ingredient.name", max_length=100)
 	quantity = serializers.CharField(max_length=50, validators=[validate_positive_quantity])
 
 	def validate(self, attrs):

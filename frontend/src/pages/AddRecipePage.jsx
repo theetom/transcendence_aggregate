@@ -1,42 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getCurrentProfile, getRecipeDetails, getRecipePath, updateRecipe } from '../data/recipeApi'
-import { authTokenStorageKey } from '../data/siteData'
+import {
+  getCurrentProfile,
+  getRecipeDetails,
+  getRecipePath,
+  requestRecipeApi,
+  updateRecipe,
+} from '../data/recipeApi'
 
 const maxPictures = 2
 const maxPictureSize = 5 * 1024 * 1024
 const maxPicturesTotalSize = 20 * 1024 * 1024
 const supportedPictureTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-
-async function requestRecipeApi(method, payload) {
-  const endpoint = '/api/recipes/add_recipe/'
-  const token = window.sessionStorage.getItem(authTokenStorageKey)
-  const headers = {}
-
-  if (token) {
-    headers.Authorization = `Token ${token}`
-  }
-
-  if (!(payload instanceof FormData) && payload !== undefined) {
-    headers['Content-Type'] = 'application/json'
-  }
-
-  const response = await fetch(endpoint, {
-    method,
-    headers,
-    body:
-      payload instanceof FormData || payload === undefined
-        ? payload
-        : JSON.stringify(payload),
-  })
-
-  const body = await response.text()
-  const details =
-    `${method} ${endpoint}\n` +
-    `HTTP ${response.status} ${response.statusText}\n\n${body}`
-
-  return { ok: response.ok, body, details }
-}
 
 function FieldError({ id, message }) {
   return message ? (
@@ -47,13 +22,21 @@ function FieldError({ id, message }) {
 }
 
 function getSaveError(error) {
-  if (!error.fieldErrors) return error.message || 'Unable to save this recipe. Try again.'
+  const fallback = error.message || 'Unable to save this recipe. Try again.'
+  if (!error.fieldErrors) return fallback
 
   function readMessages(value) {
     if (typeof value === 'string') return [value]
     if (Array.isArray(value)) return value.flatMap(readMessages)
     if (value && typeof value === 'object') return Object.values(value).flatMap(readMessages)
     return []
+  }
+
+  function formatMessage(label, message) {
+    const maxLength = message.match(/^Ensure this field has no more than (\d+) characters\.?$/i)
+    return maxLength
+      ? `${label} cannot exceed ${maxLength[1]} characters.`
+      : `${label}: ${message}`
   }
 
   const labels = {
@@ -66,11 +49,23 @@ function getSaveError(error) {
     retained_image_ids: 'Saved pictures',
     non_field_errors: 'Recipe',
   }
+  const ingredientFields = { name: 'name', quantity: 'quantity', unit: 'unit' }
   const messages = Object.entries(error.fieldErrors).flatMap(([field, value]) => {
-    const details = readMessages(value).join(' ')
-    return details ? [`${labels[field] || 'Recipe'}: ${details}`] : []
+    if (field === 'ingredients' && value && typeof value === 'object') {
+      return Object.entries(value).flatMap(([index, rowErrors]) => {
+        if (!/^\d+$/.test(index) || !rowErrors || typeof rowErrors !== 'object' || Array.isArray(rowErrors)) {
+          return readMessages(rowErrors).map((message) => formatMessage('Ingredients', message))
+        }
+        return Object.entries(rowErrors).flatMap(([name, errors]) => {
+          const suffix = ingredientFields[name]
+          const label = `Ingredient ${Number(index) + 1}${suffix ? ` ${suffix}` : ''}`
+          return readMessages(errors).map((message) => formatMessage(label, message))
+        })
+      })
+    }
+    return readMessages(value).map((message) => formatMessage(labels[field] || 'Recipe', message))
   })
-  return messages.join('\n') || error.message
+  return messages.join('\n') || fallback
 }
 
 function AddRecipePage({ editMode = false }) {
@@ -187,27 +182,17 @@ function AddRecipePage({ editMode = false }) {
     let cancelled = false
 
     async function loadOptions() {
-      let responseDetails = 'GET /api/recipes/add_recipe/'
-
       try {
-        const result = await requestRecipeApi('GET')
-        responseDetails = result.details
+        const data = await requestRecipeApi('/api/recipes/add_recipe/', { requiresAuth: true })
 
         if (cancelled) return
-
-        if (!result.ok) {
-          if (!editMode) setStatus(responseDetails)
-          return
-        }
-
-        const data = JSON.parse(result.body)
 
         if (
           !Array.isArray(data?.ingredients) ||
           !Array.isArray(data?.categories)
         ) {
           throw new Error(
-            'The response must contain ingredients and categories arrays.',
+            'Recipe options could not be read. Reload and try again.',
           )
         }
 
@@ -215,7 +200,7 @@ function AddRecipePage({ editMode = false }) {
         setRecipeCategories(data.categories)
       } catch (error) {
         if (!cancelled && !editMode) {
-          setStatus(`${responseDetails}\n\n${error.name}: ${error.message}`)
+          setStatus(error.message || 'Unable to load recipe options. Try again.')
         }
       }
     }
@@ -375,21 +360,16 @@ function AddRecipePage({ editMode = false }) {
           state: { recipeEditSaved: true, submittedForApproval: submitsForApproval },
         })
       } else {
-        const result = await requestRecipeApi('POST', payload)
+        await requestRecipeApi('/api/recipes/add_recipe/', {
+          method: 'POST', requiresAuth: true, body: payload, expectedStatus: 201,
+        })
         if (!mountedRef.current) return
-        if (result.ok) {
-          navigate('/add-recipe/submitted', { replace: true })
-        } else {
-          setStatus(result.details)
-        }
+        navigate('/add-recipe/submitted', { replace: true })
       }
     } catch (error) {
       if (!mountedRef.current) return
       if (editMode && error.requiresReload) setRequiresReload(true)
-      setStatus(
-        editMode ? getSaveError(error)
-          : `POST /api/recipes/add_recipe/\n\n${error.name}: ${error.message}`,
-      )
+      setStatus(getSaveError(error))
     } finally {
       submittingRef.current = false
       if (mountedRef.current) setIsSubmitting(false)

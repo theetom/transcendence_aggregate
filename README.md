@@ -1,12 +1,12 @@
-*This project has been created as part of the 42 curriculum by [team 42 logins to confirm].*
+*This project has been created as part of the 42 curriculum by toferrei, nneves-a, suroh, hladeiro, famendes.*
 
 # Recipe Site
 
-This README is a working draft. Team logins, role assignments, contributions and the final chosen-module list still need team confirmation. The module review below does not establish a completed 14-point total.
+The team names, 42 logins, roles and GitHub accounts below are confirmed. Individual implementation ownership, commit-author aliases, team work practices, additional AI use and the final chosen-module list still need confirmation. The module review below does not establish a completed 14-point total.
 
 ## Description
 
-Recipe Site is a recipe-sharing application built for ft_transcendence. Visitors browse approved recipes and public profiles. Registered users submit recipes with ingredients, quantities, instructions and photos, edit their profiles, and post ratings and written reviews. Staff review submissions, explain rejections and decide recipe deletion requests.
+Recipe Site is a recipe-sharing application built for ft_transcendence. Visitors browse approved recipes and public profiles. Registered users submit recipes with ingredients, quantities, instructions and photos, edit their profiles, save favorites, and post ratings and written reviews. Their own profile includes saved recipes and a review history. Staff review submissions, explain rejections and decide recipe deletion requests.
 
 The project uses the requirements in [ft_transcendence.pdf](ft_transcendence.pdf), version 21.1. Module requirements and the README requirements are separate from the application's feature checklist.
 
@@ -71,10 +71,12 @@ Open **https://localhost:8443/** with the default configuration. HTTP on `http:/
 | `/recipe/<id>` | Recipe details, photos, ratings/reviews and authorized recipe actions. |
 | `/add-recipe` | Signed-in recipe submission. |
 | `/recipe/<id>/edit` | Owner/staff recipe editing. |
-| `/profile` | Your own profile and submitted recipes. |
+| `/profile` | Your own profile, submitted recipes, favorites and review history. |
 | `/users/<account-id>` | A public profile and its approved recipes. |
 | `/staff` | Website recipe management for staff. |
 | `/admin/` | Django administration for accounts with the necessary permissions. |
+| `/privacy` | Public privacy information about stored data, visibility, moderation and deletion. |
+| `/terms` | Public terms for accounts, submissions, reviews and moderation. |
 
 Use **Connect** to sign up or sign in. Login accepts a username or email address with a password. Pending/rejected recipe details are available to their owner and staff.
 
@@ -112,16 +114,19 @@ The shared database archive is unencrypted. This transfer mechanism is not live 
 
 ## Team Information
 
-Team confirmation is required for every member's 42 login and assigned roles. The subject requires Product Owner, Project Manager / Scrum Master, Technical Lead and developer responsibilities, with roles combined where appropriate.
+The team has five members: Tomaz, Nuno, Roh, Hugo and Fabio. Every member is a developer. Tomaz, Nuno and Roh also hold the coordination roles listed below. Names, 42 logins, roles and GitHub accounts are recorded from the team's supplied information.
 
-| Role | 42 login(s) | Responsibilities to confirm |
-| --- | --- | --- |
-| Product Owner | Pending | Product direction, priorities and feature acceptance. |
-| Project Manager / Scrum Master | Pending | Task coordination, planning and communication. |
-| Technical Lead | Pending | Architecture, technical decisions and integration. |
-| Developers | Pending | Each member's implemented features and modules. |
+| Member | GitHub account | 42 login | Assigned roles | Responsibilities |
+| --- | --- | --- | --- | --- |
+| Tomaz Lima (Tomaz) | [theetom](https://github.com/theetom) | `toferrei` | Product Owner; Developer | Product direction, backlog priorities and acceptance of completed features; assigned development work. |
+| Nuno Andrezo (Nuno) | [NunoAndrezo](https://github.com/NunoAndrezo) | `nneves-a` | Project Manager; Developer | Planning, task coordination, progress, team communication and blockers; assigned development work. |
+| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Technical Lead; Developer | Architecture, technical decisions, code quality, review and integration; assigned development work. |
+| Hugo Emanuel Ladeiro Nobre (Hugo) | [Anzohs](https://github.com/Anzohs) | `hladeiro` | Developer | Assigned feature/module implementation, review, testing and documentation. |
+| Fabio | [FaMe1337](https://github.com/FaMe1337) | `famendes` | Developer | Assigned feature/module implementation, review, testing and documentation. |
 
 ## Project Management
+
+Product ownership is assigned to Tomaz, project coordination to Nuno and technical leadership to Roh. All five members share development responsibilities. Their specific implementation work is recorded in the Individual Contributions section once confirmed.
 
 Git stores source changes. [WORK_LOG.md](WORK_LOG.md) records implementation decisions, source reviews, user-reported checks and remaining work. Functional acceptance in the current workflow is performed by the user; a source review is not a substitute for a browser/runtime check.
 
@@ -133,8 +138,8 @@ The team still needs to confirm its task board, communication channels, meeting/
 | --- | --- |
 | Frontend | React 19, React Router 7 and Vite 8 provide component-based UI, browser routing and a production build. |
 | Styling | Tailwind CSS 4 is configured alongside shared CSS tokens/components in `frontend/src/index.css` and `App.css`. |
-| Backend | Django 6.1-range dependencies and Django REST Framework provide authentication, serializers, HTTP endpoints and administration. |
-| Database | PostgreSQL 17 stores relational data. Django ORM models/migrations manage relationships and schema; transactions and locks coordinate writes. |
+| Backend | The backend image declares Django `>=6.1,<7.0` and Django REST Framework for authentication, serializers, HTTP endpoints and administration. |
+| Database | PostgreSQL 17 provides relational constraints, transactions and row locking for the shared recipe data. Django ORM models/migrations manage the relationships and schema. |
 | Media | Pillow validates images. Uploaded files live in a Docker volume shared with Nginx for serving. |
 | Deployment | Docker Compose runs PostgreSQL, Django/Gunicorn and the built frontend served by Nginx. |
 | HTTPS | mkcert-based local certificates terminate at Nginx, which proxies API/admin traffic to the private backend. |
@@ -174,25 +179,28 @@ Uploaded bytes are stored in the media volume; image fields store their paths. T
 
 ## Features List
 
-Feature contributor names must be supplied by the team for this table before final submission.
+The team still needs to confirm which members implemented each feature. Confirmed identities and recorded verification work are listed under Individual Contributions.
 
 | Implemented feature | Behavior | Main source |
 | --- | --- | --- |
 | Signup and login | Username/email checks, configured password rules, hashed passwords, token login/logout and clear duplicate-signup errors. | `backend/users/`, `SignupPage.jsx`, `LoginPage.jsx` |
 | Own/public profiles | Own bio/photo updates; public identity/bio/photo and approved recipes; separate public/self response fields. | `backend/users/`, `ProfilePage.jsx`, `PublicUserProfilePage.jsx` |
-| Recipe submission/editing | Ingredients with per-recipe quantities/units, steps, categories and validated photos; owner/staff write restrictions and transactional saves. | `backend/recipes/`, `AddRecipePage.jsx` |
+| Recipe submission/editing | Ingredients with per-recipe quantities/units, steps, categories and validated photos; owner/staff write restrictions and transactional saves. Ingredient names are limited to 100 characters in creation and editing, with field-specific validation messages. | `backend/recipes/`, `AddRecipePage.jsx` |
 | Recipe moderation | Staff approval/rejection, author-visible rejection reason, resubmission and deletion-request decisions. | `recipes/views.py`, `AdminPage.jsx`, `RecipePage.jsx` |
-| Changed-content guard | Website edits increment a revision; stale staff approval/rejection is refused and asks for reload. | Recipe serializers/views, `moderationApi.js`, `RecipePage.jsx` |
-| Ratings/reviews | Signed-in reviews of approved recipes, reviewer names/dates, 1–5 validation and refreshed averages/counts. | `backend/reviews/`, `recipeApi.js`, `RecipeReviewForm.jsx` |
+| Changed-content guard | Website edits increment a content revision. Stale owner/staff edits and stale staff approval/rejection return HTTP 409 before overwriting newer recipe contents. | Recipe serializers/views, `moderationApi.js`, `AddRecipePage.jsx` |
+| Ratings/reviews | Signed-in reviews of approved recipes, reviewer names/dates, 1–5 validation, permission-checked deletion, own review history and consistent averages/counts. | `backend/reviews/`, `backend/users/`, `RecipeReviewForm.jsx`, `ProfilePage.jsx` |
+| Favorites | Signed-in users add approved recipes to their own favorites and remove saved entries. Their profile lists saved recipes and supports removing unavailable entries. | `backend/users/views.py`, `recipeApi.js`, `RecipePage.jsx`, `ProfilePage.jsx` |
+| Shared-view refresh | Visible recipe, profile, home, search and staff views refresh on a five-second delay after the previous request completes and when focus returns. Unsaved editor drafts are retained. | `useLiveRefresh.js` and its page callers |
 | Discovery | Approved recipe-title/user-name search, public author links, recent recipes and 30-day rating/review rankings with real photo previews. | `HomePage.jsx`, `SearchResultsPage.jsx`, `RecipePreviewCard.jsx` |
 | Duplicate prevention | Website names reuse existing IDs ignoring case/outer spaces; repeated ingredient/category rows are rejected, including direct API submissions. | Recipe serializers, `AddRecipePage.jsx` |
 | Local deployment/data transfer | HTTPS startup, persistent volumes, health checks and shared database/photo import/export. | Compose, `frontend/nginx.conf`, `scripts/` |
+| Project policies | Public Privacy and Terms pages describe current data collection, public visibility, submission rules, moderation and deletion; footer and reciprocal links are defined. | `PrivacyPage.jsx`, `TermsPage.jsx`, `SiteFooter.jsx` |
 
 The agreed recipe-admin feature scope has been accepted by the user. Qualification for a particular subject module still depends on that module's complete requirements and its evaluation demonstration.
 
 ## Modules
 
-The team's final chosen-module list and contributors are pending confirmation. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
+The final module choices and their contributor assignments are pending confirmation. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
 
 | Module | Points | Current source evidence / remaining qualification |
 | --- | --- | --- |
@@ -214,15 +222,31 @@ The straightforward source-backed subtotal is **3 candidate points** from framew
 
 ## Individual Contributions
 
-Pending team confirmation. For each 42 login, add the implemented features/modules, specific components or services, responsibilities and a concrete challenge with its resolution. Fill the contributor attribution in the feature/module sections as well.
+Names, 42 logins, project roles and GitHub accounts are confirmed in Team Information. Commit-author names or email aliases and specific implementation ownership still need to be matched to those identities. Roh's documented browser/API testing is recorded below without assigning unconfirmed feature authorship.
+
+| Member | GitHub account | 42 login | Commit-author aliases | Implemented features/modules and contribution evidence |
+| --- | --- | --- | --- | --- |
+| Tomaz | [theetom](https://github.com/theetom) | `toferrei` | Pending | To confirm. |
+| Nuno | [NunoAndrezo](https://github.com/NunoAndrezo) | `nneves-a` | Pending | To confirm. |
+| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Pending | Performed and reported browser/API acceptance checks, including overlapping review/favorite writes, account isolation and stale-change rejection; evidence is in [WORK_LOG.md](WORK_LOG.md). Feature ownership and commit evidence remain to confirm. |
+| Hugo | [Anzohs](https://github.com/Anzohs) | `hladeiro` | Pending | To confirm. |
+| Fabio | [FaMe1337](https://github.com/FaMe1337) | `famendes` | Pending | To confirm. |
+
+Verification challenge documented for `suroh`: establish that actions actually overlap and that old versions cannot overwrite newer contents. Two account sessions used one shared future start time with three Gunicorn workers; saved data and account isolation were checked afterward, and stale edits/approvals were rejected with HTTP 409. The original one-worker configuration was restored.
+
+Specific implementation contributions for each member, actual challenges and their solutions, feature/module attribution and Git contribution evidence still need team confirmation. Shared challenges can be described with their actual contributors; the subject does not prescribe one unique challenge per member.
 
 ## Current Limits and Verification
 
-- Category browsing, favorites actions and related-recipe suggestions have unfinished UI paths; they are not counted as completed features here.
+- Category browsing and related-recipe suggestions have unfinished UI paths; they are not counted as completed features here.
 - Search currently has no advanced sorting/pagination. Friends/chat/presence, OAuth and 2FA are not implemented.
 - Photo URLs are served publicly. Pending/rejected recipe page/API access is restricted separately; media serving remains the project's accepted scope.
 - The shared-folder workflow preserves older duplicate-name records and has cross-computer conflict limitations.
-- Recent changes were source-reviewed. Browser/runtime acceptance is user-led and recorded as reported in `WORK_LOG.md`; that does not certify every module or all supported browsers.
+- The header now uses multiple rows at narrower widths, keeps search and account controls in reading order, and stays in normal page flow so it does not cover content. Browser confirmation of the previously clipped desktop view with docked DevTools remains; earlier resizing/keyboard checks passed at the widths tested by the user.
+
+User-run browser/API checks on October 26–27, 2026 confirmed overlapping review and favorite writes from two ordinary accounts, correct settled totals/averages and account isolation, and stale edit/approval rejection without replacing newer contents. The overlapping writes returned successfully in approximately 24–39 ms in this local test. Both accounts' final checks passed, and the temporary three-worker setting was restored to the original one worker. The detailed results are recorded in [WORK_LOG.md](WORK_LOG.md); these completed cases do not need repeating.
+
+Other recorded user acceptance includes normal review updates, shared-view refresh, 100/101-character ingredient-name boundaries and readable errors, and desktop keyboard/search focus. Source inspection and runtime acceptance are recorded separately. The remaining final acceptance review covers a clean-checkout launch, HTTPS, stable Chrome/normal-console behavior and public policy navigation. Full chosen-module qualification is handled in the separate module-selection phase.
 
 For a demonstration, use the normal launcher, then exercise signup/login, profile changes, recipe create/edit/photo handling, staff decisions, rejection/resubmission, deletion requests, ratings and search. Check visible state after reloading. The work log retains the detailed duplicate-name, signup-conflict and changed-content test procedures.
 
@@ -239,4 +263,6 @@ For a demonstration, use the normal launcher, then exercise signup/login, profil
 
 ### AI Use
 
-AI assistance was used for source analysis, implementation proposals and code changes involving deployment/data-sharing scripts, React forms and search/profile UI, recipe moderation and stale-content checks, password validation, ratings, duplicate handling, source reviews and this README draft. The work log records the scope and verification of those sessions. Team members must review, test and understand the submitted implementation. Team confirmation is still needed for the complete project-wide AI-use attribution.
+Codex assistance was used for source analysis, implementation proposals and code changes involving deployment/data-sharing scripts, React forms, search/profiles, favorites and own review history, shared-view refresh, recipe moderation and stale-content guards, password and ingredient validation, ratings, duplicate handling, policy copy, keyboard focus, responsive header layout, source reviews and this README. It also helped prepare and explain the user-run verification helpers. The work log records the scope and actual verification of those sessions; the browser/API results above were performed and reported by Roh.
+
+Team members must review, test and understand the implementation attributed to them. AI use outside the sessions recorded in WORK_LOG.md still needs team confirmation, including which tasks and project parts it assisted. No unreported use or absence of use is assumed.

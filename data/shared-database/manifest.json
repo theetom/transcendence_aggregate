@@ -1,14 +1,14 @@
 {
   "archive_format": "postgresql-custom",
-  "created_at_utc": "2026-10-26T05:14:41.955651+00:00",
-  "data_bytes": 64503,
+  "created_at_utc": "2026-10-26T16:19:19.539940+00:00",
+  "data_bytes": 64901,
   "excluded_table_data": [
     "public.django_session",
     "public.authtoken_token"
   ],
   "format_version": 3,
   "media_included": true,
-  "media_sha256": "890479251f71d7cef1c192d4dc79b37aff3c5a060055914a1e647c756787459f",
+  "media_sha256": "d1fc0072f776d780575bb801d97ace79118a76175b927595b2b0992d090eddc8",
   "migration_fingerprint": "d8d6efec72c3b54159abdb9f329330f8cc516368d8967b4ff05b4be3fa4c67dc",
   "photos": {
     "files": {
@@ -55,6 +55,10 @@
       "ae04c91431223594bf76339354a2b31cb0f3775865971d827a288394cecf4a3a.jpg": {
         "bytes": 286869,
         "sha256": "ae04c91431223594bf76339354a2b31cb0f3775865971d827a288394cecf4a3a"
+      },
+      "db21da8ccaaacaf3258066c2f1126ea766fce209f93431b03f4b0cf25f1206ca.jpg": {
+        "bytes": 329694,
+        "sha256": "db21da8ccaaacaf3258066c2f1126ea766fce209f93431b03f4b0cf25f1206ca"
       }
     },
     "profiles": {
@@ -96,6 +100,18 @@
         "file": "a9273fb4bf976e4dcc159179b5d0ae67b5974483405cc7f1a1f810a9ce0eecce.jpg",
         "path": "recipes/cd33bcb8b8e84ccaabd5ddc3955b7e0b.jpg"
       },
+      "21": {
+        "file": "db21da8ccaaacaf3258066c2f1126ea766fce209f93431b03f4b0cf25f1206ca.jpg",
+        "path": "recipes/c836ff01e2a64e1eb27e5f2c0f96e169.jpg"
+      },
+      "22": {
+        "file": "db21da8ccaaacaf3258066c2f1126ea766fce209f93431b03f4b0cf25f1206ca.jpg",
+        "path": "recipes/d03180ece81d4859a3076d8677b0264d.jpg"
+      },
+      "23": {
+        "file": "db21da8ccaaacaf3258066c2f1126ea766fce209f93431b03f4b0cf25f1206ca.jpg",
+        "path": "recipes/49517564917e4fa8900b0cedd26c4b87.jpg"
+      },
       "3": {
         "file": "5b298f55188b76ddc286f435395caeb97bc00df9caec39cef00bfb6586c71ab4.jpg",
         "path": "shared/recipes/5b298f55188b76ddc286f435395caeb97bc00df9caec39cef00bfb6586c71ab4.jpg"
@@ -119,7 +135,7 @@
     }
   },
   "postgres_major": 17,
-  "snapshot_id": "20261026T051433Z_6f9fe8422f8a",
+  "snapshot_id": "20261026T161909Z_0afb362e31f7",
   "source_database": "recipes_shared_20261021t080220z_8dde02ab0694",
-  "source_git_revision": "0521ae02147a0a1f943598a58535036fcf792bfc"
+  "source_git_revision": "a5d66de78b0220b24a8df426806a2b231127acb9"
 }
