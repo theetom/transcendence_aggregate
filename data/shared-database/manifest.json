@@ -1,14 +1,14 @@
 {
   "archive_format": "postgresql-custom",
-  "created_at_utc": "2026-10-26T02:39:35.266524+00:00",
-  "data_bytes": 64394,
+  "created_at_utc": "2026-10-26T05:14:41.955651+00:00",
+  "data_bytes": 64503,
   "excluded_table_data": [
     "public.django_session",
     "public.authtoken_token"
   ],
   "format_version": 3,
   "media_included": true,
-  "media_sha256": "72557b7efa9b81ccee3ea837e683395a6c75d6990f194f9fec8644fa35cbc2a9",
+  "media_sha256": "890479251f71d7cef1c192d4dc79b37aff3c5a060055914a1e647c756787459f",
   "migration_fingerprint": "d8d6efec72c3b54159abdb9f329330f8cc516368d8967b4ff05b4be3fa4c67dc",
   "photos": {
     "files": {
@@ -47,6 +47,10 @@
       "9e04d345b40249fb99eb8c25cb573d7687ab5be4b6784aeff865829c68520a08.jpg": {
         "bytes": 26560,
         "sha256": "9e04d345b40249fb99eb8c25cb573d7687ab5be4b6784aeff865829c68520a08"
+      },
+      "a9273fb4bf976e4dcc159179b5d0ae67b5974483405cc7f1a1f810a9ce0eecce.jpg": {
+        "bytes": 235567,
+        "sha256": "a9273fb4bf976e4dcc159179b5d0ae67b5974483405cc7f1a1f810a9ce0eecce"
       },
       "ae04c91431223594bf76339354a2b31cb0f3775865971d827a288394cecf4a3a.jpg": {
         "bytes": 286869,
@@ -88,6 +92,10 @@
         "file": "89fdb7dcffefc4b0554e70b5bbb1e873bd3bdab2094d9c254685a68acfb6a717.jpg",
         "path": "shared/recipes/89fdb7dcffefc4b0554e70b5bbb1e873bd3bdab2094d9c254685a68acfb6a717.jpg"
       },
+      "20": {
+        "file": "a9273fb4bf976e4dcc159179b5d0ae67b5974483405cc7f1a1f810a9ce0eecce.jpg",
+        "path": "recipes/cd33bcb8b8e84ccaabd5ddc3955b7e0b.jpg"
+      },
       "3": {
         "file": "5b298f55188b76ddc286f435395caeb97bc00df9caec39cef00bfb6586c71ab4.jpg",
         "path": "shared/recipes/5b298f55188b76ddc286f435395caeb97bc00df9caec39cef00bfb6586c71ab4.jpg"
@@ -111,7 +119,7 @@
     }
   },
   "postgres_major": 17,
-  "snapshot_id": "20261026T023926Z_1e14bccde0b0",
+  "snapshot_id": "20261026T051433Z_6f9fe8422f8a",
   "source_database": "recipes_shared_20261021t080220z_8dde02ab0694",
-  "source_git_revision": "60c2cce6991e3a86d8a2d055b1c7fbe87c636750"
+  "source_git_revision": "0521ae02147a0a1f943598a58535036fcf792bfc"
 }
