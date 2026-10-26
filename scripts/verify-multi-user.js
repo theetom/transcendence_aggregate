@@ -1,5 +1,6 @@
 // Paste into the Console of each signed-in test session. Installing runs no requests.
 // Only prepare/run/verify/captureDecision/staleApprove perform the actions described below.
+// prepare(role, runId, fixtureTitle) can explicitly select a differently named disposable recipe.
 (() => {
   if (window.multiUserCheck) throw new Error('multiUserCheck is already installed in this page.')
 
@@ -135,10 +136,13 @@
     return results.map((result) => result.value)
   }
 
-  function requireFixture(recipe) {
+  function requireFixture(recipe, fixtureTitle = null) {
+    const titleMatches = typeof recipe.title === 'string'
+      && (fixtureTitle === null ? /^Multi-user test\b/i.test(recipe.title) : recipe.title === fixtureTitle)
     need(recipe.approved === true && recipe.rejected === false && recipe.deletion_requested === false
-      && typeof recipe.title === 'string' && /^Multi-user test\b/i.test(recipe.title),
-    'Use an approved disposable recipe whose title begins with "Multi-user test", with no deletion request.')
+      && titleMatches, fixtureTitle === null
+      ? 'Use an approved disposable recipe whose title begins with "Multi-user test", with no deletion request.'
+      : 'Use the explicitly selected approved disposable recipe, with no deletion request.')
   }
 
   function identifyRound(recipe, round) {
@@ -171,10 +175,12 @@
       'The final test average/count are incorrect.')
   }
 
-  async function prepare(role, runId = 'round1') {
+  async function prepare(role, runId = 'round1', fixtureTitle = null) {
     need(!session && !busy && !blocked, 'Prepare once per session; use report() before leaving this page.')
     need(['A', 'B', 'S'].includes(role), 'Role must be A, B or S.')
     need(typeof runId === 'string' && /^[A-Za-z0-9_-]{1,40}$/.test(runId), 'Use the same short letters/numbers runId in all three sessions.')
+    need(fixtureTitle === null || (typeof fixtureTitle === 'string' && fixtureTitle.trim().length > 0),
+      'The optional test recipe title must be a nonempty exact title.')
     const context = { role, token: window.sessionStorage.getItem(tokenKey) }
     contextCheck(context)
     const recipeId = currentRecipeId()
@@ -182,10 +188,10 @@
     try {
       const [profile, recipe] = await together([profileFor(context, 'prepare profile'), recipeFor(context, recipeId, 'prepare recipe')])
       need(profile.user.is_staff === (role === 'S'), 'A/B must be ordinary accounts; S must be staff.')
-      requireFixture(recipe)
+      requireFixture(recipe, fixtureTitle)
       need(recipe.reviews.length === 0, 'The disposable recipe must have zero reviews before round 1.')
       session = { ...context, userId: profile.user.id, username: profile.user.username, runId, recipeId,
-        title: recipe.title, bio: profile.bio, favorites: [...profile.favorites] }
+        title: recipe.title, fixtureTitle, bio: profile.bio, favorites: [...profile.favorites] }
       console.table([{ role, userId: session.userId, username: session.username, recipeId, title: recipe.title }])
     } finally {
       busy = false
@@ -254,7 +260,7 @@
       need(profile.user.is_staff === (session.role === 'S'), 'The account role changed; no round writes were sent.')
       need(profile.bio === session.bio && sameIds(profile.favorites.filter((id) => id !== session.recipeId),
         session.favorites.filter((id) => id !== session.recipeId)), 'The baseline profile changed; no round writes were sent.')
-      requireFixture(recipe)
+      requireFixture(recipe, session.fixtureTitle)
       if (round === 1) need(recipe.reviews.length === 0, 'Round 1 requires an empty review list.')
       else {
         identifyRound(recipe, 1)

@@ -1,14 +1,14 @@
 {
   "archive_format": "postgresql-custom",
-  "created_at_utc": "2026-10-23T16:10:15.232146+00:00",
-  "data_bytes": 64288,
+  "created_at_utc": "2026-10-26T02:39:35.266524+00:00",
+  "data_bytes": 64394,
   "excluded_table_data": [
     "public.django_session",
     "public.authtoken_token"
   ],
   "format_version": 3,
   "media_included": true,
-  "media_sha256": "b964bb1a7a840565b76097e0397fb76e9ca8f39b07de09b5a8623b06b7deda52",
+  "media_sha256": "72557b7efa9b81ccee3ea837e683395a6c75d6990f194f9fec8644fa35cbc2a9",
   "migration_fingerprint": "d8d6efec72c3b54159abdb9f329330f8cc516368d8967b4ff05b4be3fa4c67dc",
   "photos": {
     "files": {
@@ -80,6 +80,10 @@
         "file": "06e1c0eafe4c198312480e794836ad9509546b83ccd4fc0fd8d4e85123c8b041.png",
         "path": "recipes/e9274e4ccad846348955af23460c6a87.png"
       },
+      "17": {
+        "file": "7e52183148124bb31f5ae6e1096a739670a8e9ffada4642ea5f3fd7f54b79611.jpg",
+        "path": "recipes/5999eac438ad492da8041b22003dfcdc.jpg"
+      },
       "2": {
         "file": "89fdb7dcffefc4b0554e70b5bbb1e873bd3bdab2094d9c254685a68acfb6a717.jpg",
         "path": "shared/recipes/89fdb7dcffefc4b0554e70b5bbb1e873bd3bdab2094d9c254685a68acfb6a717.jpg"
@@ -107,7 +111,7 @@
     }
   },
   "postgres_major": 17,
-  "snapshot_id": "20261023T161006Z_b5c4514715c5",
+  "snapshot_id": "20261026T023926Z_1e14bccde0b0",
   "source_database": "recipes_shared_20261021t080220z_8dde02ab0694",
-  "source_git_revision": "8dc8428315695b769ab518265a7ae7e49b3b822e"
+  "source_git_revision": "60c2cce6991e3a86d8a2d055b1c7fbe87c636750"
 }

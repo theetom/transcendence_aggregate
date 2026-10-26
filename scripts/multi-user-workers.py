@@ -20,8 +20,21 @@ def processes():
         if not directory.name.isdigit():
             continue
         try:
-            command = (directory / 'cmdline').read_bytes().replace(b'\0', b' ')
-            if b'gunicorn' not in command or b'config.wsgi:application' not in command:
+            arguments = (directory / 'cmdline').read_bytes().split(b'\0')
+            executable = arguments[0].rsplit(b'/', 1)[-1]
+            if executable == b'gunicorn':
+                server_arguments = arguments[1:]
+            elif executable.startswith(b'python'):
+                if len(arguments) > 1 and arguments[1].rsplit(b'/', 1)[-1] == b'gunicorn':
+                    server_arguments = arguments[2:]
+                elif arguments[1:3] == [b'-m', b'gunicorn']:
+                    server_arguments = arguments[3:]
+                else:
+                    continue
+            else:
+                # Init and shell arguments may contain the entire Gunicorn command.
+                continue
+            if b'config.wsgi:application' not in server_arguments:
                 continue
             parent_line = next(
                 line for line in (directory / 'status').read_text().splitlines()
