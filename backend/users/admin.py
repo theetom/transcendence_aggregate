@@ -2,8 +2,14 @@ from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin
 
+from .models import UserProfile
+
 
 class ProjectUserAdmin(UserAdmin):
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        UserProfile.objects.get_or_create(user=obj)
+
     def get_fieldsets(self, request, obj=None):
         return tuple(
             (title, {

@@ -202,13 +202,13 @@ The agreed recipe-admin feature scope has been accepted by the user. Qualificati
 
 ## Modules
 
-The final module choices and their contributor assignments are pending confirmation. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
+The combined React + Django frameworks Major, Django ORM Minor and advanced permissions Major are selected and implemented, with contributors recorded below. The remaining module choices and contributor assignments are unfinished. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
 
 | Module | Points | Current source evidence / remaining qualification |
 | --- | --- | --- |
-| Frontend + backend frameworks — Major | 2 | React plus Django. Strong source evidence; demonstrate the running application. Do not also count the separate framework Minors. |
-| ORM — Minor | 1 | Django models, relationships, migrations and querysets. Strong source evidence. |
-| Advanced permissions — Major | 2 | Candidate: Django `UserAdmin` retains account CRUD/permissions and website owner/staff/guest actions differ. Demonstrate user CRUD, role/permission management and role-specific actions before claiming it. |
+| Frontend + backend frameworks — Major | 2 | Selected and implemented with React for reusable frontend components and Django for backend routing, validation and administration. Contributors: Roh and Hugo (React frontend); Tomaz (Django backend). Vite is the frontend build tool. Count this combined Major once; exclude the separate frontend/backend framework Minors. |
+| Django ORM — Minor | 1 | Selected and implemented with Django models, relationships, migrations and querysets to manage PostgreSQL data consistently in Python. Contributor: Tomaz (backend). |
+| Advanced permissions — Major | 2 | Selected, implemented and user-verified to control who can manage accounts and recipes. Django administration provides user CRUD (Create, Read, Update, and Delete: fundamental operations used to manage persistent data in software, database, and APIs) and scoped model-permission grants/revocation; backend checks and role-specific frontend controls enforce owner/staff/guest access. Django admin saves create missing website profiles. Contributors: Tomaz (backend); Roh and Hugo (frontend); Roh (Codex-assisted admin/profile integration fix and verification). |
 | Custom design system — Minor | 1 | Shared colors, typography and components exist. Confirm/document the required ten reusable components and icon system. |
 | File upload/management — Minor | 1 | Image validation, profile previews and saved recipe photo removal exist. Complete the requirement check for supported file types, previews, upload progress, deletion and access policy. |
 | Advanced search — Minor | 1 | Current title/name search needs the module's filters, sorting and pagination. |
@@ -220,7 +220,7 @@ The final module choices and their contributor assignments are pending confirmat
 | Additional browsers — Minor | 1 | Requires completed feature checks in two additional browsers and documented limitations. No complete evidence is recorded. |
 | Accessibility — Major | 2 | Labels/ARIA/native dialogs help, but source review does not establish full WCAG 2.1 AA compliance. |
 
-The straightforward source-backed subtotal is **3 candidate points** from frameworks and ORM, before evaluation. Advanced permissions is a further **2-point candidate**, not an automatic completed claim. This table lists possibilities and gaps; it is not a selected 14-point plan. Custom modules require their own scope, implementation evidence, contributor attribution and justification.
+The selected frameworks Major (**2 points**), Django ORM Minor (**1 point**) and advanced permissions Major (**2 points**) total **5 points**. Other rows describe possibilities and remaining gaps; this table does not claim a completed 14-point total. Custom modules require their own scope, implementation evidence, contributor attribution and justification.
 
 ## Individual Contributions
 

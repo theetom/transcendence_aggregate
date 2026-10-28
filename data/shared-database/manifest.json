@@ -1,7 +1,7 @@
 {
   "archive_format": "postgresql-custom",
-  "created_at_utc": "2026-10-28T06:26:21.211807+00:00",
-  "data_bytes": 64901,
+  "created_at_utc": "2026-10-28T13:57:30.484570+00:00",
+  "data_bytes": 65287,
   "excluded_table_data": [
     "public.django_session",
     "public.authtoken_token"
@@ -135,7 +135,7 @@
     }
   },
   "postgres_major": 17,
-  "snapshot_id": "20261028T062612Z_b5246d8b7000",
+  "snapshot_id": "20261028T135721Z_cb4a09e20b4f",
   "source_database": "recipes_shared_20261021t080220z_8dde02ab0694",
-  "source_git_revision": "bc08a11c42105d92de639d483317b5c060ef4140"
+  "source_git_revision": "1f4d31736edaf11e9211fed882bb50b3ab1e0806"
 }
