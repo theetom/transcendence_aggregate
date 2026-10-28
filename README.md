@@ -2,7 +2,7 @@
 
 # Recipe Site
 
-The team names, 42 logins, roles, GitHub accounts and contribution areas below are confirmed. Detailed feature/module attribution, commit-author aliases, additional AI use and the final chosen-module list still need confirmation. The module review below does not establish a completed 14-point total.
+The team names, 42 logins, roles, GitHub accounts and contribution areas below are confirmed. Detailed feature/module attribution, commit-author aliases and the final chosen-module list still need confirmation. The module review below does not establish a completed 14-point total.
 
 ## Description
 
@@ -265,6 +265,8 @@ For a demonstration, use the normal launcher, then exercise signup/login, profil
 
 ### AI Use
 
-Codex assistance was used for source analysis, implementation proposals and code changes involving deployment/data-sharing scripts, React forms, search/profiles, favorites and own review history, shared-view refresh, recipe moderation and stale-content guards, password and ingredient validation, ratings, duplicate handling, policy copy, keyboard focus, responsive header layout, source reviews and this README. It also helped prepare and explain the user-run verification helpers. The work log records the scope and actual verification of those sessions; the browser/API results above were performed and reported by Roh.
+Roh (`suroh`) used Codex to build and modify code, and ChatGPT to break down, analyse and review project work. The team also used ChatGPT alongside reference documents to understand the project requirements and work out implementation approaches.
 
-Team members must review, test and understand the implementation attributed to them. AI use outside the sessions recorded in WORK_LOG.md still needs team confirmation, including which tasks and project parts it assisted. No unreported use or absence of use is assumed.
+The recorded Codex work covered source analysis, implementation proposals and code changes involving deployment/data-sharing scripts, React forms, search/profiles, favorites and own review history, shared-view refresh, recipe moderation and stale-content guards, password and ingredient validation, ratings, duplicate handling, policy copy, keyboard focus, responsive header layout, source reviews and this README. It also helped prepare and explain the user-run verification helpers. The work log records the scope and actual verification of those sessions; the browser/API results above were performed and reported by Roh.
+
+Team members must review, test and understand the implementation attributed to them.
