@@ -2,7 +2,7 @@
 
 # Recipe Site
 
-The team names, 42 logins, roles and GitHub accounts below are confirmed. Individual implementation ownership, commit-author aliases, team work practices, additional AI use and the final chosen-module list still need confirmation. The module review below does not establish a completed 14-point total.
+The team names, 42 logins, roles, GitHub accounts and contribution areas below are confirmed. Detailed feature/module attribution, commit-author aliases, additional AI use and the final chosen-module list still need confirmation. The module review below does not establish a completed 14-point total.
 
 ## Description
 
@@ -118,19 +118,21 @@ The team has five members: Tomaz, Nuno, Roh, Hugo and Fabio. Every member is a d
 
 | Member | GitHub account | 42 login | Assigned roles | Responsibilities |
 | --- | --- | --- | --- | --- |
-| Tomaz Lima (Tomaz) | [theetom](https://github.com/theetom) | `toferrei` | Product Owner; Developer | Product direction, backlog priorities and acceptance of completed features; assigned development work. |
-| Nuno Andrezo (Nuno) | [NunoAndrezo](https://github.com/NunoAndrezo) | `nneves-a` | Project Manager; Developer | Planning, task coordination, progress, team communication and blockers; assigned development work. |
-| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Technical Lead; Developer | Architecture, technical decisions, code quality, review and integration; assigned development work. |
-| Hugo Emanuel Ladeiro Nobre (Hugo) | [Anzohs](https://github.com/Anzohs) | `hladeiro` | Developer | Assigned feature/module implementation, review, testing and documentation. |
-| Fabio | [FaMe1337](https://github.com/FaMe1337) | `famendes` | Developer | Assigned feature/module implementation, review, testing and documentation. |
+| Tomaz Lima (Tomaz) | [theetom](https://github.com/theetom) | `toferrei` | Product Owner; Developer | Product direction, backlog priorities and acceptance of completed features; backend development, including serializers. |
+| Nuno Andrezo (Nuno) | [NunoAndrezo](https://github.com/NunoAndrezo) | `nneves-a` | Project Manager; Developer | Team communication, meeting scheduling and work coordination; checking the project's Docker setup and connections. |
+| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Technical Lead; Developer | Technical leadership; frontend development, Vite integration, visual-output checks and browser/API verification. |
+| Hugo Emanuel Ladeiro Nobre (Hugo) | [Anzohs](https://github.com/Anzohs) | `hladeiro` | Developer | Frontend development, Vite integration and visual-output checks with Roh. |
+| Fabio | [FaMe1337](https://github.com/FaMe1337) | `famendes` | Developer | Support for frontend and backend development as needed. |
 
 ## Project Management
 
-Product ownership is assigned to Tomaz, project coordination to Nuno and technical leadership to Roh. All five members share development responsibilities. Their specific implementation work is recorded in the Individual Contributions section once confirmed.
+Product ownership is assigned to Tomaz, project coordination to Nuno and technical leadership to Roh. All five members share development responsibilities. Their confirmed work areas are recorded in the Individual Contributions section.
+
+Nuno coordinated team communication and scheduled meetings. Work was divided between Roh and Hugo on the frontend and Vite integration, Tomaz on the backend and serializers, and Fabio providing support across frontend and backend as needed. Nuno also checked that the project's Docker setup and connections worked properly.
 
 Git stores source changes. [WORK_LOG.md](WORK_LOG.md) records implementation decisions, source reviews, user-reported checks and remaining work. Functional acceptance in the current workflow is performed by the user; a source review is not a substitute for a browser/runtime check.
 
-The team still needs to confirm its task board, communication channels, meeting/review process and work allocation for this section.
+The team used Discord and WhatsApp for communication and coordination.
 
 ## Technical Stack
 
@@ -179,7 +181,7 @@ Uploaded bytes are stored in the media volume; image fields store their paths. T
 
 ## Features List
 
-The team still needs to confirm which members implemented each feature. Confirmed identities and recorded verification work are listed under Individual Contributions.
+The confirmed contribution areas are frontend development, Vite integration and visual-output testing by Roh and Hugo; backend development, including serializers, by Tomaz; Docker setup/connection checks by Nuno; and support across frontend and backend by Fabio. The Individual Contributions section also records Roh's browser/API verification work. More detailed contributor assignments for individual features remain to be confirmed.
 
 | Implemented feature | Behavior | Main source |
 | --- | --- | --- |
@@ -222,19 +224,19 @@ The straightforward source-backed subtotal is **3 candidate points** from framew
 
 ## Individual Contributions
 
-Names, 42 logins, project roles and GitHub accounts are confirmed in Team Information. Commit-author names or email aliases and specific implementation ownership still need to be matched to those identities. Roh's documented browser/API testing is recorded below without assigning unconfirmed feature authorship.
+Names, 42 logins, project roles and GitHub accounts are confirmed in Team Information. The team has also confirmed the contribution areas below. Commit-author names or email aliases and detailed feature/module assignments remain to be matched to those identities.
 
 | Member | GitHub account | 42 login | Commit-author aliases | Implemented features/modules and contribution evidence |
 | --- | --- | --- | --- | --- |
-| Tomaz | [theetom](https://github.com/theetom) | `toferrei` | Pending | To confirm. |
-| Nuno | [NunoAndrezo](https://github.com/NunoAndrezo) | `nneves-a` | Pending | To confirm. |
-| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Pending | Performed and reported browser/API acceptance checks, including overlapping review/favorite writes, account isolation and stale-change rejection; evidence is in [WORK_LOG.md](WORK_LOG.md). Feature ownership and commit evidence remain to confirm. |
-| Hugo | [Anzohs](https://github.com/Anzohs) | `hladeiro` | Pending | To confirm. |
-| Fabio | [FaMe1337](https://github.com/FaMe1337) | `famendes` | Pending | To confirm. |
+| Tomaz | [theetom](https://github.com/theetom) | `toferrei` | Pending | Backend development, including serializers. |
+| Nuno | [NunoAndrezo](https://github.com/NunoAndrezo) | `nneves-a` | Pending | Coordinated team communications and meeting dates; checked that the project's Docker setup and connections worked properly. |
+| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Pending | Frontend development with Hugo, Vite integration and visual-output testing. Also performed and reported browser/API acceptance checks, including overlapping review/favorite writes, account isolation and stale-change rejection; evidence is in [WORK_LOG.md](WORK_LOG.md). |
+| Hugo | [Anzohs](https://github.com/Anzohs) | `hladeiro` | Pending | Frontend development with Roh, Vite integration and visual-output testing. |
+| Fabio | [FaMe1337](https://github.com/FaMe1337) | `famendes` | Pending | Supported both backend and frontend development and provided help as needed. |
 
 Verification challenge documented for `suroh`: establish that actions actually overlap and that old versions cannot overwrite newer contents. Two account sessions used one shared future start time with three Gunicorn workers; saved data and account isolation were checked afterward, and stale edits/approvals were rejected with HTTP 409. The original one-worker configuration was restored.
 
-Specific implementation contributions for each member, actual challenges and their solutions, feature/module attribution and Git contribution evidence still need team confirmation. Shared challenges can be described with their actual contributors; the subject does not prescribe one unique challenge per member.
+Detailed feature/module assignments, additional implementation challenges and their solutions, and Git contribution evidence still need team confirmation. Shared challenges can be described with their actual contributors; the subject does not prescribe one unique challenge per member.
 
 ## Current Limits and Verification
 
@@ -246,7 +248,7 @@ Specific implementation contributions for each member, actual challenges and the
 
 User-run browser/API checks on October 26–27, 2026 confirmed overlapping review and favorite writes from two ordinary accounts, correct settled totals/averages and account isolation, and stale edit/approval rejection without replacing newer contents. The overlapping writes returned successfully in approximately 24–39 ms in this local test. Both accounts' final checks passed, and the temporary three-worker setting was restored to the original one worker. The detailed results are recorded in [WORK_LOG.md](WORK_LOG.md); these completed cases do not need repeating.
 
-Other recorded user acceptance includes normal review updates, shared-view refresh, 100/101-character ingredient-name boundaries and readable errors, and desktop keyboard/search focus. Source inspection and runtime acceptance are recorded separately. The remaining final acceptance review covers a clean-checkout launch, HTTPS, stable Chrome/normal-console behavior and public policy navigation. Full chosen-module qualification is handled in the separate module-selection phase.
+Other recorded user acceptance includes normal review updates, shared-view refresh, 100/101-character ingredient-name boundaries and readable errors, and desktop keyboard/search focus. The user also confirmed that the public Terms and Privacy links open readable policy pages without requiring login. Source inspection and runtime acceptance are recorded separately. The remaining final acceptance review covers a clean-checkout launch, HTTPS and stable Chrome/normal-console behavior. Full chosen-module qualification is handled in the separate module-selection phase.
 
 For a demonstration, use the normal launcher, then exercise signup/login, profile changes, recipe create/edit/photo handling, staff decisions, rejection/resubmission, deletion requests, ratings and search. Check visible state after reloading. The work log retains the detailed duplicate-name, signup-conflict and changed-content test procedures.
 
