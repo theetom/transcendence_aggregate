@@ -2,7 +2,7 @@
 
 Board: [Transcendence](https://trello.com/b/dYQHomFA/transcendence)
 
-Revised and verified: 2026-10-28.
+Trello publication revised and verified: 2026-10-28. Local module progress updated: 2026-10-29.
 
 Publication status: **Complete — ten simplified cards and all 31 native checklist items verified in Trello.**
 
@@ -12,11 +12,11 @@ Frameworks and ORM are already implemented. Both README entries are complete and
 
 Module 03 advanced permissions is implemented and user-verified. Its README entry and all three Trello tasks are complete.
 
-**Progress: Modules 01–03 complete — 5 of 14 target points.** Modules 04–10 remain pending qualification, representing the remaining 9 target points.
+**Progress: Modules 01–04 complete — 6 of 14 target points.** Modules 05–10 remain pending qualification, representing the remaining 8 target points.
 
 The required README module information is the chosen module, its points, why/how it is implemented and its contributors (subject printed page 28 / PDF page 29). Exact file references, tutorials and separate evidence reports are not mandatory additions.
 
-Module 01's old card was archived because the connector cannot delete its excess native checklist items. Its verified replacement is linked below. Other module links are unchanged. Each card has one **Required work** native checklist; the items below mirror it.
+Module 01's old card was archived because the connector cannot delete its excess native checklist items. Its verified replacement is linked below. Other module links are unchanged. Each card has one **Required work** native checklist; the items below record local progress. Module 04's local updates have not been synchronized to Trello.
 
 ## Card index
 
@@ -25,14 +25,14 @@ Module 01's old card was archived because the connector cannot delete its excess
 | 01 | [React + Django frameworks](https://trello.com/c/CrNd2bmK/57-module-01-react-django-frameworks-major-2-points) | Major | 2 | 1 | Complete |
 | 02 | [Django ORM](https://trello.com/c/5O2WSAZU/48-module-02-django-orm-minor-1-point) | Minor | 1 | 1 | Complete |
 | 03 | [Advanced permissions](https://trello.com/c/VyltJMBQ/49-module-03-advanced-permissions-major-2-points) | Major | 2 | 3 | Complete |
-| 04 | [Custom design system](https://trello.com/c/8TOKaPvg/50-module-04-custom-design-system-minor-1-point) | Minor | 1 | 2 | Pending |
+| 04 | [Custom design system](https://trello.com/c/8TOKaPvg/50-module-04-custom-design-system-minor-1-point) | Minor | 1 | 2 | Complete |
 | 05 | [Advanced recipe search](https://trello.com/c/TWEqD2Hb/51-module-05-advanced-recipe-search-minor-1-point) | Minor | 1 | 2 | Pending |
 | 06 | [Secured public recipe API](https://trello.com/c/ZvUXeo0H/52-module-06-secured-public-recipe-api-major-2-points) | Major | 2 | 5 | Pending |
 | 07 | [Recipe data export/import](https://trello.com/c/sonZzuGg/53-module-07-recipe-data-export-import-minor-1-point) | Minor | 1 | 4 | Pending |
 | 08 | [Health, status and automated backups](https://trello.com/c/T7ZPZQq9/54-module-08-health-status-and-automated-backups-minor-1-point) | Minor | 1 | 4 | Pending |
 | 09 | [Recipe analytics dashboard](https://trello.com/c/8fkox8yA/55-module-09-recipe-analytics-dashboard-major-2-points) | Major | 2 | 5 | Pending |
 | 10 | [Two additional browsers](https://trello.com/c/Djc38gP8/56-module-10-two-additional-browsers-minor-1-point) | Minor | 1 | 4 | Pending |
-| **Total** | **10 cards** | **4 Major + 6 Minor** | **14** | **31** | **3 complete; 7 pending** |
+| **Total** | **10 cards** | **4 Major + 6 Minor** | **14** | **31** | **4 complete; 6 pending** |
 
 ## [Module 01] React + Django frameworks — Major (2 points)
 
@@ -84,12 +84,12 @@ Module 01's old card was archived because the connector cannot delete its excess
 
 **Requirement:** Provide a custom design system with a colour palette, typography, icons and at least 10 reusable components.
 
-**Current status:** Shared styles and components already exist. Finish only unmet requirements.
+**Current status:** Complete: Savour Studio palette, typography, local SVG icons and ten reusable components have source evidence and README documentation. Roh reported passing the guided 390 × 844 mobile page layouts, desktop/narrowed-header review, keyboard/menu focus, empty-form validation and extra ingredient/category/step removal with first-card protection. The completed subtotal is now 6 points. This local progress update does not update the external Trello card.
 
 **Required work:**
 
-- [ ] Complete and verify the palette, typography, icons and at least 10 reusable components used by the application.
-- [ ] Record this module, its 1 point, why/how it is implemented, and contributors in README.
+- [x] Complete and verify the palette, typography, icons and at least 10 reusable components used by the application.
+- [x] Record this module, its 1 point, why/how it is implemented, and contributors in README.
 
 ---
 

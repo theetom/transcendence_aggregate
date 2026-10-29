@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthPageShell from '../components/AuthPageShell'
+import Button from '../components/Button'
 import { authTokenStorageKey } from '../data/siteData'
 
 function LoginPage() {
@@ -104,9 +105,9 @@ function LoginPage() {
         </div>
 
         <div className="auth-card__actions">
-          <button type="submit" className="button button--ghost" disabled={isSubmitting}>
+          <Button type="submit" variant="ghost" disabled={isSubmitting}>
             Continue
-          </button>
+          </Button>
           <Link className="button button--ghost" to="/signup">
             Need an account?
           </Link>

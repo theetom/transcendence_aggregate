@@ -202,14 +202,14 @@ The agreed recipe-admin feature scope has been accepted by the user. Qualificati
 
 ## Modules
 
-The combined React + Django frameworks Major, Django ORM Minor and advanced permissions Major are selected and implemented, with contributors recorded below. The remaining module choices and contributor assignments are unfinished. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
+The combined React + Django frameworks Major, Django ORM Minor, advanced permissions Major and custom design system Minor are complete, with contributors recorded below. The remaining module choices and contributor assignments are unfinished. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
 
 | Module | Points | Current source evidence / remaining qualification |
 | --- | --- | --- |
 | Frontend + backend frameworks — Major | 2 | Selected and implemented with React for reusable frontend components and Django for backend routing, validation and administration. Contributors: Roh and Hugo (React frontend); Tomaz (Django backend). Vite is the frontend build tool. Count this combined Major once; exclude the separate frontend/backend framework Minors. |
 | Django ORM — Minor | 1 | Selected and implemented with Django models, relationships, migrations and querysets to manage PostgreSQL data consistently in Python. Contributor: Tomaz (backend). |
 | Advanced permissions — Major | 2 | Selected, implemented and user-verified to control who can manage accounts and recipes. Django administration provides user CRUD (Create, Read, Update, and Delete: fundamental operations used to manage persistent data in software, database, and APIs) and scoped model-permission grants/revocation; backend checks and role-specific frontend controls enforce owner/staff/guest access. Django admin saves create missing website profiles. Contributors: Tomaz (backend); Roh and Hugo (frontend); Roh (Codex-assisted admin/profile integration fix and verification). |
-| Custom design system — Minor | 1 | Shared colors, typography and components exist. Confirm/document the required ten reusable components and icon system. |
+| Custom design system — Minor | 1 | Complete: Savour Studio palette, typography, shared SVG icons and ten reusable components are implemented and documented below. Guided mobile, desktop, keyboard and form-validation checks were user-verified. Contributor: Roh (design direction, Codex-assisted implementation and verification), building on the shared frontend by Roh and Hugo. |
 | File upload/management — Minor | 1 | Image validation, profile previews and saved recipe photo removal exist. Complete the requirement check for supported file types, previews, upload progress, deletion and access policy. |
 | Advanced search — Minor | 1 | Current title/name search needs the module's filters, sorting and pagination. |
 | Public API — Major | 2 | Routes/token authentication exist. Rate limiting is missing; API documentation and how tokens meet the key requirement need completion/demonstration. |
@@ -220,7 +220,28 @@ The combined React + Django frameworks Major, Django ORM Minor and advanced perm
 | Additional browsers — Minor | 1 | Requires completed feature checks in two additional browsers and documented limitations. No complete evidence is recorded. |
 | Accessibility — Major | 2 | Labels/ARIA/native dialogs help, but source review does not establish full WCAG 2.1 AA compliance. |
 
-The selected frameworks Major (**2 points**), Django ORM Minor (**1 point**) and advanced permissions Major (**2 points**) total **5 points**. Other rows describe possibilities and remaining gaps; this table does not claim a completed 14-point total. Custom modules require their own scope, implementation evidence, contributor attribution and justification.
+The completed frameworks Major (**2 points**), Django ORM Minor (**1 point**), advanced permissions Major (**2 points**) and custom design system Minor (**1 point**) total **6 of 14 target points**, leaving **8 points**. Other rows describe possibilities and remaining gaps; this table does not claim a completed 14-point total. Custom modules require their own scope, implementation evidence, contributor attribution and justification.
+
+### Custom design system — Module 04 (1 point, complete)
+
+The Savour Studio design system gives recipe discovery, recipe details and forms a consistent appearance while sharing controls and layouts across pages. Its charcoal panels, ivory text, gold actions and sage accents are defined alongside spacing and corner-radius tokens in [index.css](frontend/src/index.css). DM Serif Display is the heading font and Manrope is the body font, with local system fallbacks. [Icon.jsx](frontend/src/components/Icon.jsx) provides a shared local SVG icon set; [savour-system.css](frontend/src/styles/savour-system.css) applies the common controls, fields, panels and responsive navigation.
+
+These ten reusable components have active application consumers in [frontend/src/components/](frontend/src/components/):
+
+| Component | Purpose and current use |
+| --- | --- |
+| `Button` | Native button variants and forwarded attributes; login, signup and recipe actions. |
+| `FieldError` | Consistent labeled validation feedback; signup, profile, recipe and review forms. |
+| `Icon` | Named SVG glyphs with shared sizing and strokes; navigation, cards and recipe actions. |
+| `AuthPageShell` | Configurable introduction, form content and status; login and signup. |
+| `PageHero` | Shared page heading, lead text and content slot; Connect, policy and not-found pages. |
+| `SectionTitle` | Section heading with description and action slots; recipe and user search results. |
+| `RecipePreviewCard` | Data-driven recipe preview with layout options and photo fallback; home, search and profiles. |
+| `RecipeReviewForm` | Controlled rating/review fields, callbacks, validation and submitting state; recipe details. |
+| `SiteHeader` | Shared navigation, search, account controls and responsive menu across routed pages. |
+| `SiteFooter` | Shared policy links and mobile navigation across routed pages. |
+
+Roh selected the Savour Studio direction, supplied the six visual references and directed the Codex-assisted implementation, building on the existing shared frontend by Roh and Hugo. Source review confirms the component contracts and their consumers. On October 29, 2026, Roh reported passing the guided visual checks at **390 × 844** for the homepage/menu, recipe details, Add Recipe, profile editor, login/signup, search results, staff, Privacy and Terms pages, including content clearance above mobile navigation. Desktop home/recipe/form layouts and the narrowed-window or docked-DevTools header check also passed. Keyboard checks confirmed visible Tab/Shift+Tab focus, Enter/Escape menu operation with focus returned to the toggle, and readable empty-form validation with focus on the first invalid field. Extra ingredient/category/step cards can be removed while the first card in each group stays protected. These user-reported results complete the module's **1-point** qualification; details are saved in [WORK_LOG.md](WORK_LOG.md).
 
 ## Individual Contributions
 
@@ -230,7 +251,7 @@ Names, 42 logins, project roles and GitHub accounts are confirmed in Team Inform
 | --- | --- | --- | --- | --- |
 | Tomaz | [theetom](https://github.com/theetom) | `toferrei` | Pending | Backend APIs and serializers for signup/login, profiles, recipes/moderation and changed-content guards, reviews/favorites, discovery and duplicate prevention. |
 | Nuno | [NunoAndrezo](https://github.com/NunoAndrezo) | `nneves-a` | Pending | Coordinated team communications and meeting dates; checked that the project's Docker setup and connections worked properly. |
-| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Pending | Frontend features credited above with Hugo, Vite integration and visual-output testing; Codex-assisted deployment/data-sharing work. Also performed and reported browser/API acceptance checks, including overlapping review/favorite writes, account isolation and stale-change rejection; evidence is in [WORK_LOG.md](WORK_LOG.md). |
+| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Pending | Frontend features credited above with Hugo, Vite integration and visual-output testing; Codex-assisted deployment/data-sharing work and Savour Studio design-system implementation. Selected the visual direction and supplied references. Also performed and reported browser/API acceptance checks, including overlapping review/favorite writes, account isolation, stale-change rejection and extra recipe-card removal; evidence is in [WORK_LOG.md](WORK_LOG.md). |
 | Hugo | [Anzohs](https://github.com/Anzohs) | `hladeiro` | Pending | Frontend work with Roh on authentication/profile pages, recipe/moderation screens, reviews/favorites, discovery, refresh and policy pages; Vite integration and visual-output testing. |
 | Fabio | [FaMe1337](https://github.com/FaMe1337) | `famendes` | Pending | Supported both backend and frontend development and provided help as needed. |
 
@@ -244,7 +265,8 @@ Selected-module assignments, additional implementation challenges and their solu
 - Search currently has no advanced sorting/pagination. Friends/chat/presence, OAuth and 2FA are not implemented.
 - Photo URLs are served publicly. Pending/rejected recipe page/API access is restricted separately; media serving remains the project's accepted scope.
 - The shared-folder workflow preserves older duplicate-name records and has cross-computer conflict limitations.
-- The header now uses multiple rows at narrower widths, keeps search and account controls in reading order, and stays in normal page flow so it does not cover content. Browser confirmation of the previously clipped desktop view with docked DevTools remains; earlier resizing/keyboard checks passed at the widths tested by the user.
+
+The Savour Studio desktop/mobile layout, menu focus, form-validation and mobile-navigation-clearance checks were performed and reported as passed by Roh on October 29, 2026, as detailed in Module 04 above. Source review and user-run verification are recorded separately in [WORK_LOG.md](WORK_LOG.md).
 
 User-run browser/API checks on October 26–27, 2026 confirmed overlapping review and favorite writes from two ordinary accounts, correct settled totals/averages and account isolation, and stale edit/approval rejection without replacing newer contents. The overlapping writes returned successfully in approximately 24–39 ms in this local test. Both accounts' final checks passed, and the temporary three-worker setting was restored to the original one worker. The detailed results are recorded in [WORK_LOG.md](WORK_LOG.md); these completed cases do not need repeating.
 
@@ -268,5 +290,7 @@ For a demonstration, use the normal launcher, then exercise signup/login, profil
 Roh (`suroh`) used Codex to build and modify code, and ChatGPT to break down, analyse and review project work. The team also used ChatGPT alongside reference documents to understand the project requirements and work out implementation approaches.
 
 The recorded Codex work covered source analysis, implementation proposals and code changes involving deployment/data-sharing scripts, React forms, search/profiles, favorites and own review history, shared-view refresh, recipe moderation and stale-content guards, password and ingredient validation, ratings, duplicate handling, policy copy, keyboard focus, responsive header layout, source reviews and this README. It also helped prepare and explain the user-run verification helpers. The work log records the scope and actual verification of those sessions; the browser/API results above were performed and reported by Roh.
+
+For the Savour Studio redesign, Roh selected and supplied six visual references. Codex implemented the palette, fonts, shared components and icons, responsive shell, homepage and recipe layouts, then corrected extra recipe-card removal from Roh's feedback. Source reviews and Roh's passed user-run mobile, desktop, keyboard and validation checks are recorded separately in the work log.
 
 Team members must review, test and understand the implementation attributed to them.

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import Button from '../components/Button'
+import Icon from '../components/Icon'
 import RecipePreviewCard from '../components/RecipePreviewCard'
 import RecipeReviewForm from '../components/RecipeReviewForm'
 import { approveRecipe, rejectRecipe, rejectRecipeDeletion } from '../data/moderationApi'
@@ -8,6 +10,7 @@ import { authTokenStorageKey, formatDate } from '../data/siteData'
 import { getUserProfilePath } from '../data/userApi'
 import useTransientMessage from '../hooks/useTransientMessage'
 import useLiveRefresh from '../hooks/useLiveRefresh'
+import '../styles/savour-recipe.css'
 
 function getImageSource(imageRecord) {
   const candidates = [imageRecord?.image, imageRecord?.src, imageRecord?.url, imageRecord?.imageUrl]
@@ -151,6 +154,7 @@ function RecipeContent({
   liveStatus,
 }) {
   const [failedAuthorPhoto, setFailedAuthorPhoto] = useState('')
+  const [failedImages, setFailedImages] = useState([])
   const [showRejectionForm, setShowRejectionForm] = useState(false)
   const gallery = Array.isArray(recipe?.images)
     ? recipe.images
@@ -188,18 +192,25 @@ function RecipeContent({
   const submittedOn = getRecordDate(recipe.date_created)
   const isPendingReview = isStaff && !recipe.deletion_requested && !recipe.approved && !recipe.rejected
   const isFavorite = favoriteIds.includes(recipe.id)
+  const categoryLabel = Array.isArray(recipe.categories)
+    ? recipe.categories.map((category) => category?.name)
+      .filter((name) => typeof name === 'string' && name.trim()).join(' / ')
+    : ''
 
   return (
-    <div className="content-frame">
+    <div className="content-frame savour-recipe">
       <section className="page-hero recipe-shell__hero">
-        <p className="eyebrow">Recipe page</p>
+        <Link className="savour-recipe__back" to="/">
+          <Icon name="arrow-left" /> Back to recipes
+        </Link>
+        <p className="eyebrow">Recipes{categoryLabel ? ` / ${categoryLabel}` : ''}</p>
         <h1>{title}</h1>
-        <p className="page-hero__lead">{lead}</p>
+        {lead ? <p className="page-hero__lead">{lead}</p> : null}
 
         <div className="recipe-shell__rating-strip" aria-label="Recipe rating summary">
           <div className="stat-pill recipe-shell__rating-pill">
             <span>Rating</span>
-            <strong>{ratingValue}</strong>
+            <strong><Icon name="star" /> {ratingValue}</strong>
           </div>
 
           <div className="stat-pill recipe-shell__rating-pill">
@@ -217,7 +228,7 @@ function RecipeContent({
       {liveStatus ? <p className="status-banner" role="status">{liveStatus}</p> : null}
 
       {isStaff || canManage || recipe.rejected === true ? (
-        <section className="page-section">
+        <section className="page-section savour-recipe__moderation">
           <article className="detail-panel">
             <p className="eyebrow">{isStaff ? 'Recipe review' : 'Recipe status'}</p>
             <h2 className="recipe-shell__status-title">{recipe.deletion_requested
@@ -345,71 +356,106 @@ function RecipeContent({
         </section>
       ) : null}
 
-      <section className="page-section recipe-shell__media-section" aria-labelledby="recipe-media-title">
-        <h2 id="recipe-media-title" className="sr-only">
-          Recipe pictures
-        </h2>
+      <div className="savour-recipe__overview">
+        <section className="page-section recipe-shell__media-section" aria-labelledby="recipe-media-title">
+          <h2 id="recipe-media-title" className="sr-only">
+            Recipe pictures
+          </h2>
 
-        <div className="recipe-shell__media-stack">
-          <article className="detail-panel recipe-shell__carousel-stage">
-            <p className="eyebrow recipe-shell__section-label">Recipe image</p>
+          <div className="recipe-shell__media-stack">
+            <article className="detail-panel recipe-shell__carousel-stage">
+              <div className={imageGridClassName}>
+                {previewImages.map((item, index) => {
+                  const imageSource = getImageSource(item)
+                  const hasImage = imageSource && !failedImages.includes(imageSource)
+                  const imageKey = item?.id ?? item?.title ?? `recipe-image-slot-${index + 1}`
+                  const altText =
+                    previewImages.length > 1 ? `${title} ${index + 1}` : title
 
-            <div className={imageGridClassName}>
-              {previewImages.map((item, index) => {
-                const imageSource = getImageSource(item)
-                const imageKey = item?.id ?? item?.title ?? `recipe-image-slot-${index + 1}`
-                const altText =
-                  previewImages.length > 1 ? `${title} ${index + 1}` : title
-
-                return (
-                  <div
-                    key={imageKey}
-                    className={
-                      imageSource
-                        ? 'recipe-shell__image-frame'
-                        : 'recipe-shell__image-frame recipe-shell__image-frame--empty'
-                    }
-                  >
-                    {imageSource ? (
-                      <img className="recipe-shell__image" src={imageSource} alt={altText} />
-                    ) : (
-                      <div className="recipe-shell__image-empty">No image available.</div>
-                    )}
+                  return (
+                    <div
+                      key={imageKey}
+                      className={
+                        hasImage
+                          ? 'recipe-shell__image-frame'
+                          : 'recipe-shell__image-frame recipe-shell__image-frame--empty'
+                      }
+                    >
+                      {hasImage ? (
+                        <img
+                          className="recipe-shell__image"
+                          src={imageSource}
+                          alt={altText}
+                          onError={() => setFailedImages((current) => current.includes(imageSource)
+                            ? current : [...current, imageSource])}
+                        />
+                      ) : (
+                        <div className="recipe-shell__image-empty">No image available.</div>
+                      )}
+                    </div>
+                  )
+                })}
+                {!hasPreviewImages ? (
+                  <div className="recipe-shell__image-frame recipe-shell__image-frame--empty">
+                    <div className="recipe-shell__image-empty">No image available.</div>
                   </div>
-                )
-              })}
-              {!hasPreviewImages ? (
-                <div className="recipe-shell__image-frame recipe-shell__image-frame--empty">
-                  <div className="recipe-shell__image-empty">No image available.</div>
-                </div>
-              ) : null}
-            </div>
-          </article>
+                ) : null}
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <div className="recipe-shell__favorite-actions recipe-shell__actions">
+          {viewer ? (
+            recipe.approved || isFavorite ? (
+              <Button
+                type="button"
+                variant={isFavorite ? 'secondary' : 'primary'}
+                className="savour-recipe__favorite-button"
+                onClick={onFavorite}
+                disabled={isSubmitting || requiresReload}
+                aria-pressed={isFavorite}
+              >
+                <Icon name="heart" />
+                {isSavingFavorite ? 'Saving...' : isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              </Button>
+            ) : null
+          ) : isCheckingViewer ? (
+            <Button type="button" variant="secondary" disabled>Loading favorites...</Button>
+          ) : recipe.approved && !roleStatus ? (
+            <Link className="button button--primary" to="/connect"><Icon name="heart" /> Sign in to save this recipe</Link>
+          ) : null}
+          {favoriteStatus ? <p className="status-banner" role="status">{favoriteStatus}</p> : null}
+          {favoriteNeedsReload ? (
+            <Button type="button" variant="ghost" onClick={onReload} disabled={isSubmitting}>
+              Reload favorites
+            </Button>
+          ) : null}
         </div>
-      </section>
 
-      <section className="page-section">
-        <article className="detail-panel">
-          <p className="eyebrow recipe-shell__section-label">Ingredients</p>
-          {ingredients.length > 0 ? (
-            <ul className="ingredient-list">
-              {ingredients.map((ingredient, index) => (
-                <li key={`${ingredient.name}-${index}`}>
-                  {ingredient.quantity} {ingredient.unit} {ingredient.name}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="empty-state">
-              No ingredients listed.
-            </div>
-          )}
-        </article>
-      </section>
+        <section className="page-section savour-recipe__ingredients-section">
+          <article className="detail-panel">
+            <h2 className="recipe-shell__section-label">Ingredients</h2>
+            {ingredients.length > 0 ? (
+              <ul className="ingredient-list">
+                {ingredients.map((ingredient, index) => (
+                  <li key={`${ingredient.name}-${index}`}>
+                    {ingredient.quantity} {ingredient.unit} {ingredient.name}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="empty-state">
+                No ingredients listed.
+              </div>
+            )}
+          </article>
+        </section>
+      </div>
 
-      <section className="page-section">
+      <section className="page-section savour-recipe__method">
         <article className="detail-panel">
-          <p className="eyebrow recipe-shell__section-label">Steps</p>
+          <h2 className="recipe-shell__section-label">Method</h2>
           {steps.length > 0 ? (
             <ol className="step-list">
               {steps.map((step, index) => (
@@ -428,7 +474,7 @@ function RecipeContent({
         <article className="detail-panel recipe-shell__author-panel">
           <div className="recipe-shell__author-intro">
             <p className="eyebrow">Author</p>
-            <h3>Recipe author</h3>
+            <h2>Recipe author</h2>
           </div>
 
           <div className="recipe-shell__author-header">
@@ -465,38 +511,12 @@ function RecipeContent({
             </div>
           ) : null}
         </article>
-
-        <div className="recipe-shell__favorite-actions recipe-shell__actions">
-          {viewer ? (
-            recipe.approved || isFavorite ? (
-              <button
-                type="button"
-                className="button button--ghost"
-                onClick={onFavorite}
-                disabled={isSubmitting || requiresReload}
-                aria-pressed={isFavorite}
-              >
-                {isSavingFavorite ? 'Saving...' : isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-              </button>
-            ) : null
-          ) : isCheckingViewer ? (
-            <button type="button" className="button button--ghost" disabled>Loading favorites...</button>
-          ) : recipe.approved && !roleStatus ? (
-            <Link className="button button--ghost" to="/connect">Sign in to save this recipe</Link>
-          ) : null}
-          {favoriteStatus ? <p className="status-banner" role="status">{favoriteStatus}</p> : null}
-          {favoriteNeedsReload ? (
-            <button type="button" className="button button--ghost" onClick={onReload} disabled={isSubmitting}>
-              Reload favorites
-            </button>
-          ) : null}
-        </div>
       </section>
 
       <section className="page-section">
         <article className="detail-panel recipe-shell__suggestion-panel">
           <div className="recipe-shell__suggestion-intro">
-            <h3>Related Recipes</h3>
+            <h2>Related recipes</h2>
           </div>
 
           <p>No related recipes available.</p>

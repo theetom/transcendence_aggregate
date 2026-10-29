@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import FieldError from './FieldError'
 
 function readErrorMessage(value) {
   if (typeof value === 'string') return value.trim()
@@ -6,12 +7,6 @@ function readErrorMessage(value) {
     return value.filter((message) => typeof message === 'string').join(' ')
   }
   return ''
-}
-
-function ReviewFieldError({ id, message }) {
-  if (!message) return null
-
-  return <p id={id} className="status-banner recipe-review-form__error" role="alert">{message}</p>
 }
 
 function RecipeReviewForm({ disabled, isSubmitting, draft, onDraftChange, fieldErrors = {}, onClearFieldError, onSubmit }) {
@@ -94,7 +89,7 @@ function RecipeReviewForm({ disabled, isSubmitting, draft, onDraftChange, fieldE
             <option key={value} value={value}>{value} {value === 1 ? 'star' : 'stars'}</option>
           ))}
         </select>
-        <ReviewFieldError id="recipe-review-grade-error" message={gradeError} />
+        <FieldError id="recipe-review-grade-error" message={gradeError} className="recipe-review-form__error" />
       </div>
       <div className="field">
         <label htmlFor="recipe-review-comment">Review</label>
@@ -112,7 +107,7 @@ function RecipeReviewForm({ disabled, isSubmitting, draft, onDraftChange, fieldE
           aria-invalid={Boolean(commentError)}
           aria-describedby={commentError ? 'recipe-review-comment-error' : undefined}
         />
-        <ReviewFieldError id="recipe-review-comment-error" message={commentError} />
+        <FieldError id="recipe-review-comment-error" message={commentError} className="recipe-review-form__error" />
       </div>
       <div className="recipe-review-form__actions">
         <button className="button button--primary" type="submit" disabled={controlsDisabled}>

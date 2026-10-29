@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import Icon from './Icon'
 import { getRecipePath } from '../data/recipeApi'
+import '../styles/savour-home.css'
 
 function RecipePreviewCard({ recipe, layout = 'vertical' }) {
   const [failedImage, setFailedImage] = useState('')
@@ -18,43 +20,43 @@ function RecipePreviewCard({ recipe, layout = 'vertical' }) {
       .filter((name) => typeof name === 'string' && name.trim()).join(', ')
     : ''
 
+  const hasRating = recipe.number_of_reviews > 0 && Number.isFinite(recipe.average_score)
+
   const content = (
-    <>
-      {isHorizontal ? <h3>{recipe.title}</h3> : <div className="landing-plain__caption">{recipe.title}</div>}
+    <div className="ss-recipe-card__body">
+      {categories ? <p className="ss-recipe-card__categories">{categories}</p> : null}
+      <h3 className="ss-recipe-card__title">{recipe.title}</h3>
       {recipe.rejected === true ? (
-        <div className="landing-plain__caption recipe-preview-card__feedback">
+        <div className="ss-recipe-card__feedback recipe-preview-card__feedback">
           <strong>Rejected</strong>
           {recipe.rejection_reason}
         </div>
       ) : null}
-      {hasImage && categories ? (
-        <div className="landing-plain__caption recipe-preview-card__meta">{categories}</div>
-      ) : null}
       {ingredients ? (
-        <div className="landing-plain__caption recipe-preview-card__meta">{ingredients}</div>
+        <p className="ss-recipe-card__ingredients">{ingredients}</p>
       ) : null}
-      <div className="landing-plain__caption recipe-preview-card__meta">
-        {recipe.number_of_reviews > 0 && typeof recipe.average_score === 'number'
-          ? `Avg: ${recipe.average_score.toFixed(1)}`
-          : 'Avg: n/a'}
-        {' · '}
-        {typeof recipe.number_of_reviews === 'number'
+      <div className="ss-recipe-card__meta">
+        <span className="ss-recipe-card__rating">
+          <Icon name="star" />
+          {hasRating ? <><span className="sr-only">Average rating: </span>{recipe.average_score.toFixed(1)}</> : 'Not rated'}
+        </span>
+        <span aria-hidden="true">·</span>
+        <span>{typeof recipe.number_of_reviews === 'number'
           ? `${recipe.number_of_reviews} review${recipe.number_of_reviews === 1 ? '' : 's'}`
-          : 'Review count unavailable'}
+          : 'Review count unavailable'}</span>
       </div>
-    </>
+    </div>
   )
 
   return (
     <Link
       to={getRecipePath(recipe.id)}
       className={isHorizontal
-        ? 'landing-plain__latest-card landing-plain__card-button recipe-preview-card recipe-preview-card--horizontal'
-        : 'landing-plain__popular-card landing-plain__card-button recipe-preview-card'}
+        ? 'recipe-preview-card ss-recipe-card ss-recipe-card--horizontal recipe-preview-card--horizontal'
+        : 'recipe-preview-card ss-recipe-card'}
     >
       <div
-        className={`${isHorizontal ? 'landing-plain__latest-image' : 'landing-plain__image-placeholder'} recipe-preview-card__image`}
-        aria-hidden="true"
+        className="ss-recipe-card__image recipe-preview-card__image"
       >
         {hasImage ? (
           <img
@@ -64,9 +66,14 @@ function RecipePreviewCard({ recipe, layout = 'vertical' }) {
             loading="lazy"
             onError={() => setFailedImage(imageSource)}
           />
-        ) : (categories || 'No image available.')}
+        ) : (
+          <div className="ss-recipe-card__placeholder">
+            <span aria-hidden="true">RS</span>
+            <span>No photo yet</span>
+          </div>
+        )}
       </div>
-      {isHorizontal ? <div className="landing-plain__latest-copy">{content}</div> : content}
+      {content}
     </Link>
   )
 }

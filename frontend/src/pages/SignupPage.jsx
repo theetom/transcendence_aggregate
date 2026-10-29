@@ -1,16 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthPageShell from '../components/AuthPageShell'
-
-function SignupFieldError({ id, message }) {
-  if (!message) return null
-
-  return (
-    <p id={id} className="status-banner signup-field-error" role="alert">
-      <strong>Error:</strong> {message}
-    </p>
-  )
-}
+import Button from '../components/Button'
+import FieldError from '../components/FieldError'
 
 function readErrorMessage(value) {
   if (typeof value === 'string') return value.trim()
@@ -147,7 +139,7 @@ function SignupPage() {
       status={status}
     >
       <form className="field-list" onSubmit={handleSubmit} style={{ marginTop: '18px' }}>
-        <SignupFieldError id="signup-form-error" message={formError} />
+        <FieldError id="signup-form-error" message={formError} className="signup-field-error" label="Error:" />
         <div className="field">
           <label htmlFor="signup-username">Username</label>
           <input
@@ -165,7 +157,7 @@ function SignupPage() {
             aria-invalid={Boolean(fieldErrors.username)}
             aria-describedby={fieldErrors.username ? 'signup-username-error' : undefined}
           />
-          <SignupFieldError id="signup-username-error" message={fieldErrors.username} />
+          <FieldError id="signup-username-error" message={fieldErrors.username} className="signup-field-error" label="Error:" />
         </div>
 
         <div className="field">
@@ -185,7 +177,7 @@ function SignupPage() {
             aria-invalid={Boolean(fieldErrors.email)}
             aria-describedby={fieldErrors.email ? 'signup-email-error' : undefined}
           />
-          <SignupFieldError id="signup-email-error" message={fieldErrors.email} />
+          <FieldError id="signup-email-error" message={fieldErrors.email} className="signup-field-error" label="Error:" />
         </div>
 
         <div className="field">
@@ -209,7 +201,7 @@ function SignupPage() {
           <p id="signup-password-help">
             Use at least 8 characters. Avoid common passwords, numbers only, and passwords similar to your username or email.
           </p>
-          <SignupFieldError id="signup-password-error" message={fieldErrors.password} />
+          <FieldError id="signup-password-error" message={fieldErrors.password} className="signup-field-error" label="Error:" />
         </div>
 
         <div className="field">
@@ -234,13 +226,13 @@ function SignupPage() {
             aria-invalid={Boolean(fieldErrors.password_confirm)}
             aria-describedby={fieldErrors.password_confirm ? 'signup-password-confirm-error' : undefined}
           />
-          <SignupFieldError id="signup-password-confirm-error" message={fieldErrors.password_confirm} />
+          <FieldError id="signup-password-confirm-error" message={fieldErrors.password_confirm} className="signup-field-error" label="Error:" />
         </div>
 
         <div className="auth-card__actions">
-          <button type="submit" className="button button--ghost" disabled={isSubmitting}>
+          <Button type="submit" variant="ghost" disabled={isSubmitting}>
             Create account
-          </button>
+          </Button>
           <Link className="button button--ghost" to="/login">
             Already registered?
           </Link>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import FieldError from '../components/FieldError'
 import {
   getCurrentProfile,
   getRecipeDetails,
@@ -12,14 +13,6 @@ const maxPictures = 2
 const maxPictureSize = 5 * 1024 * 1024
 const maxPicturesTotalSize = 20 * 1024 * 1024
 const supportedPictureTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-
-function FieldError({ id, message }) {
-  return message ? (
-    <p id={id} className="status-banner add-recipe-form__error" role="alert">
-      {message}
-    </p>
-  ) : null
-}
 
 function getSaveError(error) {
   const fallback = error.message || 'Unable to save this recipe. Try again.'
@@ -460,6 +453,7 @@ function AddRecipePage({ editMode = false }) {
   }
 
   function removeListItem(setItems, index) {
+    if (index <= 0) return
     setHasUnsavedChanges(true)
     setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))
   }
@@ -518,7 +512,7 @@ function AddRecipePage({ editMode = false }) {
                   aria-invalid={Boolean(fieldError('recipe-name'))}
                   aria-describedby={fieldError('recipe-name') ? 'recipe-name-error' : undefined}
                 />
-                <FieldError id="recipe-name-error" message={fieldError('recipe-name')} />
+                <FieldError id="recipe-name-error" message={fieldError('recipe-name')} className="add-recipe-form__error" />
               </div>
             </div>
           </article>
@@ -549,7 +543,7 @@ function AddRecipePage({ editMode = false }) {
                         aria-invalid={Boolean(fieldError(`ingredient-${index + 1}`))}
                         aria-describedby={fieldError(`ingredient-${index + 1}`) ? `ingredient-${index + 1}-error` : undefined}
                       />
-                      <FieldError id={`ingredient-${index + 1}-error`} message={fieldError(`ingredient-${index + 1}`)} />
+                      <FieldError id={`ingredient-${index + 1}-error`} message={fieldError(`ingredient-${index + 1}`)} className="add-recipe-form__error" />
                     </div>
                     <div className="field">
                       <label htmlFor={`quantity-${index + 1}`}>Quantity</label>
@@ -565,7 +559,7 @@ function AddRecipePage({ editMode = false }) {
                           updateIngredient(index, 'quantity', event.target.value)
                         }
                       />
-                      <FieldError id={`quantity-${index + 1}-error`} message={fieldError(`quantity-${index + 1}`)} />
+                      <FieldError id={`quantity-${index + 1}-error`} message={fieldError(`quantity-${index + 1}`)} className="add-recipe-form__error" />
                     </div>
                     <div className="field">
                       <label htmlFor={`unit-${index + 1}`}>Unit</label>
@@ -580,9 +574,9 @@ function AddRecipePage({ editMode = false }) {
                           updateIngredient(index, 'unit', event.target.value)
                         }
                       />
-                      <FieldError id={`unit-${index + 1}-error`} message={fieldError(`unit-${index + 1}`)} />
+                      <FieldError id={`unit-${index + 1}-error`} message={fieldError(`unit-${index + 1}`)} className="add-recipe-form__error" />
                     </div>
-                    {editMode && ingredients.length > 1 ? (
+                    {index > 0 ? (
                       <button
                         type="button"
                         className="button button--ghost"
@@ -630,9 +624,9 @@ function AddRecipePage({ editMode = false }) {
                         aria-invalid={Boolean(fieldError(`category-${index + 1}`))}
                         aria-describedby={fieldError(`category-${index + 1}`) ? `category-${index + 1}-error` : undefined}
                       />
-                      <FieldError id={`category-${index + 1}-error`} message={fieldError(`category-${index + 1}`)} />
+                      <FieldError id={`category-${index + 1}-error`} message={fieldError(`category-${index + 1}`)} className="add-recipe-form__error" />
                     </div>
-                    {editMode && categories.length > 1 ? (
+                    {index > 0 ? (
                       <button
                         type="button"
                         className="button button--ghost"
@@ -672,9 +666,9 @@ function AddRecipePage({ editMode = false }) {
                       aria-describedby={fieldError(`step-${index + 1}`) ? `step-${index + 1}-error` : undefined}
                       onChange={(event) => updateStep(index, event.target.value)}
                     />
-                    <FieldError id={`step-${index + 1}-error`} message={fieldError(`step-${index + 1}`)} />
+                    <FieldError id={`step-${index + 1}-error`} message={fieldError(`step-${index + 1}`)} className="add-recipe-form__error" />
                   </div>
-                  {editMode && steps.length > 1 ? (
+                  {index > 0 ? (
                     <button
                       type="button"
                       className="button button--ghost"
@@ -701,7 +695,7 @@ function AddRecipePage({ editMode = false }) {
               field. Each photo can be up to 5 MiB.
               {editMode ? ' Saved photos count toward the two-photo limit. To replace one, remove it and choose a new file.' : ''}
             </p>
-            <FieldError id="recipe-pictures-selection-error" message={pictureSelectionError} />
+            <FieldError id="recipe-pictures-selection-error" message={pictureSelectionError} className="add-recipe-form__error" />
             <div className="form-panel__body dynamic-list">
               {savedPictures.map((picture, index) => (
                 <div key={picture.id} className="dynamic-card field-list">
@@ -738,7 +732,7 @@ function AddRecipePage({ editMode = false }) {
                         fieldError(`picture-${index + 1}`) && `picture-${index + 1}-error`,
                       ].filter(Boolean).join(' ')}
                     />
-                    <FieldError id={`picture-${index + 1}-error`} message={fieldError(`picture-${index + 1}`)} />
+                    <FieldError id={`picture-${index + 1}-error`} message={fieldError(`picture-${index + 1}`)} className="add-recipe-form__error" />
                   </div>
                   {picture ? (
                     <button

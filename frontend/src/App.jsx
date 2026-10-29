@@ -18,6 +18,7 @@ import SearchResultsPage from './pages/SearchResultsPage'
 import SignupPage from './pages/SignupPage'
 import TermsPage from './pages/TermsPage'
 import { isViewerAuthenticated } from './data/siteData'
+import './styles/savour-system.css'
 
 function ProtectedRoute({ children }) {
   if (!isViewerAuthenticated()) {
@@ -49,9 +50,10 @@ function AppShell() {
 
   return (
     <div className="site-frame">
+      <a className="skip-link" href="#main-content">Skip to content</a>
       {!hideShell && <SiteHeader />}
 
-      <main className={mainClassName}>
+      <main id="main-content" className={mainClassName} tabIndex={-1}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/home" element={<Navigate replace to="/" />} />

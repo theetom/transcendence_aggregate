@@ -27,7 +27,7 @@ function AuthPageShell({
 
         <section className="auth-card">
           <p className="eyebrow">{formEyebrow}</p>
-          <h3>{formTitle}</h3>
+          <h2 className="auth-card__form-title">{formTitle}</h2>
           {children}
           <p
             className="status-banner auth-card__status"

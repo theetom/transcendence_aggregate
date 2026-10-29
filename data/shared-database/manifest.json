@@ -1,14 +1,14 @@
 {
   "archive_format": "postgresql-custom",
-  "created_at_utc": "2026-10-28T13:57:30.484570+00:00",
-  "data_bytes": 65287,
+  "created_at_utc": "2026-10-29T06:04:06.789364+00:00",
+  "data_bytes": 65463,
   "excluded_table_data": [
     "public.django_session",
     "public.authtoken_token"
   ],
   "format_version": 3,
   "media_included": true,
-  "media_sha256": "d1fc0072f776d780575bb801d97ace79118a76175b927595b2b0992d090eddc8",
+  "media_sha256": "ba4a5b3d88de8e895601241d34052be3c92aa60af0f4e55d539fff02527dfb13",
   "migration_fingerprint": "d8d6efec72c3b54159abdb9f329330f8cc516368d8967b4ff05b4be3fa4c67dc",
   "photos": {
     "files": {
@@ -65,6 +65,10 @@
       "1": {
         "file": "0c2f721aef10b1bf41e64a97f5b6219497db2031c5edbc07c49ffda5a4ec149b.jpg",
         "path": "shared/profiles/0c2f721aef10b1bf41e64a97f5b6219497db2031c5edbc07c49ffda5a4ec149b.jpg"
+      },
+      "2": {
+        "file": "792960a232dc9f41c235167dec39416a36da24d33153e870e1d59eafe311ccae.webp",
+        "path": "profile_pictures/b83da2aa18a54b98822ec2978a3e10b9.webp"
       }
     },
     "recipes": {
@@ -135,7 +139,7 @@
     }
   },
   "postgres_major": 17,
-  "snapshot_id": "20261028T135721Z_cb4a09e20b4f",
+  "snapshot_id": "20261029T060357Z_cc48bf11ed52",
   "source_database": "recipes_shared_20261021t080220z_8dde02ab0694",
-  "source_git_revision": "1f4d31736edaf11e9211fed882bb50b3ab1e0806"
+  "source_git_revision": "15841662fdcaa5dbc633673045625aefb30a42ba"
 }

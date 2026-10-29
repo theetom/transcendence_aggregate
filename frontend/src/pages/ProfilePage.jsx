@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import FieldError from '../components/FieldError'
 import RecipePreviewCard from '../components/RecipePreviewCard'
 import { getCurrentProfile, getRecipeDetails, getRecipePath, readAuthoredReviews, readRecipeSummary, requestRecipeApi, setRecipeFavorite, updateCurrentProfile } from '../data/recipeApi'
 import { formatDate } from '../data/siteData'
@@ -28,14 +29,6 @@ function profileErrorMessage(value) {
 function getReviewDate(timestamp) {
   const date = timestamp.split('T')[0]
   return date && !Number.isNaN(Date.parse(`${date}T12:00:00`)) ? formatDate(date) : null
-}
-
-function ProfileFieldError({ field, message }) {
-  return message ? (
-    <p id={`profile-${field}-error`} className="status-banner signup-field-error" role="alert">
-      {message}
-    </p>
-  ) : null
 }
 
 function ProfileEditor({ profile, onSaved, onCancel, onSavingChange }) {
@@ -176,7 +169,7 @@ function ProfileEditor({ profile, onSaved, onCancel, onSavingChange }) {
               aria-invalid={Boolean(fieldErrors[field])}
               aria-describedby={fieldErrors[field] ? `profile-${field}-error` : undefined}
             />
-            <ProfileFieldError field={field} message={fieldErrors[field]} />
+            <FieldError id={`profile-${field}-error`} message={fieldErrors[field]} className="signup-field-error" />
           </div>
         ))}
         <div className="field profile-page__editor-full">
@@ -189,7 +182,7 @@ function ProfileEditor({ profile, onSaved, onCancel, onSavingChange }) {
             aria-invalid={Boolean(fieldErrors.bio)}
             aria-describedby={fieldErrors.bio ? 'profile-bio-error' : undefined}
           />
-          <ProfileFieldError field="bio" message={fieldErrors.bio} />
+          <FieldError id="profile-bio-error" message={fieldErrors.bio} className="signup-field-error" />
         </div>
         <div className="profile-page__editor-photo profile-page__editor-full">
           <div className="field">
@@ -206,7 +199,7 @@ function ProfileEditor({ profile, onSaved, onCancel, onSavingChange }) {
             <p id="profile-photo-help" className="profile-page__section-note">
               JPEG, PNG, GIF or WebP, up to 5 MiB. Without a new photo, your current picture stays unchanged.
             </p>
-            <ProfileFieldError field="profile_picture" message={pictureError} />
+            <FieldError id="profile-profile_picture-error" message={pictureError} className="signup-field-error" />
             {pictureFile || fieldErrors.profile_picture ? (
               <button type="button" className="button button--ghost" onClick={clearPicture}>
                 Clear selected photo
