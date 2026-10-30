@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import AuthPageShell from '../components/AuthPageShell'
 import Button from '../components/Button'
 import { authTokenStorageKey } from '../data/siteData'
+import { clearAccountAPIKeyState, rememberAccountAPIKey } from '../data/accountApiKey'
 
 function LoginPage() {
   const navigate = useNavigate()
@@ -54,7 +55,9 @@ function LoginPage() {
         return
       }
 
+      clearAccountAPIKeyState()
       window.sessionStorage.setItem(authTokenStorageKey, data.token)
+      rememberAccountAPIKey(data.account_api_key, data.token)
       navigate('/', { replace: true })
     } catch {
       setStatus('Unable to complete sign-in. Check your connection and try again.')

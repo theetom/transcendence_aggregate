@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Icon from './Icon'
+import { clearAccountAPIKeyState } from '../data/accountApiKey'
 import {
   authTokenStorageKey,
   isViewerAuthenticated,
@@ -19,6 +20,10 @@ function SiteHeader() {
   const menuPopoverRef = useRef(null)
   const menuToggleRef = useRef(null)
   const logoutPendingRef = useRef(false)
+
+  useEffect(() => {
+    if (!isAuthenticated) clearAccountAPIKeyState()
+  }, [isAuthenticated])
 
   useEffect(() => {
     setMenuOpen(false)
@@ -71,6 +76,7 @@ function SiteHeader() {
     const token = window.sessionStorage.getItem(authTokenStorageKey)
 
     if (!token) {
+      clearAccountAPIKeyState()
       navigate('/connect', { replace: true })
       return
     }
@@ -91,6 +97,7 @@ function SiteHeader() {
         return
       }
 
+      clearAccountAPIKeyState()
       window.sessionStorage.removeItem(authTokenStorageKey)
       navigate('/connect', { replace: true })
     } catch {

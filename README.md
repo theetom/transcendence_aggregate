@@ -71,7 +71,7 @@ Open **https://localhost:8443/** with the default configuration. HTTP on `http:/
 | `/recipe/<id>` | Recipe details, photos, ratings/reviews and authorized recipe actions. |
 | `/add-recipe` | Signed-in recipe submission. |
 | `/recipe/<id>/edit` | Owner/staff recipe editing. |
-| `/profile` | Your own profile, submitted recipes, favorites and review history. |
+| `/profile` | Your own profile, submitted recipes, favorites, review history and private public-API access controls. |
 | `/users/<account-id>` | A public profile and its approved recipes. |
 | `/staff` | Website recipe management for staff. |
 | `/admin/` | Django administration for accounts with the necessary permissions. |
@@ -154,6 +154,8 @@ The frontend build uses Node 22; the backend image uses Python 3.13. See the Doc
 erDiagram
     USER ||--o| USER_PROFILE : has
     USER ||--o| AUTH_TOKEN : authenticates
+    USER ||--o{ PUBLIC_API_KEY : owns
+    USER ||--o| PUBLIC_API_RATE_LIMIT : shares_quota
     USER ||--o{ RECIPE : submits
     USER ||--o{ REVIEW : writes
     USER_PROFILE }o--o{ RECIPE : favorites
@@ -177,7 +179,7 @@ erDiagram
 | `RecipeImage` | Recipe foreign key and image-file path. |
 | `Review` | Recipe/user foreign keys, integer grade, text comment and timestamp; new website reviews require 1–5 stars and a nonblank comment. |
 
-Uploaded bytes are stored in the media volume; image fields store their paths. The database also contains Django's session, group/permission, admin-log and migration tables. Source models are in `backend/users/`, `backend/recipes/` and `backend/reviews/`.
+Uploaded bytes are stored in the media volume; image fields store their paths. Public API keys store a secret digest, account/write scope, account-key designation and expiry/revocation metadata; each account has one shared public API quota record. Those key/quota rows are excluded from shared snapshots. The account-key designation is added by migration `0002`, preserving the initial public API migration. The database also contains Django's session, group/permission, admin-log and migration tables. Source models are in `backend/users/`, `backend/recipes/`, `backend/reviews/` and `backend/public_api/`.
 
 ## Features List
 
@@ -194,6 +196,7 @@ The team confirmed the frontend/backend credits below. Roh and Hugo also handled
 | Favorites | Roh and Hugo (frontend); Tomaz (backend). | Signed-in users add approved recipes to their own favorites and remove saved entries. Their profile lists saved recipes and supports removing unavailable entries. | `backend/users/views.py`, `recipeApi.js`, `RecipePage.jsx`, `ProfilePage.jsx` |
 | Shared-view refresh | Roh and Hugo (frontend). | Visible recipe, profile, home, search and staff views refresh on a five-second delay after the previous request completes and when focus returns. Unsaved editor drafts are retained. | `useLiveRefresh.js` and its page callers |
 | Discovery | Roh and Hugo (frontend); Tomaz (existing backend); Roh (Codex-assisted Module05 implementation and browser verification). | Approved recipe-title/user-name search, public author links, recent recipes and 30-day rating/review rankings with real photo previews. Recipe search has user-verified category/ingredient/minimum-rating filters, title/rating/review sorting and pagination. | `HomePage.jsx`, `SearchResultsPage.jsx`, `recipeSearch.js`, `RecipePreviewCard.jsx` |
+| Public recipe API | Roh (Codex-assisted Module06 integration), reusing Tomaz's recipe validation and write flows and the shared Roh/Hugo account frontend. | Separate versioned API with automatic account keys at first sign-in, private Profile key controls, expiry/revocation/rotation, five database paths and application/proxy rate limits. API actions follow website account permissions. Source implementation and documentation are saved; runtime verification remains pending. | `backend/public_api/`, login/Profile components, `frontend/nginx.conf`, API section below |
 | Duplicate prevention | Roh and Hugo (frontend); Tomaz (backend). | Website names reuse existing IDs ignoring case/outer spaces; repeated ingredient/category rows are rejected, including direct API submissions. | Recipe serializers, `AddRecipePage.jsx` |
 | Local deployment/data transfer | Nuno (Docker setup/connection checks); Roh (Codex-assisted deployment/data-sharing work). | HTTPS startup, persistent volumes, health checks and shared database/photo import/export. | Compose, `frontend/nginx.conf`, `scripts/` |
 | Project policies | Roh and Hugo (frontend). | Public Privacy and Terms pages describe current data collection, public visibility, submission rules, moderation and deletion; footer and reciprocal links are defined. | `PrivacyPage.jsx`, `TermsPage.jsx`, `SiteFooter.jsx` |
@@ -212,7 +215,7 @@ The combined React + Django frameworks Major, Django ORM Minor, advanced permiss
 | Custom design system — Minor | 1 | Complete: Savour Studio palette, typography, shared SVG icons and ten reusable components are implemented and documented below. Guided mobile, desktop, keyboard and form-validation checks were user-verified. Contributor: Roh (design direction, Codex-assisted implementation and verification), building on the shared frontend by Roh and Hugo. |
 | File upload/management — Minor | 1 | Image validation, profile previews and saved recipe photo removal exist. Complete the requirement check for supported file types, previews, upload progress, deletion and access policy. |
 | Advanced search — Minor | 1 | Module05 is complete: frontend category/ingredient/minimum-rating filters, four sorts and 6/12/24-item pagination are implemented, documented and user-verified, including page reset and URL restoration. Contributor: Roh (Codex-assisted implementation and browser verification), building on Roh and Hugo's frontend and Tomaz's existing approved-recipe API. |
-| Public API — Major | 2 | Routes/token authentication exist. Rate limiting is missing; API documentation and how tokens meet the key requirement need completion/demonstration. |
+| Public API — Major | 2 | Module06 is in progress: a separate public API with automatic account-bound keys and private Profile lifecycle controls, five database paths covering GET/POST/PUT/DELETE, application/proxy rate limiting and usage documentation are implemented. User-led provisioning/lifecycle/authentication/permission/CRUD/rate-limit verification remains pending; its 2 points are not counted yet. Contributor: Roh (Codex-assisted integration), using Tomaz's existing recipe validation/write flows and the shared Roh/Hugo account frontend. |
 | Standard user management — Major | 2 | Profiles/authentication exist; friends, online status and a default avatar remain absent. |
 | User interaction — Major | 2 | Profiles/reviews exist; the module also requires chat and friends. |
 | Health/status/backups — Minor | 1 | Container health checks and automatic startup exports exist; a status page and complete recovery demonstration remain. |
@@ -253,6 +256,147 @@ This implementation loads the full approved collection through the existing `/ap
 
 Roh requested and directed the Codex-assisted Module05 frontend implementation, building on the shared frontend by Roh and Hugo and the existing approved-recipe API by Tomaz. On October 30, 2026, Roh reported passing the new controls' appearance, combined category/ingredient filtering and clearing, minimum-rating filtering and all four sorts. Using 30 marked sample recipes, Roh also verified Next/Previous, the 6/12/24-item page sizes and ranges, applying a filter from a later page returning to page 1, refresh persistence and browser Back restoring the earlier search/page. These user-run checks, the source review and the purpose/implementation/contributor documentation complete Module05 for **1 point**, bringing the completed subtotal to **7/14**. Roh subsequently confirmed the temporary sample cleanup was done. See [WORK_LOG.md](WORK_LOG.md) for the actual verification and cleanup record.
 
+### Secured public recipe API — Module 06 (2 points, verification pending)
+
+The public API lets an external client browse approved recipes and submit or manage recipes through the same account permissions and recipe rules used by the website. Its separate base path is **`https://localhost:8443/api/public/v1`** with the default configuration. Each active website account receives its own designated API key at first successful sign-in; normal users manage it from their private Profile instead of an administrator terminal. This API uses that dedicated key rather than the website login token. Roh directed the Codex-assisted account-key, Profile, rate-limit and endpoint integration, reusing Tomaz's existing recipe validation and transactional create/edit/delete flows and the shared Roh/Hugo account frontend. Provisioning, lifecycle, authentication, permissions, CRUD, migrations and rate-limit behavior still require user-run verification; Module06 is **in progress**, so the completed total remains **7/14**.
+
+#### Load the implementation
+
+With the existing PostgreSQL/backend running, rebuild the backend and frontend services from the repository root:
+
+```sh
+docker compose up -d --no-deps --build --wait --wait-timeout 120 backend frontend
+```
+
+Backend startup applies the new migrations. The frontend rebuild loads the Nginx rate-limit configuration. The normal `sh scripts/start.sh` workflow also builds the project and applies migrations, but additionally imports/prepares and exports shared records as described above. These are user-run steps, not recorded successful builds or migrations.
+
+#### Get and manage your account key
+
+1. Sign in with your normal website account, then open **Profile → Public API access**. Signup currently redirects to login; creating an account alone does not issue its API key.
+2. Save the newly issued key privately when the panel offers it. First successful sign-in issues the key; opening Profile also provisions the first key for an account whose signed-in session predates this feature. No administrator command is required for this flow.
+3. Expand **Public API access** to see current status and expiry; opening the section refreshes that metadata. Use **Show key / Hide key** and **Copy key** for a newly issued key. **Generate new key** creates a replacement and invalidates the old key. **Disable key** stops the current key without creating another one and leaves website login usable. A **Refresh key status** recovery button appears when an error requires a status reload. The normal account key allows read/write requests within the account's existing recipe permissions: an ordinary user manages their own recipes, and staff retain the existing staff actions.
+
+The raw API secret is available only when issued or replaced. The database stores its SHA-256 digest, and the frontend keeps the newly issued secret only in temporary memory; it is not saved in local/session storage, router history or public profile responses. Once shown in Profile, leaving that page or doing a full refresh clears the in-memory copy, so save it privately first. Existing metadata can still be shown; if the raw key was lost, use **Generate new key**, which invalidates the previous key. Show/Hide and Copy controls remain visible when key metadata is loaded, but are disabled with an explanation when the full value is unavailable on the page. Hiding the key or collapsing the section keeps the temporary copy available on that page; reopening the section masks the value until Show key is selected again. The former Clear from this page action has been removed to avoid confusing hiding with discarding the copy.
+
+Automatically issued account keys and Profile replacements use a 30-day lifetime. Signing in again, reloading Profile or ensuring a first key does **not** silently replace an expired or revoked key. Use the explicit new-key/replacement action to resume API access. Revoking the API key leaves the website account and its login working. Keys belong to their account and never grant additional website privileges.
+
+Key and quota records are local to this installation, and their data is excluded from shared database snapshots; the account-key marker uses the existing excluded key table. Keep the secret out of source files, screenshots, logs and shared exports. Use HTTPS and send it in **`Authorization: ApiKey <key>`**, never in the URL. The format is `rpk_<32-character UUID hex>.<43-character secret>`. Issue a separate account key on another installation instead of copying credential records through the shared snapshot.
+
+The Profile controls call the private website endpoint **`/api/me/api-key/`**, authenticated only by the existing website `Authorization: Token <website-token>` over HTTPS. Public API keys cannot authenticate to this endpoint, and the caller cannot select another account. This private management path is separate from the five public database paths below.
+
+| Private method | Behavior |
+| --- | --- |
+| GET | Read only the signed-in account's current key metadata, never its raw secret. |
+| POST | Ensure the account's first key exists; repeat calls return metadata without issuing another secret. Expired/revoked history prevents automatic reactivation. |
+| PUT | Explicitly replace the account key using `expected_key_id` from current metadata. |
+| DELETE | Revoke the account key using the current `expected_key_id`. |
+
+Successful management replies use **200** with `{user_id, key}` and an `api_key` field only when a new secret was issued. A stale replacement/revocation returns **409**, code `api_key_changed`; reload metadata instead of blindly retrying the old action. The frontend follows the same rule after an uncertain write response.
+
+#### Advanced operator key commands
+
+The CLI remains available for an operator to inspect/revoke keys or create separate client keys, including optional read-only keys. **Manually created CLI keys** are read-only by default; `--write` permits writes within the owner's existing recipe permissions. Automatic account keys already have that write scope and require no CLI setup. `--days` defaults to 30 and accepts 1–365 days for CLI creation/rotation. Replace `YOUR_USERNAME` and the key UUID placeholders below with actual values.
+
+```sh
+docker compose exec backend python manage.py public_api_key create --username YOUR_USERNAME --name recipe-client
+docker compose exec backend python manage.py public_api_key create --username YOUR_USERNAME --name recipe-writer --write --days 30
+docker compose exec backend python manage.py public_api_key list --username YOUR_USERNAME
+docker compose exec backend python manage.py public_api_key rotate --id KEY_UUID --days 30
+docker compose exec backend python manage.py public_api_key revoke --id KEY_UUID
+```
+
+`list` displays metadata, not secrets. `rotate` revokes the selected key and issues a replacement with the same owner/write scope, preserving the account-key designation when rotating a designated account key; use the newly shown secret. `revoke` stops further use. Expired/revoked keys and keys belonging to inactive accounts are rejected. Separate manual client keys do not replace the Profile-managed account key.
+
+#### Paths and permissions
+
+All five paths require a valid API key. Collection responses use `count`, `next`, `previous` and `results`, with `?page=1&page_size=20`; page size defaults to 20 and is capped at 100.
+
+| Path below `/api/public/v1` | Methods | Behavior |
+| --- | --- | --- |
+| `/recipes/` | GET, POST | GET lists approved recipes. POST with a write key submits a recipe owned by the key's account; it starts pending approval. |
+| `/recipes/<id>/` | GET, PUT, DELETE | GET permits approved recipes or unpublished recipes belonging to the caller, plus staff access. PUT/DELETE require a write key and recipe-owner/staff permission. |
+| `/categories/` | GET | Lists categories referenced by approved recipes. |
+| `/ingredients/` | GET | Lists ingredients referenced by approved recipes. |
+| `/me/recipes/` | GET | Lists the key owner's recipes in all moderation states; even staff keys receive only their own recipes here. |
+
+PUT requires the current `content_revision`; a stale revision returns **409** with code `recipe_changed`. An ordinary owner's successful edit returns the recipe to pending approval; a staff edit preserves its current moderation state unless resubmitting. Existing photos are retained by default. `retained_image_ids` selects which current photos to keep, and replacement uploads must leave one or two photos in total. An ordinary owner's DELETE returns **202** and requests staff deletion approval. Staff DELETE returns **204** and removes the recipe. API keys do not bypass moderation or ownership.
+
+#### Request examples
+
+These Bash examples use the public `rootCA.pem` from the same local CA selected by the launcher. If you changed `CAROOT`, `XDG_DATA_HOME`, host or port, use that installation's values. Browser trust does not automatically configure curl's trust store. Do not disable TLS verification or use verbose shell tracing for requests containing a secret.
+
+```bash
+RECIPE_API_BASE='https://localhost:8443/api/public/v1'
+RECIPE_API_CA="${CAROOT:-${XDG_DATA_HOME:-$HOME/.local/share}/mkcert}/rootCA.pem"
+read -rs RECIPE_API_KEY
+```
+
+After `read`, paste the key and press Enter; the input is hidden and is not written into a shell command. The following GETs exercise all five path types; set `RECIPE_API_ID` to a recipe ID returned by the approved or own-recipe list.
+
+```bash
+curl --cacert "$RECIPE_API_CA" -i -H "Authorization: ApiKey $RECIPE_API_KEY" "$RECIPE_API_BASE/recipes/?page=1&page_size=20"
+curl --cacert "$RECIPE_API_CA" -i -H "Authorization: ApiKey $RECIPE_API_KEY" "$RECIPE_API_BASE/categories/"
+curl --cacert "$RECIPE_API_CA" -i -H "Authorization: ApiKey $RECIPE_API_KEY" "$RECIPE_API_BASE/ingredients/"
+curl --cacert "$RECIPE_API_CA" -i -H "Authorization: ApiKey $RECIPE_API_KEY" "$RECIPE_API_BASE/me/recipes/"
+RECIPE_API_ID=123
+curl --cacert "$RECIPE_API_CA" -i -H "Authorization: ApiKey $RECIPE_API_KEY" "$RECIPE_API_BASE/recipes/$RECIPE_API_ID/"
+```
+
+For POST/PUT/DELETE, use your normal account key or a separately write-enabled client key. Use a disposable recipe so these examples do not modify real recipe contents. POST requires **one or two actual photos**, each at most **5 MiB**, validated as JPEG, PNG, GIF or WebP. Nested multipart fields contain JSON arrays; do not add a JSON Content-Type header to the multipart request.
+
+```bash
+RECIPE_API_PHOTO='/absolute/path/to/photo.jpg'
+curl --cacert "$RECIPE_API_CA" -i -H "Authorization: ApiKey $RECIPE_API_KEY" \
+  -F 'title=Module06 API demo' -F 'description=Temporary API demonstration recipe' \
+  -F 'ingredients=[{"name":"rice","quantity":"100","unit":"g"}]' \
+  -F 'categories=[{"name":"API demo"}]' \
+  -F 'steps=[{"step_number":1,"instruction":"Prepare the ingredients."}]' \
+  -F "images=@$RECIPE_API_PHOTO" "$RECIPE_API_BASE/recipes/"
+```
+
+POST returns **201**. Set the ID and revision from its response (or a fresh detail GET) before editing. Titles/ingredient/category names have a 100-character limit; ingredient quantities must be positive, names must be unique within a recipe and step numbers must be positive and unique. PUT below changes only the title and preserves current photos.
+
+```bash
+RECIPE_API_ID=123
+RECIPE_API_REVISION=1
+curl --cacert "$RECIPE_API_CA" -i -X PUT \
+  -H "Authorization: ApiKey $RECIPE_API_KEY" -H 'Content-Type: application/json' \
+  --data "{\"content_revision\":$RECIPE_API_REVISION,\"title\":\"Module06 API demo updated\"}" \
+  "$RECIPE_API_BASE/recipes/$RECIPE_API_ID/"
+curl --cacert "$RECIPE_API_CA" -i -X DELETE \
+  -H "Authorization: ApiKey $RECIPE_API_KEY" "$RECIPE_API_BASE/recipes/$RECIPE_API_ID/"
+```
+
+An ordinary owner's deletion request still needs a staff decision; use the existing staff workflow or a staff account's write key to remove the disposable recipe afterward. A key's `--write` flag alone does not make its owner staff. Keep the key loaded for the quota check below, then clear the local shell variable after all checks.
+
+#### Rate limits and verification
+
+The application allows **60 requests per 60-second window per account**, shared across that account's API keys and all public API paths. PostgreSQL-backed counters coordinate Gunicorn workers. Exhausting the account quota returns **429** and a `Retry-After` header. Nginx also applies a **10-request/second per-IP** limit with a burst of 100 to this public API path, including requests without valid keys; proxy rejections return 429 with `Retry-After: 1`. Rotating a key does not give the same account a separate quota. The website's existing API routes are outside these new limits.
+
+For the account-quota check, leave that account's public API idle for a full minute first. This Bash loop sends only safe recipe-list GETs and prints status codes, not the key or response records. If all calls fit within one fresh 60-second window, the first 60 should return 200 and the next should return 429; other requests by the same account use the same allowance. Inspect a throttled response with the earlier `curl -i` GET and follow its `Retry-After` before trying again.
+
+```bash
+for ((request_number=1; request_number<=61; request_number++)); do
+  curl --cacert "$RECIPE_API_CA" -sS -o /dev/null -w '%{http_code}\n' \
+    -H "Authorization: ApiKey $RECIPE_API_KEY" "$RECIPE_API_BASE/recipes/"
+done
+```
+
+After the quota resets, use a missing/invalid key to check 401; check that another ordinary account's key cannot edit the disposable recipe; check a stale revision gives 409; use Profile replacement/revocation and confirm the old key returns 401. A separate optional CLI read-only key can check the read-only-write 403, but the normal automatic account key is write-enabled. Also check first-sign-in/Profile provisioning, one-time display, expiry/status and that signing in after revocation does not reactivate access. These are user-run acceptance steps and have not been reported passed. They should use the disposable record only and preserve already accepted website behavior. When finished, clear the local secret variable with `unset RECIPE_API_KEY`.
+
+| Status | Meaning |
+| --- | --- |
+| 200 / 201 | Successful read/update / recipe submission. |
+| 202 / 204 | Owner deletion request awaiting staff / staff deletion completed. |
+| 400 | Invalid recipe fields, nested data or photo input. |
+| 401 | Missing, malformed, expired, revoked or inactive-account API key. |
+| 403 | Read-only key write, non-owner action or inaccessible unpublished recipe. |
+| 404 / 405 | Missing recipe/page / unsupported method. |
+| 409 | Stale recipe revision or deletion/moderation conflict. |
+| 429 | Account or proxy quota exceeded; honor `Retry-After`. |
+
+Application errors and the public API proxy rate-limit response use JSON. Other proxy failures, such as an unavailable backend, can have a different response body. Runtime/build/migration/API verification remains pending, and the module's 2 points will be counted only after acceptance.
+
 ## Individual Contributions
 
 Names, 42 logins, project roles and GitHub accounts are confirmed in Team Information. The feature table records the confirmed frontend/backend credits, and individual work is summarised below. Commit-author names or email aliases and selected-module assignments remain to be matched to those identities.
@@ -261,7 +405,7 @@ Names, 42 logins, project roles and GitHub accounts are confirmed in Team Inform
 | --- | --- | --- | --- | --- |
 | Tomaz | [theetom](https://github.com/theetom) | `toferrei` | Pending | Backend APIs and serializers for signup/login, profiles, recipes/moderation and changed-content guards, reviews/favorites, discovery and duplicate prevention. |
 | Nuno | [NunoAndrezo](https://github.com/NunoAndrezo) | `nneves-a` | Pending | Coordinated team communications and meeting dates; checked that the project's Docker setup and connections worked properly. |
-| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Pending | Frontend features credited above with Hugo, Vite integration and visual-output testing; Codex-assisted deployment/data-sharing work, Savour Studio design-system implementation and Module05 search filters/sorting/pagination implementation. Selected the visual direction and supplied references. Also performed and reported browser/API acceptance checks, including overlapping review/favorite writes, account isolation, stale-change rejection, extra recipe-card removal and Module05 filtering/sorting/pagination/URL restoration. Evidence is in [WORK_LOG.md](WORK_LOG.md). |
+| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Pending | Frontend features credited above with Hugo, Vite integration and visual-output testing; Codex-assisted deployment/data-sharing work, Savour Studio design-system implementation, Module05 search filters/sorting/pagination and Module06 public API/automatic account-key/Profile integration. Selected the visual direction and supplied references. Also performed and reported browser/API acceptance checks, including overlapping review/favorite writes, account isolation, stale-change rejection, extra recipe-card removal and Module05 filtering/sorting/pagination/URL restoration. Module06 runtime acceptance remains pending. Evidence is in [WORK_LOG.md](WORK_LOG.md). |
 | Hugo | [Anzohs](https://github.com/Anzohs) | `hladeiro` | Pending | Frontend work with Roh on authentication/profile pages, recipe/moderation screens, reviews/favorites, discovery, refresh and policy pages; Vite integration and visual-output testing. |
 | Fabio | [FaMe1337](https://github.com/FaMe1337) | `famendes` | Pending | Supported both backend and frontend development and provided help as needed. |
 
@@ -273,6 +417,7 @@ Selected-module assignments, additional implementation challenges and their solu
 
 - Category browsing and related-recipe suggestions have unfinished UI paths; they are not counted as completed features here.
 - Advanced recipe search is user-verified and implemented in the browser over the full approved collection. Large-catalogue transfer and processing would benefit from server-side search/pagination.
+- Module06 public API/account-key/Profile source and usage documentation are saved; its build/migration/provisioning/lifecycle/authentication/permission/CRUD/rate-limit acceptance is still pending. Its 2 points are not included in the completed 7/14.
 - Friends/chat/presence, OAuth and 2FA are not implemented.
 - Photo URLs are served publicly. Pending/rejected recipe page/API access is restricted separately; media serving remains the project's accepted scope.
 - The shared-folder workflow preserves older duplicate-name records and has cross-computer conflict limitations.
@@ -305,5 +450,7 @@ The recorded Codex work covered source analysis, implementation proposals and co
 For the Savour Studio redesign, Roh selected and supplied six visual references. Codex implemented the palette, fonts, shared components and icons, responsive shell, homepage and recipe layouts, then corrected extra recipe-card removal from Roh's feedback. Source reviews and Roh's passed user-run mobile, desktop, keyboard and validation checks are recorded separately in the work log.
 
 For Module05, Roh directed Codex-assisted implementation of the frontend recipe filters, sorting, URL settings and pagination using the existing API, plus a separate removable sample-data helper. Source review, Roh's passed user-run browser verification and user-confirmed sample cleanup are recorded separately; no new backend application implementation is attributed to this work.
+
+For Module06, Roh directed Codex-assisted implementation of the isolated public API, automatic account-key lifecycle, private Profile controls, database/proxy rate limits and this usage documentation, reusing Tomaz's existing recipe validation/write flows and the shared account frontend by Roh and Hugo. Source review and pending user-run build/migration/provisioning/API acceptance are recorded separately; no live keys, runtime checks or 2-point qualification are claimed from source work alone.
 
 Team members must review, test and understand the implementation attributed to them.

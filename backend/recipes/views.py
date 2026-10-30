@@ -18,9 +18,7 @@ from reviews.serializers import ReviewSerializer
 
 logger = logging.getLogger(__name__)
 
-@api_view(["GET", "POST"])
-@parser_classes([MultiPartParser, FormParser, JSONParser])
-def recipe_intake(request):
+def _recipe_intake(request):
 	if request.method == "GET":
 		categories = Category.objects.all()
 		ingredients = Ingredient.objects.all()
@@ -130,6 +128,13 @@ def recipe_intake(request):
 			raise
 
 		return response
+
+
+@api_view(["GET", "POST"])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
+def recipe_intake(request):
+	return _recipe_intake(request)
+
 
 @api_view(["GET"])
 def recipe_list(request):
@@ -522,9 +527,7 @@ def _recipe_review(request, recipe_id):
 		return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-@api_view(["GET", "POST", "PUT", "DELETE"])
-@parser_classes([MultiPartParser, FormParser, JSONParser])
-def recipe_detail(request, recipe_id):
+def _recipe_detail(request, recipe_id):
 	if request.method in ("PUT", "DELETE"):
 		return _recipe_edit_or_delete(request, recipe_id)
 	if request.method == "POST":
@@ -552,6 +555,13 @@ def recipe_detail(request, recipe_id):
 
 	serializer = RecipeDetailedSerializer(recipe, context={"review_viewer": request.user})
 	return Response(serializer.data)
+
+
+@api_view(["GET", "POST", "PUT", "DELETE"])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
+def recipe_detail(request, recipe_id):
+	return _recipe_detail(request, recipe_id)
+
 
 """ import json
 

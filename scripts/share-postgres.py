@@ -30,7 +30,11 @@ ROOT = Path(__file__).resolve().parent.parent
 PRIVATE = ROOT / "data/database-private"
 SHARED = ROOT / "data/shared-database"
 PG_MAJOR = 17
-EXCLUSIONS = ["public.django_session", "public.authtoken_token"]
+LEGACY_EXCLUSIONS = ["public.django_session", "public.authtoken_token"]
+EXCLUSIONS = LEGACY_EXCLUSIONS + [
+    "public.public_api_publicapikey",
+    "public.public_api_publicapiratelimit",
+]
 SNAPSHOT_NAME = re.compile(r"\d{8}T\d{6}Z_[0-9a-f]{12}")
 HEX_DIGEST = re.compile(r"[0-9a-f]{64}")
 DATABASE_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,62}")
@@ -89,9 +93,11 @@ def private_file(path):
     return os.fdopen(descriptor, "wb")
 
 
-def fingerprint():
+def fingerprint(*, include_public_api=True):
     files = {}
     for path in sorted((ROOT / "backend").glob("*/migrations/*.py")):
+        if not include_public_api and path.relative_to(ROOT / "backend").parts[0] == "public_api":
+            continue
         if path.is_symlink() or not path.is_file():
             fail("Migration sources must be regular files.")
         files[path.relative_to(ROOT / "backend").as_posix()] = digest(path)
@@ -525,7 +531,6 @@ def read_manifest(snapshot_argument, *, check_migrations=True):
     fixed = {
         "postgres_major": PG_MAJOR,
         "archive_format": "postgresql-custom",
-        "excluded_table_data": EXCLUSIONS,
     }
     if any(manifest.get(key) != value for key, value in fixed.items()):
         fail("The snapshot format, PostgreSQL version, or exclusions are incompatible.")
@@ -555,6 +560,13 @@ def read_manifest(snapshot_argument, *, check_migrations=True):
     migration_hash = manifest.get("migration_fingerprint")
     if not isinstance(migration_hash, str) or not HEX_DIGEST.fullmatch(migration_hash):
         fail("The snapshot manifest contains an invalid migration fingerprint.")
+    exclusions = manifest.get("excluded_table_data")
+    if exclusions != EXCLUSIONS:
+        # A pre-API snapshot cannot contain API-key tables. Retain this exact
+        # legacy schema for initialized computers while all new exports omit
+        # API keys/rate buckets. Never accept legacy exclusions for API schema.
+        if exclusions != LEGACY_EXCLUSIONS or migration_hash != fingerprint(include_public_api=False):
+            fail("The snapshot credential exclusions are incompatible.")
     # Legacy database checksum/comparison fields are ignored.
     if (type(manifest.get("data_bytes")) is not int
             or manifest["data_bytes"] != data.stat().st_size

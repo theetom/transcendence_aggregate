@@ -12,11 +12,11 @@ Frameworks and ORM are already implemented. Both README entries are complete and
 
 Module 03 advanced permissions is implemented and user-verified. Its README entry and all three Trello tasks are complete.
 
-**Progress: Modules 01–05 complete — 7 of 14 target points.** Module 05 implementation, README documentation and user-led browser verification are complete; temporary sample cleanup is user-confirmed. Modules 06–10 remain pending, representing the remaining 7 target points.
+**Progress: Modules 01–05 complete — 7 of 14 target points.** Module 05 implementation, README documentation and user-led browser verification are complete; temporary sample cleanup is user-confirmed. Module 06 is in progress with source implementation and documentation saved, while user-led runtime acceptance remains pending. Modules 07–10 remain pending; the five unqualified modules represent the remaining 7 target points.
 
 The required README module information is the chosen module, its points, why/how it is implemented and its contributors (subject printed page 28 / PDF page 29). Exact file references, tutorials and separate evidence reports are not mandatory additions.
 
-Module 01's old card was archived because the connector cannot delete its excess native checklist items. Its verified replacement is linked below. Other module links are unchanged. Each card has one **Required work** native checklist; the items below record local progress. Module 04 and Module 05 local updates have not been synchronized to Trello.
+Module 01's old card was archived because the connector cannot delete its excess native checklist items. Its verified replacement is linked below. Other module links are unchanged. Each card has one **Required work** native checklist; the items below record local progress. Module 04, Module 05 and Module 06 local updates have not been synchronized to Trello.
 
 ## Card index
 
@@ -27,12 +27,12 @@ Module 01's old card was archived because the connector cannot delete its excess
 | 03 | [Advanced permissions](https://trello.com/c/VyltJMBQ/49-module-03-advanced-permissions-major-2-points) | Major | 2 | 3 | Complete |
 | 04 | [Custom design system](https://trello.com/c/8TOKaPvg/50-module-04-custom-design-system-minor-1-point) | Minor | 1 | 2 | Complete |
 | 05 | [Advanced recipe search](https://trello.com/c/TWEqD2Hb/51-module-05-advanced-recipe-search-minor-1-point) | Minor | 1 | 2 | Complete |
-| 06 | [Secured public recipe API](https://trello.com/c/ZvUXeo0H/52-module-06-secured-public-recipe-api-major-2-points) | Major | 2 | 5 | Pending |
+| 06 | [Secured public recipe API](https://trello.com/c/ZvUXeo0H/52-module-06-secured-public-recipe-api-major-2-points) | Major | 2 | 5 | In progress |
 | 07 | [Recipe data export/import](https://trello.com/c/sonZzuGg/53-module-07-recipe-data-export-import-minor-1-point) | Minor | 1 | 4 | Pending |
 | 08 | [Health, status and automated backups](https://trello.com/c/T7ZPZQq9/54-module-08-health-status-and-automated-backups-minor-1-point) | Minor | 1 | 4 | Pending |
 | 09 | [Recipe analytics dashboard](https://trello.com/c/8fkox8yA/55-module-09-recipe-analytics-dashboard-major-2-points) | Major | 2 | 5 | Pending |
 | 10 | [Two additional browsers](https://trello.com/c/Djc38gP8/56-module-10-two-additional-browsers-minor-1-point) | Minor | 1 | 4 | Pending |
-| **Total** | **10 cards** | **4 Major + 6 Minor** | **14** | **31** | **5 complete; 5 pending** |
+| **Total** | **10 cards** | **4 Major + 6 Minor** | **14** | **31** | **5 complete; 1 in progress; 4 pending** |
 
 ## [Module 01] React + Django frameworks — Major (2 points)
 
@@ -114,15 +114,15 @@ Module 01's old card was archived because the connector cannot delete its excess
 
 **Requirement:** Provide a public database API with a secured API key, rate limiting, documentation and at least five endpoints covering GET, POST, PUT and DELETE.
 
-**Current status:** Existing Django REST routes provide a foundation.
+**Current status:** In progress: a separate HTTPS `/api/public/v1/` API implements five database paths covering GET/POST/PUT/DELETE, automatic account-bound keys at first successful sign-in and private Profile status/one-time-secret/replacement/revocation controls. Normal account keys permit writes only within each website account's existing recipe ownership/staff permissions; expired/revoked keys are not silently reactivated. Keys have SHA-256 secret digests and expiry, with a shared per-account PostgreSQL quota and a per-IP Nginx limit. New migration `0002` adds the account-key marker while preserving `0001` and the existing credential snapshot exclusions. Existing moderation, revision and photo rules are reused. README user setup/key/endpoint/CRUD/error/quota usage and module purpose/how/2-point/contributor documentation are saved. User-run build/migration/provisioning/lifecycle/authentication/permission/CRUD/rate-limit acceptance remains pending, so the completed subtotal stays **7/14**. No live-key or runtime-pass evidence is claimed. This local progress update has not been synchronized to Trello.
 
 **Required work:**
 
-- [ ] Provide secured API-key access.
-- [ ] Provide at least five database API endpoints covering GET, POST, PUT and DELETE.
+- [x] Provide secured API-key access.
+- [x] Provide at least five database API endpoints covering GET, POST, PUT and DELETE.
 - [ ] Apply and check rate limiting.
-- [ ] Document API authentication and endpoint usage.
-- [ ] Record this module, its 2 points, why/how it is implemented, and contributors in README.
+- [x] Document API authentication and endpoint usage.
+- [x] Record this module, its 2 points, why/how it is implemented, and contributors in README.
 
 ---
 

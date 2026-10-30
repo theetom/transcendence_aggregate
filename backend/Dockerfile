@@ -18,6 +18,7 @@ COPY reviews/*.py ./reviews/
 COPY reviews/migrations/*.py ./reviews/migrations/
 COPY users/*.py ./users/
 COPY users/migrations/*.py ./users/migrations/
+COPY public_api/ ./public_api/
 
 EXPOSE 8000
 

@@ -3,6 +3,7 @@ import logging
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, connection, transaction
 from django.db.models import Q
+from django.utils.cache import patch_vary_headers
 
 from rest_framework.decorators import api_view, parser_classes, permission_classes
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -25,6 +26,7 @@ from recipes.models import Recipe
 from recipes.serializers import RecipeSummarySerializer
 from reviews.models import Review
 from reviews.serializers import ReviewSerializer
+from public_api.services import ensure_account_api_key
 
 
 logger = logging.getLogger(__name__)
@@ -32,6 +34,22 @@ User = get_user_model()
 
 class WebsiteLoginView(ObtainAuthToken):
     serializer_class = UsernameOrEmailAuthTokenSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        with transaction.atomic():
+            token, _ = Token.objects.get_or_create(user=user)
+            account_api_key = ensure_account_api_key(user)
+        response = Response({
+            'token': token.key,
+            'user_id': user.pk,
+            'account_api_key': account_api_key,
+        })
+        response['Cache-Control'] = 'no-store'
+        patch_vary_headers(response, ['Authorization'])
+        return response
 
 @api_view(["GET"])
 def users_list(request):

@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'recipes',
     'users.apps.UsersConfig',
     'reviews',
+    'public_api',
     'rest_framework',
     'rest_framework.authtoken',
 ]
