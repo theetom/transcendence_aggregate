@@ -9,7 +9,7 @@ fail() {
 usage() {
     printf '%s\n' \
         'Usage: sh scripts/start.sh' \
-        'Load shared records/photos, retain local recipes, start the project and export both.' \
+        'Load shared records/photos, retain local recipes, start Recipe Site and Public API Tester, and export records/photos.' \
         'Optional: --import SNAPSHOT_ID_OR_PATH explicitly loads a shared copy.'
 }
 
@@ -112,7 +112,15 @@ import json
 import os
 import sys
 
-frontend = json.load(sys.stdin)["services"]["frontend"]
+services = json.load(sys.stdin)["services"]
+frontend = services["frontend"]
+planner_ports = services["meal-planner"].get("ports", [])
+if len(planner_ports) != 1 or planner_ports[0].get("host_ip") != "127.0.0.1":
+    sys.exit("Public API Tester requires one loopback-only published port.")
+planner_port = str(planner_ports[0].get("published", ""))
+if (not planner_port.isdecimal() or not 1 <= int(planner_port) <= 65535
+        or planner_ports[0].get("target") != int(planner_port)):
+    sys.exit("Public API Tester requires matching valid host and container ports.")
 mounts = [mount for mount in frontend.get("volumes", [])
           if mount.get("target") == "/etc/nginx/certs" and mount.get("type") == "bind"]
 if len(mounts) != 1:
@@ -125,7 +133,7 @@ ca = absolute(sys.argv[1])
 chrome_current = absolute(sys.argv[4])
 chrome_legacy = os.path.join(sys.argv[3], ".pki/nssdb")
 values = [tls, frontend["environment"]["SERVER_NAME"],
-          str(frontend["environment"]["HTTPS_PORT"]), ca, chrome_current]
+          str(frontend["environment"]["HTTPS_PORT"]), ca, chrome_current, planner_port]
 if any(not value or "\n" in value or "\r" in value for value in values):
     sys.exit("Certificate path, server name and HTTPS port must be nonempty single-line values.")
 if values[1].startswith("-") or any(character.isspace() for character in values[1]):
@@ -151,6 +159,7 @@ unset compose_configuration
     IFS= read -r https_port
     IFS= read -r ca_directory
     IFS= read -r chrome_current
+    IFS= read -r meal_planner_port
 } <<EOF
 $startup_settings
 EOF
@@ -196,6 +205,12 @@ case "$certificate_state" in
     *) fail 'Local certificate preparation returned an unexpected result.' ;;
 esac
 
+# Give the demo only the existing public CA file, using this user's Docker UID
+# mapping so an existing owner-readable CA also works without changing its mode.
+MEAL_PLANNER_CA_FILE="$ca_directory/rootCA.pem"
+MEAL_PLANNER_USER=$tools_user
+export MEAL_PLANNER_CA_FILE MEAL_PLANNER_USER
+
 wsl_detected=0
 case "$(uname -r)" in
     *[Mm]icrosoft*|*WSL*) wsl_detected=1 ;;
@@ -240,16 +255,23 @@ else
 fi
 
 recreate_frontend=0
+recreate_meal_planner=0
 reload_marker="$tls_directory/.frontend-reload-required"
 if [ -e "$reload_marker" ]; then
     frontend_container=$(docker compose ps --all --quiet frontend)
     [ -z "$frontend_container" ] || recreate_frontend=1
+    meal_planner_container=$(docker compose ps --all --quiet meal-planner)
+    [ -z "$meal_planner_container" ] || recreate_meal_planner=1
 fi
 printf '%s\n' 'Building and starting Compose services; existing backend migrations may be applied.'
 docker compose up -d --build --wait --wait-timeout 120
 if [ "$recreate_frontend" -eq 1 ]; then
     printf '%s\n' 'Recreating frontend to load the updated local certificate.'
     docker compose up -d --no-deps --force-recreate --wait --wait-timeout 120 frontend
+fi
+if [ "$recreate_meal_planner" -eq 1 ]; then
+    printf '%s\n' 'Recreating Public API Tester to load the current public CA.'
+    docker compose up -d --no-deps --force-recreate --wait --wait-timeout 120 meal-planner
 fi
 if [ -e "$reload_marker" ]; then
     rm -f "$reload_marker"
@@ -260,5 +282,6 @@ python3 scripts/share-postgres.py export
 printf '%s\n' 'Share updates with Git commit/push; other computers load them on startup after Git pull.'
 
 printf '\nOpen https://%s:%s\n' "$server_name" "$https_port"
+printf 'Public API Tester: http://localhost:%s\n' "$meal_planner_port"
 printf '%s\n' 'Fully restart Chrome after trust setup, including incognito windows.'
 printf '%s\n' 'Browser trust must be checked in the actual evaluation browser; this setup does not change system-client trust.'

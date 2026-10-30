@@ -2,7 +2,7 @@
 
 Board: [Transcendence](https://trello.com/b/dYQHomFA/transcendence)
 
-Trello publication revised and verified: 2026-10-28. Local module progress updated: 2026-10-30.
+Trello publication revised and verified: 2026-10-28. Local module progress updated: 2026-10-31.
 
 Publication status: **Complete — ten simplified cards and all 31 native checklist items verified in Trello.**
 
@@ -12,7 +12,7 @@ Frameworks and ORM are already implemented. Both README entries are complete and
 
 Module 03 advanced permissions is implemented and user-verified. Its README entry and all three Trello tasks are complete.
 
-**Progress: Modules 01–05 complete — 7 of 14 target points.** Module 05 implementation, README documentation and user-led browser verification are complete; temporary sample cleanup is user-confirmed. Module 06 is in progress with source implementation and documentation saved, while user-led runtime acceptance remains pending. Modules 07–10 remain pending; the five unqualified modules represent the remaining 7 target points.
+**Progress: Modules 01–06 complete — 9 of 14 target points.** Module06 implementation and README documentation are complete; the user reports Public API Tester works, all five public path reads and missing/invalid-key rejection passed, and the account quota returned 60 HTTP 200 responses followed by HTTP 429 with `Retry-After: 49`. Modules 07–10 remain pending; the four unqualified modules represent the remaining 5 target points. Module05 temporary sample cleanup remains user-confirmed.
 
 The required README module information is the chosen module, its points, why/how it is implemented and its contributors (subject printed page 28 / PDF page 29). Exact file references, tutorials and separate evidence reports are not mandatory additions.
 
@@ -27,12 +27,12 @@ Module 01's old card was archived because the connector cannot delete its excess
 | 03 | [Advanced permissions](https://trello.com/c/VyltJMBQ/49-module-03-advanced-permissions-major-2-points) | Major | 2 | 3 | Complete |
 | 04 | [Custom design system](https://trello.com/c/8TOKaPvg/50-module-04-custom-design-system-minor-1-point) | Minor | 1 | 2 | Complete |
 | 05 | [Advanced recipe search](https://trello.com/c/TWEqD2Hb/51-module-05-advanced-recipe-search-minor-1-point) | Minor | 1 | 2 | Complete |
-| 06 | [Secured public recipe API](https://trello.com/c/ZvUXeo0H/52-module-06-secured-public-recipe-api-major-2-points) | Major | 2 | 5 | In progress |
+| 06 | [Secured public recipe API](https://trello.com/c/ZvUXeo0H/52-module-06-secured-public-recipe-api-major-2-points) | Major | 2 | 5 | Complete |
 | 07 | [Recipe data export/import](https://trello.com/c/sonZzuGg/53-module-07-recipe-data-export-import-minor-1-point) | Minor | 1 | 4 | Pending |
 | 08 | [Health, status and automated backups](https://trello.com/c/T7ZPZQq9/54-module-08-health-status-and-automated-backups-minor-1-point) | Minor | 1 | 4 | Pending |
 | 09 | [Recipe analytics dashboard](https://trello.com/c/8fkox8yA/55-module-09-recipe-analytics-dashboard-major-2-points) | Major | 2 | 5 | Pending |
 | 10 | [Two additional browsers](https://trello.com/c/Djc38gP8/56-module-10-two-additional-browsers-minor-1-point) | Minor | 1 | 4 | Pending |
-| **Total** | **10 cards** | **4 Major + 6 Minor** | **14** | **31** | **5 complete; 1 in progress; 4 pending** |
+| **Total** | **10 cards** | **4 Major + 6 Minor** | **14** | **31** | **6 complete; 4 pending** |
 
 ## [Module 01] React + Django frameworks — Major (2 points)
 
@@ -99,7 +99,7 @@ Module 01's old card was archived because the connector cannot delete its excess
 
 **Requirement:** Provide advanced search with filters, sorting and pagination.
 
-**Current status:** Complete: the existing approved-recipe collection supports combined title/category/ingredient/minimum-rating filters, title A–Z/Z–A/highest-rated/most-reviewed sorting and 6/12/24-item pagination in the frontend. Roh reported passing the controls' appearance, combined filters/clearing, minimum rating, all four sorts, Next/Previous and page-size ranges, later-page filter reset, refresh persistence and browser Back restoration on October 30, 2026. Source review also covers live-refresh page clamping. The implementation uses Tomaz's existing API without backend application changes, and README purpose/how/1-point/contributor documentation is complete. The completed subtotal is 7/14 points. Roh confirmed temporary sample cleanup was done. This local progress update has not been synchronized to Trello.
+**Current status:** Complete: the existing approved-recipe collection supports combined title/category/ingredient/minimum-rating filters, title A–Z/Z–A/highest-rated/most-reviewed sorting and 6/12/24-item pagination in the frontend. Roh reported passing the controls' appearance, combined filters/clearing, minimum rating, all four sorts, Next/Previous and page-size ranges, later-page filter reset, refresh persistence and browser Back restoration on October 30, 2026. Source review also covers live-refresh page clamping. The implementation uses Tomaz's existing API without backend application changes, and README purpose/how/1-point/contributor documentation is complete. At Module05 completion on October 30, the completed subtotal reached 7/14 points. Roh confirmed temporary sample cleanup was done. This local progress update has not been synchronized to Trello.
 
 **Required work:**
 
@@ -114,13 +114,13 @@ Module 01's old card was archived because the connector cannot delete its excess
 
 **Requirement:** Provide a public database API with a secured API key, rate limiting, documentation and at least five endpoints covering GET, POST, PUT and DELETE.
 
-**Current status:** In progress: a separate HTTPS `/api/public/v1/` API implements five database paths covering GET/POST/PUT/DELETE, automatic account-bound keys at first successful sign-in and private Profile status/one-time-secret/replacement/revocation controls. Normal account keys permit writes only within each website account's existing recipe ownership/staff permissions; expired/revoked keys are not silently reactivated. Keys have SHA-256 secret digests and expiry, with a shared per-account PostgreSQL quota and a per-IP Nginx limit. New migration `0002` adds the account-key marker while preserving `0001` and the existing credential snapshot exclusions. Existing moderation, revision and photo rules are reused. README user setup/key/endpoint/CRUD/error/quota usage and module purpose/how/2-point/contributor documentation are saved. User-run build/migration/provisioning/lifecycle/authentication/permission/CRUD/rate-limit acceptance remains pending, so the completed subtotal stays **7/14**. No live-key or runtime-pass evidence is claimed. This local progress update has not been synchronized to Trello.
+**Current status:** Complete: a separate HTTPS `/api/public/v1/` API provides five database paths covering GET/POST/PUT/DELETE, automatic account-bound API keys and private Profile controls, secret digests/expiry, a shared per-account PostgreSQL quota and per-IP Nginx limit. Existing recipe validation/moderation/revision/photo rules and credential snapshot exclusions are preserved. README purpose/how/2-point/contributor and setup/key/endpoint/error/CRUD/quota documentation is complete. On October 31, the user reported Public API Tester works, supplied five public path HTTP 200 passes plus missing/invalid-key HTTP 401 passes, and then recorded 60 HTTP 200 responses followed by one HTTP 429 with `Retry-After: 49`. The final required rate-limit checklist item is complete, bringing Modules 01–06 to **9/14 points**. Optional cross-account/key-lifecycle/post-limit recovery tests were not run; individual CRUD statuses were not separately supplied. This local progress update has not been synchronized to Trello.
 
 **Required work:**
 
 - [x] Provide secured API-key access.
 - [x] Provide at least five database API endpoints covering GET, POST, PUT and DELETE.
-- [ ] Apply and check rate limiting.
+- [x] Apply and check rate limiting.
 - [x] Document API authentication and endpoint usage.
 - [x] Record this module, its 2 points, why/how it is implemented, and contributors in README.
 

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>Public API Tester</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+    <script src="/api-demo.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to API tester</a>
+    <div class="app-shell">
+      <header class="app-header">
+        <a class="brand" href="/" aria-label="Public API Tester home"><span class="brand-mark" aria-hidden="true">API</span><span>Public API Tester</span></a>
+        <span class="demo-label">Recipe Site API demo</span>
+      </header>
+
+      <main id="main">
+        <section class="introduction" aria-labelledby="page-title">
+          <div><p class="eyebrow">Recipe Site public API</p><h1 id="page-title">Real requests.<br>Visible results.</h1></div>
+          <p class="intro-copy">Create, read, update and delete one temporary recipe. See the actual public API response for every request.</p>
+        </section>
+
+        <section class="connection-panel" aria-labelledby="connection-title">
+          <div class="connection-heading"><div><p class="eyebrow">Start here</p><h2 id="connection-title">Connect to the public API</h2></div><span class="connection-state" id="connection-state">Not connected</span></div>
+          <form id="connection-form">
+            <div class="key-field"><label for="api-key">Recipe Site API key</label><input id="api-key" type="password" autocomplete="off" spellcheck="false" required placeholder="Paste your API key here" aria-describedby="connection-help"></div>
+            <button class="button button--primary" id="connect-button" type="submit">Connect API <span aria-hidden="true">↗</span></button>
+          </form>
+          <div class="connection-footer"><p id="connection-help">Copy your key from <strong>Profile → Public API access</strong> in Recipe Site. It is used only for this local connection.</p><button class="text-button" id="disconnect-button" type="button" hidden>Disconnect</button></div>
+          <p class="api-proof" id="api-proof" role="status">Connect an active key to begin testing.</p>
+          <p class="notice notice--error" id="error-notice" role="alert" hidden></p>
+        </section>
+
+        <details class="api-demo" id="api-demo" open>
+          <summary><span><span class="eyebrow">For your presentation</span><span class="api-demo__title">API demonstration</span></span><span class="api-demo__toggle" aria-hidden="true">+</span></summary>
+          <div class="api-demo__body">
+            <p class="api-demo__intro">Show GET, POST, PUT and DELETE with one temporary recipe. These buttons make real requests to Recipe Site.</p>
+            <p class="api-demo__help">For complete deletion, connect above using a staff account’s API key. An ordinary account requests deletion instead; you can then disconnect, connect a staff key and delete the same recipe here.</p>
+            <div class="api-demo__record"><p id="demo-recipe-state" role="status">Checking tester status…</p><button class="text-button" id="demo-refresh" type="button">Refresh demo status</button></div>
+            <p class="notice notice--error" id="demo-error" role="alert" hidden></p>
+
+            <div class="api-demo__steps" id="demo-controls" aria-busy="false">
+              <form class="api-demo__step" id="demo-create-form" enctype="multipart/form-data">
+                <h3><span class="api-demo__method">POST</span>Create a recipe</h3>
+                <p>Create a sample recipe named “API demo recipe” with your photo. It starts as pending approval.</p>
+                <label for="demo-photo">Recipe photo</label>
+                <input id="demo-photo" name="images" type="file" accept="image/jpeg,image/png,image/gif,image/webp" required aria-describedby="demo-photo-help" disabled>
+                <p class="api-demo__field-help" id="demo-photo-help">One JPEG, PNG, GIF or WebP, up to 5 MiB.</p>
+                <button class="button button--primary" id="demo-create" type="submit" disabled>Create demo recipe</button>
+              </form>
+
+              <section class="api-demo__step" aria-labelledby="demo-read-title">
+                <h3 id="demo-read-title"><span class="api-demo__method">GET</span>Read the recipe</h3>
+                <p>Fetch the temporary recipe and see its saved title, ID and revision. Read again after deletion to check that it is gone.</p>
+                <button class="button button--quiet" id="demo-read" type="button" disabled>Read demo recipe</button>
+              </section>
+
+              <form class="api-demo__step" id="demo-rename-form">
+                <h3><span class="api-demo__method">PUT</span>Rename the recipe</h3>
+                <p>Update the same recipe through the public API, keeping its photo and ingredients.</p>
+                <label for="demo-title">New recipe title</label>
+                <input id="demo-title" type="text" value="API demo recipe updated" maxlength="100" required disabled>
+                <button class="button button--quiet" id="demo-rename" type="submit" disabled>Rename demo recipe</button>
+              </form>
+
+              <section class="api-demo__step" aria-labelledby="demo-delete-title">
+                <h3 id="demo-delete-title"><span class="api-demo__method">DELETE</span>Clean up the recipe</h3>
+                <p>A staff key removes this recipe with HTTP 204. An ordinary owner’s key returns HTTP 202 and leaves it awaiting staff removal.</p>
+                <button class="button button--quiet" id="demo-delete" type="button" disabled>Delete demo recipe</button>
+              </section>
+            </div>
+
+            <section class="api-demo__responses" aria-labelledby="demo-responses-title">
+              <div class="api-demo__response-heading"><h3 id="demo-responses-title">Real API responses</h3><span>API keys are never shown here.</span></div>
+              <div class="api-demo__results" aria-label="HTTP method results">
+                <p><strong>GET</strong><span id="demo-result-get">Not run</span></p>
+                <p><strong>POST</strong><span id="demo-result-post">Not run</span></p>
+                <p><strong>PUT</strong><span id="demo-result-put">Not run</span></p>
+                <p><strong>DELETE</strong><span id="demo-result-delete">Not run</span></p>
+              </div>
+              <p class="api-demo__response-help" id="demo-response-help">After each action, its public API method, path, HTTP status and response body appear below. Results last for this page visit.</p>
+              <div class="api-demo__history" id="demo-history"></div>
+            </section>
+          </div>
+        </details>
+      </main>
+      <footer class="app-footer"><span>Public API Tester</span><span>A separate app, using real Recipe Site data.</span></footer>
+    </div>
+
+  </body>
+</html>

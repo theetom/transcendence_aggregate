@@ -91,6 +91,60 @@ services:
       retries: 5
       start_period: 20s
 
+  # Retain the service identity so existing installations replace the same container.
+  meal-planner:
+    build:
+      context: ./demos/public-api-tester
+    init: true
+    restart: unless-stopped
+    user: "${MEAL_PLANNER_USER:-65534:65534}"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      MEAL_PLANNER_PORT: "${MEAL_PLANNER_PORT:-8765}"
+      CAROOT: /app/ca
+    ports:
+      - "127.0.0.1:${MEAL_PLANNER_PORT:-8765}:${MEAL_PLANNER_PORT:-8765}"
+    volumes:
+      - type: bind
+        source: "${MEAL_PLANNER_CA_FILE:-./certs/rootCA.pem}"
+        target: /app/ca/rootCA.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - python
+      - server.py
+      - --bind
+      - 0.0.0.0
+      - --port
+      - "${MEAL_PLANNER_PORT:-8765}"
+      - --api-base
+      - "https://${SERVER_NAME:-localhost}:${HTTPS_PORT:-8443}/api/public/v1"
+      - --upstream
+      - frontend:443
+      - --ca
+      - /app/ca/rootCA.pem
+    depends_on:
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import os, urllib.request;
+          request = urllib.request.Request('http://127.0.0.1:' + os.environ['MEAL_PLANNER_PORT'] + '/api/status', headers={'X-Public-API-Tester': '1'});
+          urllib.request.build_opener(urllib.request.ProxyHandler({})).open(request, timeout=3).close()
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
 volumes:
   postgres_data:
   django_static:

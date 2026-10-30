@@ -43,6 +43,7 @@ Edit `.env` and supply nonempty `DJANGO_SECRET_KEY` and `POSTGRES_PASSWORD`. For
 | `DJANGO_POSTGRES_DB` | Backend database selection; defaults to `recipes`. |
 | `HTTPS_PORT` | Optional external HTTPS port; defaults to `8443`. |
 | `FRONTEND_PORT` | Optional HTTP redirect port; defaults to `5173`. |
+| `MEAL_PLANNER_PORT` | Optional separate Public API Tester port; defaults to `8765`. |
 | `SERVER_NAME` | Optional local certificate/server name; defaults to `localhost`. |
 | `TLS_CERT_DIR` | Optional certificate directory; defaults to `./certs`. |
 
@@ -56,11 +57,11 @@ On Linux, close Chrome before the launcher updates its user certificate store. F
 sh scripts/start.sh
 ```
 
-The launcher prepares certificate tools in Docker, creates or checks the local HTTPS certificate, imports the public CA into the supported user/browser trust store, prepares the shared database selection, and builds/starts the services. Django migrations and static-file collection run during backend startup. It then exports the current database and referenced photos to the shared folder.
+The launcher prepares certificate tools in Docker, creates or checks the local HTTPS certificate, imports the public CA into the supported user/browser trust store, prepares the shared database selection, and builds/starts Recipe Site and the separate Public API Tester service. Django migrations and static-file collection run during backend startup. It then exports the current database and referenced photos to the shared folder.
 
 On WSL, confirm the Windows user certificate-trust prompt if it appears. Fully restart Chrome after trust setup, including private windows.
 
-Open **https://localhost:8443/** with the default configuration. HTTP on `http://localhost:5173/` redirects to HTTPS. Compose binds both published ports to the local loopback interface.
+Open **https://localhost:8443/** for Recipe Site and **http://localhost:8765/** for Public API Tester with the default configuration. HTTP on `http://localhost:5173/` redirects to Recipe Site HTTPS. Compose binds all three published ports to the local loopback interface.
 
 ### Use the website
 
@@ -143,7 +144,7 @@ The team used Discord and WhatsApp for communication and coordination.
 | Backend | The backend image declares Django `>=6.1,<7.0` and Django REST Framework for authentication, serializers, HTTP endpoints and administration. |
 | Database | PostgreSQL 17 provides relational constraints, transactions and row locking for the shared recipe data. Django ORM models/migrations manage the relationships and schema. |
 | Media | Pillow validates images. Uploaded files live in a Docker volume shared with Nginx for serving. |
-| Deployment | Docker Compose runs PostgreSQL, Django/Gunicorn and the built frontend served by Nginx. |
+| Deployment | Docker Compose runs PostgreSQL, Django/Gunicorn, the built frontend served by Nginx and the independent Python Public API Tester client. |
 | HTTPS | mkcert-based local certificates terminate at Nginx, which proxies API/admin traffic to the private backend. |
 
 The frontend build uses Node 22; the backend image uses Python 3.13. See the Dockerfiles and package files for the actual dependency declarations. Django/DRF are one backend, rather than independently deployed microservices.
@@ -196,7 +197,7 @@ The team confirmed the frontend/backend credits below. Roh and Hugo also handled
 | Favorites | Roh and Hugo (frontend); Tomaz (backend). | Signed-in users add approved recipes to their own favorites and remove saved entries. Their profile lists saved recipes and supports removing unavailable entries. | `backend/users/views.py`, `recipeApi.js`, `RecipePage.jsx`, `ProfilePage.jsx` |
 | Shared-view refresh | Roh and Hugo (frontend). | Visible recipe, profile, home, search and staff views refresh on a five-second delay after the previous request completes and when focus returns. Unsaved editor drafts are retained. | `useLiveRefresh.js` and its page callers |
 | Discovery | Roh and Hugo (frontend); Tomaz (existing backend); Roh (Codex-assisted Module05 implementation and browser verification). | Approved recipe-title/user-name search, public author links, recent recipes and 30-day rating/review rankings with real photo previews. Recipe search has user-verified category/ingredient/minimum-rating filters, title/rating/review sorting and pagination. | `HomePage.jsx`, `SearchResultsPage.jsx`, `recipeSearch.js`, `RecipePreviewCard.jsx` |
-| Public recipe API | Roh (Codex-assisted Module06 integration), reusing Tomaz's recipe validation and write flows and the shared Roh/Hugo account frontend. | Separate versioned API with automatic account keys at first sign-in, private Profile key controls, expiry/revocation/rotation, five database paths and application/proxy rate limits. API actions follow website account permissions. Source implementation and documentation are saved; runtime verification remains pending. | `backend/public_api/`, login/Profile components, `frontend/nginx.conf`, API section below |
+| Public recipe API | Roh (Codex-assisted Module06 integration), reusing Tomaz's recipe validation and write flows and the shared Roh/Hugo account frontend. | Separate versioned API with automatic account keys at first sign-in, private Profile key controls, expiry/revocation/rotation, five database paths and application/proxy rate limits. API actions follow website account permissions. Module06 is complete: the user reports the tester works, and user-run endpoint, API-key rejection and account rate-limit checks passed. | `backend/public_api/`, login/Profile components, `frontend/nginx.conf`, API section below |
 | Duplicate prevention | Roh and Hugo (frontend); Tomaz (backend). | Website names reuse existing IDs ignoring case/outer spaces; repeated ingredient/category rows are rejected, including direct API submissions. | Recipe serializers, `AddRecipePage.jsx` |
 | Local deployment/data transfer | Nuno (Docker setup/connection checks); Roh (Codex-assisted deployment/data-sharing work). | HTTPS startup, persistent volumes, health checks and shared database/photo import/export. | Compose, `frontend/nginx.conf`, `scripts/` |
 | Project policies | Roh and Hugo (frontend). | Public Privacy and Terms pages describe current data collection, public visibility, submission rules, moderation and deletion; footer and reciprocal links are defined. | `PrivacyPage.jsx`, `TermsPage.jsx`, `SiteFooter.jsx` |
@@ -205,7 +206,7 @@ The agreed recipe-admin feature scope has been accepted by the user. Qualificati
 
 ## Modules
 
-The combined React + Django frameworks Major, Django ORM Minor, advanced permissions Major, custom design system Minor and advanced recipe search Minor are complete, with contributors recorded below. Five planned modules remain to qualify, and remaining contributor assignments are unfinished. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
+The combined React + Django frameworks Major, Django ORM Minor, advanced permissions Major, custom design system Minor, advanced recipe search Minor and secured public API Major are complete, with contributors recorded below. Four planned modules remain to qualify, and remaining contributor assignments are unfinished. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
 
 | Module | Points | Current source evidence / remaining qualification |
 | --- | --- | --- |
@@ -215,7 +216,7 @@ The combined React + Django frameworks Major, Django ORM Minor, advanced permiss
 | Custom design system — Minor | 1 | Complete: Savour Studio palette, typography, shared SVG icons and ten reusable components are implemented and documented below. Guided mobile, desktop, keyboard and form-validation checks were user-verified. Contributor: Roh (design direction, Codex-assisted implementation and verification), building on the shared frontend by Roh and Hugo. |
 | File upload/management — Minor | 1 | Image validation, profile previews and saved recipe photo removal exist. Complete the requirement check for supported file types, previews, upload progress, deletion and access policy. |
 | Advanced search — Minor | 1 | Module05 is complete: frontend category/ingredient/minimum-rating filters, four sorts and 6/12/24-item pagination are implemented, documented and user-verified, including page reset and URL restoration. Contributor: Roh (Codex-assisted implementation and browser verification), building on Roh and Hugo's frontend and Tomaz's existing approved-recipe API. |
-| Public API — Major | 2 | Module06 is in progress: a separate public API with automatic account-bound keys and private Profile lifecycle controls, five database paths covering GET/POST/PUT/DELETE, application/proxy rate limiting and usage documentation are implemented. User-led provisioning/lifecycle/authentication/permission/CRUD/rate-limit verification remains pending; its 2 points are not counted yet. Contributor: Roh (Codex-assisted integration), using Tomaz's existing recipe validation/write flows and the shared Roh/Hugo account frontend. |
+| Public API — Major | 2 | Module06 is complete: a separate public API with automatic account-bound keys and private Profile controls, five database paths covering GET/POST/PUT/DELETE, application/proxy rate limiting and usage documentation are implemented. The user reports Public API Tester works; all five path reads returned 200, missing/invalid keys returned 401, and the account quota allowed 60 requests before returning 429 with `Retry-After: 49`. Its 2 points are included. Contributor: Roh (Codex-assisted integration), using Tomaz's existing recipe validation/write flows and the shared Roh/Hugo account frontend. |
 | Standard user management — Major | 2 | Profiles/authentication exist; friends, online status and a default avatar remain absent. |
 | User interaction — Major | 2 | Profiles/reviews exist; the module also requires chat and friends. |
 | Health/status/backups — Minor | 1 | Container health checks and automatic startup exports exist; a status page and complete recovery demonstration remain. |
@@ -223,7 +224,7 @@ The combined React + Django frameworks Major, Django ORM Minor, advanced permiss
 | Additional browsers — Minor | 1 | Requires completed feature checks in two additional browsers and documented limitations. No complete evidence is recorded. |
 | Accessibility — Major | 2 | Labels/ARIA/native dialogs help, but source review does not establish full WCAG 2.1 AA compliance. |
 
-The completed frameworks Major (**2 points**), Django ORM Minor (**1 point**), advanced permissions Major (**2 points**), custom design system Minor (**1 point**) and advanced search Minor (**1 point**) total **7 of 14 target points**, leaving **7 points**. Other rows describe possibilities and remaining gaps; this table does not claim a completed 14-point total. Custom modules require their own scope, implementation evidence, contributor attribution and justification.
+The completed frameworks Major (**2 points**), Django ORM Minor (**1 point**), advanced permissions Major (**2 points**), custom design system Minor (**1 point**), advanced search Minor (**1 point**) and secured public API Major (**2 points**) total **9 of 14 target points**, leaving **5 points**. Other rows describe possibilities and remaining gaps; this table does not claim a completed 14-point total. Custom modules require their own scope, implementation evidence, contributor attribution and justification.
 
 ### Custom design system — Module 04 (1 point, complete)
 
@@ -256,9 +257,9 @@ This implementation loads the full approved collection through the existing `/ap
 
 Roh requested and directed the Codex-assisted Module05 frontend implementation, building on the shared frontend by Roh and Hugo and the existing approved-recipe API by Tomaz. On October 30, 2026, Roh reported passing the new controls' appearance, combined category/ingredient filtering and clearing, minimum-rating filtering and all four sorts. Using 30 marked sample recipes, Roh also verified Next/Previous, the 6/12/24-item page sizes and ranges, applying a filter from a later page returning to page 1, refresh persistence and browser Back restoring the earlier search/page. These user-run checks, the source review and the purpose/implementation/contributor documentation complete Module05 for **1 point**, bringing the completed subtotal to **7/14**. Roh subsequently confirmed the temporary sample cleanup was done. See [WORK_LOG.md](WORK_LOG.md) for the actual verification and cleanup record.
 
-### Secured public recipe API — Module 06 (2 points, verification pending)
+### Secured public recipe API — Module 06 (2 points, complete)
 
-The public API lets an external client browse approved recipes and submit or manage recipes through the same account permissions and recipe rules used by the website. Its separate base path is **`https://localhost:8443/api/public/v1`** with the default configuration. Each active website account receives its own designated API key at first successful sign-in; normal users manage it from their private Profile instead of an administrator terminal. This API uses that dedicated key rather than the website login token. Roh directed the Codex-assisted account-key, Profile, rate-limit and endpoint integration, reusing Tomaz's existing recipe validation and transactional create/edit/delete flows and the shared Roh/Hugo account frontend. Provisioning, lifecycle, authentication, permissions, CRUD, migrations and rate-limit behavior still require user-run verification; Module06 is **in progress**, so the completed total remains **7/14**.
+The public API lets an external client browse approved recipes and submit or manage recipes through the same account permissions and recipe rules used by the website. Its separate base path is **`https://localhost:8443/api/public/v1`** with the default configuration. Each active website account receives its own designated API key at first successful sign-in; normal users manage it from their private Profile instead of an administrator terminal. This API uses that dedicated key rather than the website login token. Roh directed the Codex-assisted account-key, Profile, rate-limit and endpoint integration, reusing Tomaz's existing recipe validation and transactional create/edit/delete flows and the shared Roh/Hugo account frontend. Roh reports the tester works, and all five public path reads plus missing/invalid-key rejection have passed user-run checks. On October 31, 2026, the user also recorded 60 HTTP 200 responses followed by HTTP 429 with `Retry-After: 49`. This completes the agreed Module06 checklist for **2 points**, bringing the completed total to **9/14**.
 
 #### Load the implementation
 
@@ -382,7 +383,7 @@ for ((request_number=1; request_number<=61; request_number++)); do
 done
 ```
 
-After the quota resets, use a missing/invalid key to check 401; check that another ordinary account's key cannot edit the disposable recipe; check a stale revision gives 409; use Profile replacement/revocation and confirm the old key returns 401. A separate optional CLI read-only key can check the read-only-write 403, but the normal automatic account key is write-enabled. Also check first-sign-in/Profile provisioning, one-time display, expiry/status and that signing in after revocation does not reactivate access. These are user-run acceptance steps and have not been reported passed. They should use the disposable record only and preserve already accepted website behavior. When finished, clear the local secret variable with `unset RECIPE_API_KEY`.
+Missing/invalid-key rejection has already passed with HTTP 401. Additional optional regression checks include another ordinary account being unable to edit a disposable recipe, stale revisions returning409, replaced/revoked keys returning401, read-only keys being unable to write, and Profile provisioning/display/expiry behavior. These additional checks have not been reported passed and are not separate Module06 completion blockers under the agreed scope. Any optional write checks should use a disposable record and preserve already accepted website behavior. When finished with the shell examples, clear the local secret variable with `unset RECIPE_API_KEY`.
 
 | Status | Meaning |
 | --- | --- |
@@ -395,7 +396,41 @@ After the quota resets, use a missing/invalid key to check 401; check that anoth
 | 409 | Stale recipe revision or deletion/moderation conflict. |
 | 429 | Account or proxy quota exceeded; honor `Retry-After`. |
 
-Application errors and the public API proxy rate-limit response use JSON. Other proxy failures, such as an unavailable backend, can have a different response body. Runtime/build/migration/API verification remains pending, and the module's 2 points will be counted only after acceptance.
+Application errors and the public API proxy rate-limit response use JSON. Other proxy failures, such as an unavailable backend, can have a different response body. The required account rate-limit check passed on October 31, 2026: 60 requests returned HTTP 200 and request 61 returned HTTP 429 with `Retry-After: 49`. Recovery after the delay was not tested and is optional additional coverage. Module06 is complete for 2 points under the agreed checklist.
+
+#### Separate Public API Tester
+
+[Public API Tester](demos/public-api-tester/index.html) is a separate client for creating, reading, updating and deleting one temporary Recipe Site recipe, with actual HTTP methods, paths, statuses and response bodies shown on screen.
+
+Start it with Recipe Site from the repository root:
+
+```sh
+sh scripts/start.sh
+```
+
+Open **http://localhost:8765**, alongside Recipe Site at **https://localhost:8443** with default settings. Copy an active key privately from **Profile → Public API access** and choose **Connect API**. If no saved key is available, explicitly generate a replacement in Profile; this invalidates the old key. Connection validates the key with a small public recipe-list GET; CRUD evidence is recorded by the tester controls below. The tester opens by default.
+
+For startup compatibility, the Compose service remains named `meal-planner` and retains the `MEAL_PLANNER_PORT`, `MEAL_PLANNER_CA_FILE` and `MEAL_PLANNER_USER` settings. The app and source directory are now Public API Tester; keeping the service identity lets startup replace an existing container on the same port without orphan cleanup. An optional `MEAL_PLANNER_PORT` changes that port. Stop any standalone instance with Ctrl+C before starting Compose.
+
+The Python standard-library connector is published only on the host's loopback interface. Startup mounts only the existing public CA file read-only, using the launcher's host/rootless user mapping so an owner-readable CA also works. Within Compose it connects to `frontend:443` while retaining the configured Recipe Site hostname for HTTPS certificate verification and the HTTP Host header; it does not disable verification or change CORS. Certificate reload handling also recreates Public API Tester to refresh its in-memory trust. Its credential-free local health check waits for the UI/connector without making upstream API requests. Use `sh scripts/start.sh` for startup or recreation so the public-CA path and user mapping are supplied; normal `docker compose stop` stops it with the project. The standalone `python3 demos/public-api-tester/server.py` option remains available when the Compose tester is stopped; it defaults to loopback and supports `--port`, `--ca` and `--api-base` overrides, and is stopped with Ctrl+C.
+
+The entered API key is held only in the connector process's bounded, one-hour sessions; the browser receives an opaque HttpOnly/SameSite cookie. The key is not put in source files, browser storage, URLs or request logs. **Disconnect** forgets the credential; it does not disable the website's key or delete a temporary recipe. Tracking for that recipe remains available in the same local session when reconnecting, including with a staff key for cleanup. Source API 401 responses clear invalid credentials, and 429 responses show the retry delay without automatically flooding requests. Demo writes are restricted to the recipe ID returned by that session's own create action; there is no arbitrary recipe-ID or API-target input.
+
+To demonstrate the HTTP methods visually, connect a **staff account's API key** for the complete deletion flow and use the following sequence. Every button makes a real secured public API request through the local connector; opening the panel or refreshing its status only reads local tracking metadata.
+
+| Control | Actual public API request | Expected evidence |
+| --- | --- | --- |
+| Choose a photo, then **Create demo recipe** | `POST /api/public/v1/recipes/` | HTTP **201**, new ID and pending recipe. The connector supplies the sample ingredients and steps; the actual photo must be JPEG, PNG, GIF or WebP and at most 5 MiB. |
+| **Read demo recipe** | `GET /api/public/v1/recipes/{id}/` | HTTP **200**, the same ID, title and content revision. |
+| Edit the title, then **Rename demo recipe** | `PUT /api/public/v1/recipes/{id}/` | HTTP **200**, changed title and incremented revision; existing photo retained. |
+| **Delete demo recipe**, then confirm | `DELETE /api/public/v1/recipes/{id}/` | Staff key: HTTP **204**, actual deletion. Ordinary owner's key: HTTP **202**, staff removal still pending. |
+| **Read demo recipe** after staff deletion | `GET /api/public/v1/recipes/{id}/` | HTTP **404**, confirming the record is gone. |
+
+The panel displays actual upstream methods, public API paths, statuses and response JSON with account details omitted and key patterns redacted. The browser's Network panel shows local connector routes; the displayed evidence describes the separate connector-to-Recipe Site request. Each method keeps its latest result for the page visit, and a new successful create resets the previous recipe's results. The temporary recipe starts pending; its owner can find it in Recipe Site's own recipes. Normal accounts can demonstrate the first three methods and a deletion request, then disconnect and connect a staff key to remove the same tracked recipe. Existing recipe ownership/staff rules are unchanged.
+
+Clean up the temporary recipe **before restarting the connector or exporting shared data**. Tracking is process memory only and can be lost when its browser cookie expires or the bounded session is evicted; if so, locate the named recipe in Recipe Site and use staff cleanup there. If a write response is uncertain, the panel blocks further writes until a read reconciles the known recipe; if a create returned no usable ID, check Recipe Site rather than creating repeated copies. Deleting the record follows the existing backend policy for retained photo files; the demo does not change that policy.
+
+On October 31, 2026, Roh reported that the converted Public API Tester works well. A subsequent user-run check returned HTTP 200 for all five public API paths (including recipe19 detail), and HTTP 401 for both missing and invalid keys; all seven checks passed. The subsequent quota check returned 60 HTTP 200 responses and one HTTP 429 with `Retry-After: 49`, completing the final required Module06 checklist item. Module06 is complete for **2 points** and the completed subtotal is **9/14**. Cross-account permissions, key-lifecycle regressions and post-limit recovery remain optional and unverified; individual CRUD statuses have not been separately reported. Do not export temporary demonstration recipes as finished project data.
 
 ## Individual Contributions
 
@@ -405,7 +440,7 @@ Names, 42 logins, project roles and GitHub accounts are confirmed in Team Inform
 | --- | --- | --- | --- | --- |
 | Tomaz | [theetom](https://github.com/theetom) | `toferrei` | Pending | Backend APIs and serializers for signup/login, profiles, recipes/moderation and changed-content guards, reviews/favorites, discovery and duplicate prevention. |
 | Nuno | [NunoAndrezo](https://github.com/NunoAndrezo) | `nneves-a` | Pending | Coordinated team communications and meeting dates; checked that the project's Docker setup and connections worked properly. |
-| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Pending | Frontend features credited above with Hugo, Vite integration and visual-output testing; Codex-assisted deployment/data-sharing work, Savour Studio design-system implementation, Module05 search filters/sorting/pagination and Module06 public API/automatic account-key/Profile integration. Selected the visual direction and supplied references. Also performed and reported browser/API acceptance checks, including overlapping review/favorite writes, account isolation, stale-change rejection, extra recipe-card removal and Module05 filtering/sorting/pagination/URL restoration. Module06 runtime acceptance remains pending. Evidence is in [WORK_LOG.md](WORK_LOG.md). |
+| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Pending | Frontend features credited above with Hugo, Vite integration and visual-output testing; Codex-assisted deployment/data-sharing work, Savour Studio design-system implementation, Module05 search filters/sorting/pagination and Module06 public API/automatic account-key/Profile integration. Selected the visual direction and supplied references. Also performed and reported browser/API acceptance checks, including overlapping review/favorite writes, account isolation, stale-change rejection, extra recipe-card removal and Module05 filtering/sorting/pagination/URL restoration. Module06 accepted results include the working tester, all five path reads, missing/invalid-key rejection and the account rate-limit demonstration. Evidence is in [WORK_LOG.md](WORK_LOG.md). |
 | Hugo | [Anzohs](https://github.com/Anzohs) | `hladeiro` | Pending | Frontend work with Roh on authentication/profile pages, recipe/moderation screens, reviews/favorites, discovery, refresh and policy pages; Vite integration and visual-output testing. |
 | Fabio | [FaMe1337](https://github.com/FaMe1337) | `famendes` | Pending | Supported both backend and frontend development and provided help as needed. |
 
@@ -417,7 +452,7 @@ Selected-module assignments, additional implementation challenges and their solu
 
 - Category browsing and related-recipe suggestions have unfinished UI paths; they are not counted as completed features here.
 - Advanced recipe search is user-verified and implemented in the browser over the full approved collection. Large-catalogue transfer and processing would benefit from server-side search/pagination.
-- Module06 public API/account-key/Profile source and usage documentation are saved; its build/migration/provisioning/lifecycle/authentication/permission/CRUD/rate-limit acceptance is still pending. Its 2 points are not included in the completed 7/14.
+- Module06 is complete for 2 points based on the working tester report and passed five-path/API-key rejection/account-quota checks, bringing the completed total to 9/14. Optional cross-account, key-lifecycle and post-limit recovery regressions have not been verified; individual CRUD statuses were not separately supplied.
 - Friends/chat/presence, OAuth and 2FA are not implemented.
 - Photo URLs are served publicly. Pending/rejected recipe page/API access is restricted separately; media serving remains the project's accepted scope.
 - The shared-folder workflow preserves older duplicate-name records and has cross-computer conflict limitations.
@@ -451,6 +486,6 @@ For the Savour Studio redesign, Roh selected and supplied six visual references.
 
 For Module05, Roh directed Codex-assisted implementation of the frontend recipe filters, sorting, URL settings and pagination using the existing API, plus a separate removable sample-data helper. Source review, Roh's passed user-run browser verification and user-confirmed sample cleanup are recorded separately; no new backend application implementation is attributed to this work.
 
-For Module06, Roh directed Codex-assisted implementation of the isolated public API, automatic account-key lifecycle, private Profile controls, database/proxy rate limits and this usage documentation, reusing Tomaz's existing recipe validation/write flows and the shared account frontend by Roh and Hugo. Source review and pending user-run build/migration/provisioning/API acceptance are recorded separately; no live keys, runtime checks or 2-point qualification are claimed from source work alone.
+For Module06, Roh directed Codex-assisted implementation of the isolated public API, automatic account-key lifecycle, private Profile controls, database/proxy rate limits and this usage documentation, reusing Tomaz's existing recipe validation/write flows and the shared account frontend by Roh and Hugo. Source review and Roh's user-run working-tester, five-path, API-key rejection and rate-limit results are recorded separately. These accepted results complete the agreed 2-point checklist; optional security/lifecycle/recovery checks remain unverified. No raw API keys are included in this documentation.
 
 Team members must review, test and understand the implementation attributed to them.
