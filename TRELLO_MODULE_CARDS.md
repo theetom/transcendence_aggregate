@@ -12,11 +12,11 @@ Frameworks and ORM are already implemented. Both README entries are complete and
 
 Module 03 advanced permissions is implemented and user-verified. Its README entry and all three Trello tasks are complete.
 
-**Progress: Modules 01–07 complete — 10 of 14 target points.** Module07 implementation/documentation and agreed user acceptance are complete: after reporting the JSON/CSV downloads, Roh confirmed both website import and export work well on October 31, 2026. Modules 08–10 remain pending; the three unqualified modules represent the remaining 4 target points. Existing accepted Module05/06 checks and cleanup evidence remain preserved.
+**Progress: Modules 01–08 complete — 11 of 14 target points.** Module08 health/status, automated private backups and documented recovery are complete: the user reported the setup works, listed a completed backup with 16 recipes / 17 photos and successfully restored it to a separate database on October 31, 2026. Modules 09–10 remain pending: two modules / 3 target points. Existing accepted module results remain preserved.
 
 The required README module information is the chosen module, its points, why/how it is implemented and its contributors (subject printed page 28 / PDF page 29). Exact file references, tutorials and separate evidence reports are not mandatory additions.
 
-Module 01's old card was archived because the connector cannot delete its excess native checklist items. Its verified replacement is linked below. Other module links are unchanged. Each card has one **Required work** native checklist; the items below record local progress. Module 04, Module 05, Module 06 and Module 07 local updates have not been synchronized to Trello.
+Module 01's old card was archived because the connector cannot delete its excess native checklist items. Its verified replacement is linked below. Other module links are unchanged. Each card has one **Required work** native checklist; the items below record local progress. Module 04, Module 05, Module 06, Module 07 and Module 08 local updates have not been synchronized to Trello.
 
 ## Card index
 
@@ -29,10 +29,10 @@ Module 01's old card was archived because the connector cannot delete its excess
 | 05 | [Advanced recipe search](https://trello.com/c/TWEqD2Hb/51-module-05-advanced-recipe-search-minor-1-point) | Minor | 1 | 2 | Complete |
 | 06 | [Secured public recipe API](https://trello.com/c/ZvUXeo0H/52-module-06-secured-public-recipe-api-major-2-points) | Major | 2 | 5 | Complete |
 | 07 | [Recipe data export/import](https://trello.com/c/sonZzuGg/53-module-07-recipe-data-export-import-minor-1-point) | Minor | 1 | 4 | Complete |
-| 08 | [Health, status and automated backups](https://trello.com/c/T7ZPZQq9/54-module-08-health-status-and-automated-backups-minor-1-point) | Minor | 1 | 4 | Pending |
+| 08 | [Health, status and automated backups](https://trello.com/c/T7ZPZQq9/54-module-08-health-status-and-automated-backups-minor-1-point) | Minor | 1 | 4 | Complete |
 | 09 | [Recipe analytics dashboard](https://trello.com/c/8fkox8yA/55-module-09-recipe-analytics-dashboard-major-2-points) | Major | 2 | 5 | Pending |
 | 10 | [Two additional browsers](https://trello.com/c/Djc38gP8/56-module-10-two-additional-browsers-minor-1-point) | Minor | 1 | 4 | Pending |
-| **Total** | **10 cards** | **4 Major + 6 Minor** | **14** | **31** | **7 complete; 3 pending** |
+| **Total** | **10 cards** | **4 Major + 6 Minor** | **14** | **31** | **8 complete; 2 pending** |
 
 ## [Module 01] React + Django frameworks — Major (2 points)
 
@@ -132,7 +132,7 @@ Module 01's old card was archived because the connector cannot delete its excess
 
 **Requirement:** Export data in multiple formats, import data with validation, and support bulk operations.
 
-**Current status:** Complete: private Profile → Recipe data selects own recipes and downloads portable JSON/CSV files with actual contents/photos; either website format supports validation/preview and transactional bulk import as new pending owner copies. Strict field/photo/file validation precedes writes. A digest-bound per-user receipt commits with the batch, supporting result recovery and safe same-request retries. README 1-point/purpose/how/contributor/usage/limits documentation is complete. On October 31, 2026, following the reported JSON/CSV downloads, Roh confirmed both import and export work well. This functional acceptance completes all four required checklist items and adds 1 point, bringing Modules 01–07 to **10/14 points**. No specific batch counts, individual HTTP outcomes, forced rejection/recovery cases or separate CLI restore result were supplied. Earlier CLI exports and validated bulk snapshot tools remain available. This local update has not been synchronized to Trello.
+**Current status:** Complete: private Profile → Recipe data selects own recipes and downloads portable JSON/CSV files with actual contents/photos; either website format supports validation/preview and transactional bulk import as new pending owner copies. Strict field/photo/file validation precedes writes. A digest-bound per-user receipt commits with the batch, supporting result recovery and safe same-request retries. README 1-point/purpose/how/contributor/usage/limits documentation is complete. On October 31, 2026, following the reported JSON/CSV downloads, Roh confirmed both import and export work well. This functional acceptance completes all four required checklist items and adds 1 point, bringing Modules 01–07 at that stage to **10/14 points**. No specific batch counts, individual HTTP outcomes, forced rejection/recovery cases or separate CLI restore result were supplied. Earlier CLI exports and validated bulk snapshot tools remain available. This local update has not been synchronized to Trello.
 
 **Required work:**
 
@@ -149,14 +149,14 @@ Module 01's old card was archived because the connector cannot delete its excess
 
 **Requirement:** Provide health checks, a status page, automated backups and disaster-recovery procedures.
 
-**Current status:** Reuse existing health checks and automatic startup exports where adequate.
+**Current status:** Complete: public /status and sanitized database readiness complement existing Docker health checks. A separate daily private PostgreSQL/photo worker retains seven verified completed copies; documented wrappers support list, extra backup, verify, safe separate-database restore and explicit receipt-bound activation. README 1-point/purpose/how/contributor/guide/recovery/privacy information is complete. The user reported the setup works, listed backup `20261031T094946Z_84a9f9191644` with **16 recipes and 17 photos**, and successfully restored it into `recipes_recovery_20261031t095520z_24a07a4cf410` on October 31, 2026. All four required items are complete, adding 1 point and bringing Modules 01–08 to **11/14 points**. The observed buildx warning was non-fatal. No activation was needed or reported; the restore command preserves current website database selection. This local update has not been synchronized to Trello.
 
 **Required work:**
 
-- [ ] Provide working health checks and a status page.
-- [ ] Ensure automated backups work, reusing existing automation where adequate.
-- [ ] Document usable disaster-recovery procedures.
-- [ ] Record this module, its 1 point, why/how it is implemented, and contributors in README.
+- [x] Provide working health checks and a status page.
+- [x] Ensure automated backups work, reusing existing automation where adequate.
+- [x] Document usable disaster-recovery procedures.
+- [x] Record this module, its 1 point, why/how it is implemented, and contributors in README.
 
 ---
 

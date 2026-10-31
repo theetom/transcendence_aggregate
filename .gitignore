@@ -12,6 +12,9 @@ venv/
 # Local database setup state, import receipts, retired data and temporary files.
 /data/database-private/
 
+# Private disaster-recovery backups contain account data and credentials.
+/data/backups/
+
 # Local TLS certificates and private keys are machine-specific.
 /certs/
 *.key

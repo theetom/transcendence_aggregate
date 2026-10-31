@@ -10,6 +10,21 @@ Recipe Site is a recipe-sharing application built for ft_transcendence. Visitors
 
 The project uses the requirements in [ft_transcendence.pdf](ft_transcendence.pdf), version 21.1. Module requirements and the README requirements are separate from the application's feature checklist.
 
+## Guides
+
+The user and operator guides are kept together in this README:
+
+| Guide | What it covers |
+| --- | --- |
+| [Public API setup and usage](#public-api-guide) | Account API keys, endpoint paths, request examples and rate limits. |
+| [Public API Tester](#separate-public-api-tester) | Open the tester, connect a key and demonstrate GET/POST/PUT/DELETE. |
+| [Recipe JSON/CSV downloads and imports](#recipe-data-guide) | Use the Profile buttons to download, check and import recipe files. |
+| [Website status](#start-and-check-the-status-page) | Open the Status page and understand service availability. |
+| [Automatic private backups](#automated-private-backups) | Where backups are saved, scheduling, retention and privacy. |
+| [Backup command reference](#backup-command-reference) | Start, list, make, verify, restore and activate a backup. |
+| [Disaster recovery](#disaster-recovery) | Restore a separate database, deliberately activate it and refresh shared data. |
+| [Shared project data](#shared-project-data) | Export the database/photos for the existing Git-sharing workflow. |
+
 ## Instructions
 
 ### Prerequisites
@@ -44,10 +59,12 @@ Edit `.env` and supply nonempty `DJANGO_SECRET_KEY` and `POSTGRES_PASSWORD`. For
 | `HTTPS_PORT` | Optional external HTTPS port; defaults to `8443`. |
 | `FRONTEND_PORT` | Optional HTTP redirect port; defaults to `5173`. |
 | `MEAL_PLANNER_PORT` | Optional separate Public API Tester port; defaults to `8765`. |
+| `BACKUP_INTERVAL_SECONDS` | Private backup interval while Docker is running; defaults to `86400` (24 hours). |
+| `BACKUP_KEEP_COUNT` | Completed private backups retained after a successful new backup; defaults to `7`. |
 | `SERVER_NAME` | Optional local certificate/server name; defaults to `localhost`. |
 | `TLS_CERT_DIR` | Optional certificate directory; defaults to `./certs`. |
 
-The private `.env`, certificate keys and local CA are machine configuration. `.env.example` documents the required settings without their values.
+The private `.env`, certificate keys, local CA and `data/backups/` are machine/private recovery data. `.env.example` documents the required settings without their values.
 
 ### Start the application
 
@@ -57,7 +74,7 @@ On Linux, close Chrome before the launcher updates its user certificate store. F
 sh scripts/start.sh
 ```
 
-The launcher prepares certificate tools in Docker, creates or checks the local HTTPS certificate, imports the public CA into the supported user/browser trust store, prepares the shared database selection, and builds/starts Recipe Site and the separate Public API Tester service. Django migrations and static-file collection run during backend startup. It then exports the current database and referenced photos to the shared folder.
+The launcher prepares certificate tools in Docker, creates or checks the local HTTPS certificate, imports the public CA into the supported user/browser trust store, prepares the shared database selection, and builds/starts Recipe Site, the separate Public API Tester and the scheduled private backup service. Django migrations and static-file collection run during backend startup. It then exports the current database and referenced photos to the shared folder.
 
 On WSL, confirm the Windows user certificate-trust prompt if it appears. Fully restart Chrome after trust setup, including private windows.
 
@@ -144,7 +161,7 @@ The team used Discord and WhatsApp for communication and coordination.
 | Backend | The backend image declares Django `>=6.1,<7.0` and Django REST Framework for authentication, serializers, HTTP endpoints and administration. |
 | Database | PostgreSQL 17 provides relational constraints, transactions and row locking for the shared recipe data. Django ORM models/migrations manage the relationships and schema. |
 | Media | Pillow validates images. Uploaded files live in a Docker volume shared with Nginx for serving. |
-| Deployment | Docker Compose runs PostgreSQL, Django/Gunicorn, the built frontend served by Nginx and the independent Python Public API Tester client. |
+| Deployment | Docker Compose runs PostgreSQL, Django/Gunicorn, the built frontend served by Nginx, the independent Python Public API Tester client and a scheduled private backup worker. |
 | HTTPS | mkcert-based local certificates terminate at Nginx, which proxies API/admin traffic to the private backend. |
 
 The frontend build uses Node 22; the backend image uses Python 3.13. See the Dockerfiles and package files for the actual dependency declarations. Django/DRF are one backend, rather than independently deployed microservices.
@@ -199,14 +216,14 @@ The team confirmed the frontend/backend credits below. Roh and Hugo also handled
 | Discovery | Roh and Hugo (frontend); Tomaz (existing backend); Roh (Codex-assisted Module05 implementation and browser verification). | Approved recipe-title/user-name search, public author links, recent recipes and 30-day rating/review rankings with real photo previews. Recipe search has user-verified category/ingredient/minimum-rating filters, title/rating/review sorting and pagination. | `HomePage.jsx`, `SearchResultsPage.jsx`, `recipeSearch.js`, `RecipePreviewCard.jsx` |
 | Public recipe API | Roh (Codex-assisted Module06 integration), reusing Tomaz's recipe validation and write flows and the shared Roh/Hugo account frontend. | Separate versioned API with automatic account keys at first sign-in, private Profile key controls, expiry/revocation/rotation, five database paths and application/proxy rate limits. API actions follow website account permissions. Module06 is complete: the user reports the tester works, and user-run endpoint, API-key rejection and account rate-limit checks passed. | `backend/public_api/`, login/Profile components, `frontend/nginx.conf`, API section below |
 | Duplicate prevention | Roh and Hugo (frontend); Tomaz (backend). | Website names reuse existing IDs ignoring case/outer spaces; repeated ingredient/category rows are rejected, including direct API submissions. | Recipe serializers, `AddRecipePage.jsx` |
-| Local deployment/data transfer | Nuno (Docker setup/connection checks); Roh (Codex-assisted deployment/data-sharing work). | HTTPS startup, persistent volumes, health checks, shared database/photo import/export and Module07 JSON/CSV recipe exports and website imports (user-confirmed working). | Compose, `frontend/nginx.conf`, `scripts/` |
+| Local deployment/data transfer | Nuno (Docker setup/connection checks); Roh (Codex-assisted deployment/data-sharing work). | HTTPS startup, persistent volumes, health checks, shared database/photo import/export, Module07 JSON/CSV recipe exports and website imports (user-confirmed working), and Module08 status/private-backup/recovery integration (user-verified). | Compose, `frontend/nginx.conf`, `scripts/` |
 | Project policies | Roh and Hugo (frontend). | Public Privacy and Terms pages describe current data collection, public visibility, submission rules, moderation and deletion; footer and reciprocal links are defined. | `PrivacyPage.jsx`, `TermsPage.jsx`, `SiteFooter.jsx` |
 
 The agreed recipe-admin feature scope has been accepted by the user. Qualification for a particular subject module still depends on that module's complete requirements and its evaluation demonstration.
 
 ## Modules
 
-The combined React + Django frameworks Major, Django ORM Minor, advanced permissions Major, custom design system Minor, advanced recipe search Minor, secured public API Major and recipe data export/import Minor are complete, with contributors recorded below. Three planned modules remain to qualify, and remaining contributor assignments are unfinished. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
+The combined React + Django frameworks Major, Django ORM Minor, advanced permissions Major, custom design system Minor, advanced recipe search Minor, secured public API Major, recipe data export/import Minor and health/status/backups Minor are complete, with contributors recorded below. Two planned modules remain to qualify, and remaining contributor assignments are unfinished. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
 
 | Module | Points | Current source evidence / remaining qualification |
 | --- | --- | --- |
@@ -219,12 +236,12 @@ The combined React + Django frameworks Major, Django ORM Minor, advanced permiss
 | Public API — Major | 2 | Module06 is complete: a separate public API with automatic account-bound keys and private Profile controls, five database paths covering GET/POST/PUT/DELETE, application/proxy rate limiting and usage documentation are implemented. The user reports Public API Tester works; all five path reads returned 200, missing/invalid keys returned 401, and the account quota allowed 60 requests before returning 429 with `Retry-After: 49`. Its 2 points are included. Contributor: Roh (Codex-assisted integration), using Tomaz's existing recipe validation/write flows and the shared Roh/Hugo account frontend. |
 | Standard user management — Major | 2 | Profiles/authentication exist; friends, online status and a default avatar remain absent. |
 | User interaction — Major | 2 | Profiles/reviews exist; the module also requires chat and friends. |
-| Health/status/backups — Minor | 1 | Container health checks and automatic startup exports exist; a status page and complete recovery demonstration remain. |
+| Health/status/backups — Minor | 1 | Module08 is complete: a public Status page/readiness endpoint, existing Docker health checks, automatic daily private database/photo backups retaining seven copies, and documented separate-database recovery are implemented. Roh reported the setup works, listed a backup of 16 recipes / 17 photos and successfully restored it to a separate database. Its 1 point is included; actual activation was not needed for verification. Contributor: Roh (Codex-assisted integration), building on the existing Docker and data-sharing work. |
 | Data export/import — Minor | 1 | Module07 is complete: Profile → Recipe data provides own-recipe selection, portable JSON/CSV downloads with photos, file validation/preview and transactional bulk imports as new pending copies. Digest-bound import receipts support result checks and safe same-request retries. Roh reported both import and export working well on October 31, 2026, following the JSON/CSV downloads. The existing snapshot tools also export readable JSON/CSV and validate bulk restores. Its 1 point is included. Contributor: Roh (Codex-assisted integration), reusing Tomaz's recipe models/validation and the shared account frontend. |
 | Additional browsers — Minor | 1 | Requires completed feature checks in two additional browsers and documented limitations. No complete evidence is recorded. |
 | Accessibility — Major | 2 | Labels/ARIA/native dialogs help, but source review does not establish full WCAG 2.1 AA compliance. |
 
-The completed frameworks Major (**2 points**), Django ORM Minor (**1 point**), advanced permissions Major (**2 points**), custom design system Minor (**1 point**), advanced search Minor (**1 point**), secured public API Major (**2 points**) and recipe data export/import Minor (**1 point**) total **10 of 14 target points**, leaving **4 points**. Other rows describe possibilities and remaining gaps; this table does not claim a completed 14-point total. Custom modules require their own scope, implementation evidence, contributor attribution and justification.
+The completed frameworks Major (**2 points**), Django ORM Minor (**1 point**), advanced permissions Major (**2 points**), custom design system Minor (**1 point**), advanced search Minor (**1 point**), secured public API Major (**2 points**), recipe data export/import Minor (**1 point**) and health/status/backups Minor (**1 point**) total **11 of 14 target points**, leaving **3 points**. Other rows describe possibilities and remaining gaps; this table does not claim a completed 14-point total. Custom modules require their own scope, implementation evidence, contributor attribution and justification.
 
 ### Custom design system — Module 04 (1 point, complete)
 
@@ -256,6 +273,8 @@ The recipe sorts are **Title: A–Z**, **Title: Z–A**, **Highest rated** and *
 This implementation loads the full approved collection through the existing `/api/recipes/all_recipes/` API and performs recipe filtering, sorting and pagination in the browser. No backend or API-response change was needed. Server-side search and pagination would be needed to reduce transfer and browser work for a large catalogue. Creation dates are absent from the summary response, so the controls do not offer a newest-first sort.
 
 Roh requested and directed the Codex-assisted Module05 frontend implementation, building on the shared frontend by Roh and Hugo and the existing approved-recipe API by Tomaz. On October 30, 2026, Roh reported passing the new controls' appearance, combined category/ingredient filtering and clearing, minimum-rating filtering and all four sorts. Using 30 marked sample recipes, Roh also verified Next/Previous, the 6/12/24-item page sizes and ranges, applying a filter from a later page returning to page 1, refresh persistence and browser Back restoring the earlier search/page. These user-run checks, the source review and the purpose/implementation/contributor documentation complete Module05 for **1 point**, bringing the completed subtotal to **7/14**. Roh subsequently confirmed the temporary sample cleanup was done. See [WORK_LOG.md](WORK_LOG.md) for the actual verification and cleanup record.
+
+<a id="public-api-guide"></a>
 
 ### Secured public recipe API — Module 06 (2 points, complete)
 
@@ -432,9 +451,11 @@ Clean up the temporary recipe **before restarting the connector or exporting sha
 
 On October 31, 2026, Roh reported that the converted Public API Tester works well. A subsequent user-run check returned HTTP 200 for all five public API paths (including recipe19 detail), and HTTP 401 for both missing and invalid keys; all seven checks passed. The subsequent quota check returned 60 HTTP 200 responses and one HTTP 429 with `Retry-After: 49`, completing the final required Module06 checklist item. Module06 is complete for **2 points**; its completion brought the subtotal at that stage to **9/14**. Cross-account permissions, key-lifecycle regressions and post-limit recovery remain optional and unverified; individual CRUD statuses have not been separately reported. Do not export temporary demonstration recipes as finished project data.
 
+<a id="recipe-data-guide"></a>
+
 ### Recipe data export/import — Module 07 (1 point, complete)
 
-This module lets signed-in users download recipe records to their computer and import multiple recipes from a file. Normal recipe saving keeps data in the website database. **Download JSON** writes a structured file with fields and ingredient/step lists; **Download CSV** writes spreadsheet rows. Both website formats include real recipe photos and can be imported back through the website. Roh directed the Codex-assisted Profile panel, private transfer endpoints, format validation and import-receipt integration, reusing Tomaz's recipe models/serializers and the shared Roh/Hugo account frontend. Roh reported both website import and export working well on October 31, 2026. This completes Module07 for **1 point**, bringing the completed total to **10/14**.
+This module lets signed-in users download recipe records to their computer and import multiple recipes from a file. Normal recipe saving keeps data in the website database. **Download JSON** writes a structured file with fields and ingredient/step lists; **Download CSV** writes spreadsheet rows. Both website formats include real recipe photos and can be imported back through the website. Roh directed the Codex-assisted Profile panel, private transfer endpoints, format validation and import-receipt integration, reusing Tomaz's recipe models/serializers and the shared Roh/Hugo account frontend. Roh reported both website import and export working well on October 31, 2026. This completed Module07 for **1 point**, bringing the subtotal at that stage to **10/14**.
 
 #### Load the website controls
 
@@ -492,7 +513,80 @@ Bulk restoration runs in a single PostgreSQL transaction into a **separate datab
 
 The exporter prepares files privately and publishes the manifest last. Individual file replacements are atomic, but the complete bundle is not replaced as one atomic operation; checksum checks reject mismatched new sidecars after an interrupted publication. Always transfer/stage the entire shared folder. The CLI extension preserves existing merge/photo/credential-exclusion behavior. The website controls add the import-receipt migration described above.
 
-On October 31, 2026, Roh reported the JSON/CSV downloads and then confirmed that both import and export work well. Together with the implemented file validation, bulk operations and README documentation, this completes the agreed Module07 checklist for **1 point**. The completed total is **10/14**. This records the user's functional acceptance without claiming specific batch sizes, rejection/recovery scenarios or a separate CLI restore result.
+On October 31, 2026, Roh reported the JSON/CSV downloads and then confirmed that both import and export work well. Together with the implemented file validation, bulk operations and README documentation, this completes the agreed Module07 checklist for **1 point**. The completed subtotal at that stage reached **10/14**. This records the user's functional acceptance without claiming specific batch sizes, rejection/recovery scenarios or a separate CLI restore result.
+
+### Health, status and automated backups — Module 08 (1 point, complete)
+
+This module gives visitors a service-availability page and protects the site's database and referenced photos with independent dated backups and an explicit recovery path. Roh directed the Codex-assisted health/status, scheduled worker, recovery-wrapper and documentation implementation, building on Nuno's Docker setup and the existing Codex-assisted data-sharing/photo helpers. Roh reported the setup works and supplied a completed automatic backup plus a successful separate-database restore on October 31, 2026. This completes Module08 for **1 point**, bringing the completed total to **11/14**.
+
+#### Start and check the status page
+
+With the project/PostgreSQL already running, load the new backend/frontend and backup worker from the repository root:
+
+```sh
+sh scripts/backups.sh start
+```
+
+This prepares private user-owned storage and local/rootless Docker user mapping, builds the three services and waits until healthy. The first backup starts automatically if no current backup exists or the last one is overdue; no 24-hour wait is needed for the first run. Startup can wait up to six minutes for the first complete backup, returning as soon as ready. Subsequent normal `sh scripts/start.sh` runs also prepare/start the worker. Neither helper sources or prints private `.env` contents.
+
+Open **https://localhost:8443/status**, or use the footer's **Status** link. It shows that the page loaded and whether the server and database respond. **Refresh status** checks immediately; automatic checks run every 30 seconds while the page is visible. `GET /api/health/` performs a real database `SELECT 1` and returns only service flags and a timestamp: HTTP 200 when ready or 503 when the database is unavailable. An unreachable server leaves database status unknown rather than claiming the database itself failed. Existing Compose PostgreSQL/backend/frontend health checks remain in use.
+
+#### Automated private backups
+
+The `backups` service uses PostgreSQL 17 tools and Python, with no Docker socket or host cron. It takes a backup when due while the service is running, defaults to every 24 hours and retains the latest 7 verified completed backups. A failed snapshot does not replace the previous completed copies; retry is scheduled after 60 seconds. Health requires a current heartbeat and a recent verified backup for the selected database/schema. If Docker is stopped, scheduling resumes when the service starts again.
+
+Each `data/backups/BACKUP_ID/` contains `database.dump`, `manifest.json` and `photos/` with the referenced recipe/profile files. The full database dump and photo references share one exported PostgreSQL snapshot. Brief locks on photo-reference/profile tables protect profile-photo deletion while files are copied; profile updates/photo changes can wait during this phase, while ordinary reads continue. Dumps/photos are checksummed and verified before the private pending directory is published as a completed dated directory. Retention removes only older recognized, verified completed snapshots after a new one succeeds; unknown or damaged directories are left for operator review.
+
+Private backups include account data and credential records. **Keep `data/backups/` out of Git and public shares**; it is ignored, directories use 0700 and files 0600. Keep another private copy on a different disk/computer for machine-loss recovery, along with the matching project code, private `.env` and any needed local CA/certificate configuration. The Dockerfile-specific build allowlist includes only the worker/photo helper and migration sources, excluding `.env`, data and unrelated backend files from that build context. Backups are separate from the deliberately shared/sanitized `data/shared-database/` export.
+
+#### Backup command reference
+
+Run these from the repository root through the wrapper so local/rootless Docker user mapping remains correct:
+
+| Task | Command | Result |
+| --- | --- | --- |
+| Load the feature | `sh scripts/backups.sh start` | Build/start the website and scheduler; an initial backup runs automatically when needed. PostgreSQL must already be running. |
+| List saved backups | `sh scripts/backups.sh list` | Show completed IDs, timestamps, database names and recipe/photo counts. |
+| Make an extra backup now | `sh scripts/backups.sh now` | Create an additional private dated database/photo copy. |
+| Check an existing backup | `sh scripts/backups.sh verify BACKUP_ID` | Check its integrity/schema without restoring it. Success prints `Backup verified: BACKUP_ID`. |
+| Restore a backup separately | `sh scripts/backups.sh restore BACKUP_ID` | Create a new recovery database and restore/reuse matching photos. Success prints `Restored database: NAME`; the website keeps its current selection. |
+| Activate a restored database | `sh scripts/backups.sh activate RESTORED_DATABASE_NAME` | Deliberately switch the website to that successful restore and recreate backend/backups. Use for an actual recovery. |
+
+Replace `BACKUP_ID` with an ID printed by `list`. Replace `RESTORED_DATABASE_NAME` with the exact name printed by a successful `restore`. Restoring and activating are separate actions: an ordinary recovery check can stop after the restore. Listing prints metadata rather than record contents or secrets. Scheduling is automatic; `now` is available for an additional copy. To change interval/retention, edit their settings in private `.env` and recreate/start the worker through the wrapper.
+
+#### Disaster recovery
+
+Keep private backups and matching code/configuration available. If PostgreSQL is stopped or its old selected database is lost, first start only the database server:
+
+```sh
+docker compose up -d --wait --wait-timeout 120 postgres
+```
+
+Choose an ID from `sh scripts/backups.sh list`, then restore it:
+
+```sh
+sh scripts/backups.sh restore BACKUP_ID
+```
+
+The recovery image is built from the current checkout. Recovery validates PostgreSQL 17, matching migration sources, metadata, archive size/hash and every photo hash/path before creating a database. It restores in one transaction into a new `recipes_recovery_...` database, compares the recipe count and installs missing photos. Existing matching photo files are reused; conflicting files are refused rather than overwritten. A successful restore prints `Restored database: NAME` and saves a private activation receipt. **The current website database selection is unchanged.** Failed recovery may leave an unselected database or added unused photos; it never drops the current database.
+
+For a real recovery, explicitly select the name printed by that successful restore:
+
+```sh
+sh scripts/backups.sh activate RESTORED_DATABASE_NAME
+```
+
+Activation requires the owned completed receipt and an existing restored database, then uses the existing safe `.env` selector and rebuilds/recreates **backend and backups** together so both follow the restored database. It preserves the previous database and waits up to six minutes for health. If service startup fails after selection, the command explicitly reports that `.env` was already changed; review the service error before retrying instead of deleting either database.
+
+After successful activation, refresh the shared bundle before the next normal startup or Git delivery:
+
+```sh
+sh scripts/export.sh
+```
+
+This prevents an older downloaded shared-data bundle from undoing the recovery through normal startup merge rules. Then use normal `sh scripts/start.sh` if frontend/TLS/startup preparation is needed. Preserve or restore the private `.env` and local certificate configuration separately on a replacement machine. Do not use the normal shared-data import/merge command as a substitute for selecting the chosen disaster backup.
+
+Source files: [health.py](backend/config/health.py), [StatusPage.jsx](frontend/src/pages/StatusPage.jsx), [backups-worker.py](scripts/backups-worker.py), [backups.sh](scripts/backups.sh), [backup-env.sh](scripts/backup-env.sh), the backup image and Compose service configuration. Documentation and saved-source reviews are complete. Roh reported the new setup works and supplied a completed-backup listing on October 31, 2026: `20261031T094946Z_84a9f9191644`, completed at `2026-10-31T09:49:46.951359+00:00`, containing **16 recipes and 17 photos**. Roh then successfully ran the restore command, which printed `Restored database: recipes_recovery_20261031t095520z_24a07a4cf410` and the optional activation instruction. The buildx/Bake warning did not prevent the observed build or restore. This completes the agreed Module08 verification and **1-point** checklist; the completed total is **11/14**. No activation was reported or needed for this verification. The current database selection is unchanged by the restore command.
 
 ## Individual Contributions
 
@@ -502,7 +596,7 @@ Names, 42 logins, project roles and GitHub accounts are confirmed in Team Inform
 | --- | --- | --- | --- | --- |
 | Tomaz | [theetom](https://github.com/theetom) | `toferrei` | Pending | Backend APIs and serializers for signup/login, profiles, recipes/moderation and changed-content guards, reviews/favorites, discovery and duplicate prevention. |
 | Nuno | [NunoAndrezo](https://github.com/NunoAndrezo) | `nneves-a` | Pending | Coordinated team communications and meeting dates; checked that the project's Docker setup and connections worked properly. |
-| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Pending | Frontend features credited above with Hugo, Vite integration and visual-output testing; Codex-assisted deployment/data-sharing work, Savour Studio design-system implementation, Module05 search filters/sorting/pagination and Module06 public API/automatic account-key/Profile integration and Module07 website/CLI JSON/CSV export/import integration with user-confirmed website import/export. Selected the visual direction and supplied references. Also performed and reported browser/API acceptance checks, including overlapping review/favorite writes, account isolation, stale-change rejection, extra recipe-card removal and Module05 filtering/sorting/pagination/URL restoration. Module06 accepted results include the working tester, all five path reads, missing/invalid-key rejection and the account rate-limit demonstration. Evidence is in [WORK_LOG.md](WORK_LOG.md). |
+| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Pending | Frontend features credited above with Hugo, Vite integration and visual-output testing; Codex-assisted deployment/data-sharing work, Savour Studio design-system implementation, Module05 search filters/sorting/pagination and Module06 public API/automatic account-key/Profile integration and Module07 website/CLI JSON/CSV export/import integration with user-confirmed website import/export, plus Module08 health/status/private-backup/recovery integration with a user-verified completed backup and separate-database restore. Selected the visual direction and supplied references. Also performed and reported browser/API acceptance checks, including overlapping review/favorite writes, account isolation, stale-change rejection, extra recipe-card removal and Module05 filtering/sorting/pagination/URL restoration. Module06 accepted results include the working tester, all five path reads, missing/invalid-key rejection and the account rate-limit demonstration. Evidence is in [WORK_LOG.md](WORK_LOG.md). |
 | Hugo | [Anzohs](https://github.com/Anzohs) | `hladeiro` | Pending | Frontend work with Roh on authentication/profile pages, recipe/moderation screens, reviews/favorites, discovery, refresh and policy pages; Vite integration and visual-output testing. |
 | Fabio | [FaMe1337](https://github.com/FaMe1337) | `famendes` | Pending | Supported both backend and frontend development and provided help as needed. |
 
@@ -515,9 +609,10 @@ Selected-module assignments, additional implementation challenges and their solu
 - Category browsing and related-recipe suggestions have unfinished UI paths; they are not counted as completed features here.
 - Advanced recipe search is user-verified and implemented in the browser over the full approved collection. Large-catalogue transfer and processing would benefit from server-side search/pagination.
 - Module06 is complete for 2 points based on the working tester report and passed five-path/API-key rejection/account-quota checks, bringing the completed total at that stage to 9/14. Optional cross-account, key-lifecycle and post-limit recovery regressions have not been verified; individual CRUD statuses were not separately supplied.
+- Module08 is complete for 1 point after the working setup report, completed 16-recipe/17-photo backup and successful separate-database restore. The completed total is 11/14. Activation was not exercised because verification left the current website database selected. Local backups require Docker to run and a separate private off-machine copy for host-loss protection.
 - Friends/chat/presence, OAuth and 2FA are not implemented.
 - Photo URLs are served publicly. Pending/rejected recipe page/API access is restricted separately; media serving remains the project's accepted scope.
-- Module07 is complete for 1 point after Roh confirmed the Profile import/export workflow works, bringing the completed total to 10/14. Specific forced validation-failure/recovery scenarios and CLI restore outcomes were not reported. Website downloads embed photos; the separate CLI readable files use photo references and remain distinct from portable website files.
+- Module07 is complete for 1 point after Roh confirmed the Profile import/export workflow works, bringing the subtotal at that stage to 10/14. Specific forced validation-failure/recovery scenarios and CLI restore outcomes were not reported. Website downloads embed photos; the separate CLI readable files use photo references and remain distinct from portable website files.
 - The shared-folder workflow preserves older duplicate-name records and has cross-computer conflict limitations.
 
 The Savour Studio desktop/mobile layout, menu focus, form-validation and mobile-navigation-clearance checks were performed and reported as passed by Roh on October 29, 2026, as detailed in Module 04 above. Source review and user-run verification are recorded separately in [WORK_LOG.md](WORK_LOG.md).
@@ -552,5 +647,7 @@ For Module05, Roh directed Codex-assisted implementation of the frontend recipe 
 For Module06, Roh directed Codex-assisted implementation of the isolated public API, automatic account-key lifecycle, private Profile controls, database/proxy rate limits and this usage documentation, reusing Tomaz's existing recipe validation/write flows and the shared account frontend by Roh and Hugo. Source review and Roh's user-run working-tester, five-path, API-key rejection and rate-limit results are recorded separately. These accepted results complete the agreed 2-point checklist; optional security/lifecycle/recovery checks remain unverified. No raw API keys are included in this documentation.
 
 For Module07, Roh directed Codex-assisted implementation of private Profile download/import controls, portable JSON/CSV with photos, existing-rule batch validation and transactional/idempotent import receipts, plus the earlier CLI recipe-record exports/checksum/count integration and this documentation. Existing recipe models/serializers, account frontend and snapshot tools are reused. Source reviews are recorded separately from Roh's October 31, 2026 confirmation that website import and export work well.
+
+For Module08, Roh directed Codex-assisted implementation of the sanitized database health endpoint, public Status page, PostgreSQL/photo snapshot worker, private storage/scheduling/retention, receipt-bound recovery commands and this README. Existing Docker/data-sharing/photo helpers are reused. Source reviews are recorded separately from Roh's October 31, 2026working setup report, 16-recipe/17-photo backup listing and successful separate-database restore. Activation was not performed in the reported verification.
 
 Team members must review, test and understand the implementation attributed to them.

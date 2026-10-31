@@ -16,6 +16,7 @@ import PublicUserProfilePage from './pages/PublicUserProfilePage'
 import RecipePage from './pages/RecipePage'
 import SearchResultsPage from './pages/SearchResultsPage'
 import SignupPage from './pages/SignupPage'
+import StatusPage from './pages/StatusPage'
 import TermsPage from './pages/TermsPage'
 import { isViewerAuthenticated } from './data/siteData'
 import './styles/savour-system.css'
@@ -44,7 +45,7 @@ function EditRecipeRoute() {
 function AppShell() {
   const location = useLocation()
   const isHomePage = location.pathname === '/'
-  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+(?:\/edit)?|\/results\/search|\/users\/[^/]+|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile(?:\/recipes)?|\/staff|\/privacy|\/terms)$/
+  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+(?:\/edit)?|\/results\/search|\/users\/[^/]+|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile(?:\/recipes)?|\/staff|\/privacy|\/status|\/terms)$/
   const hideShell = !knownPathPattern.test(location.pathname)
   const mainClassName = isHomePage ? 'page-main page-main--home' : 'page-main'
 
@@ -121,6 +122,7 @@ function AppShell() {
           />
           <Route path="/staff" element={<AdminPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/status" element={<StatusPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

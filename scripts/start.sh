@@ -9,7 +9,7 @@ fail() {
 usage() {
     printf '%s\n' \
         'Usage: sh scripts/start.sh' \
-        'Load shared records/photos, retain local recipes, start Recipe Site and Public API Tester, and export records/photos.' \
+        'Load shared records/photos, retain local recipes, start Recipe Site, Public API Tester and private backups, and export records/photos.' \
         'Optional: --import SNAPSHOT_ID_OR_PATH explicitly loads a shared copy.'
 }
 
@@ -69,6 +69,10 @@ case "$security_options" in
     *userns*) fail 'Remapped rootful Docker cannot safely write your browser stores. Use your permitted local/rootless Docker setup.' ;;
     *) tools_user="$(id -u):$(id -g)" ;;
 esac
+
+# Keep dated private backups owned by this local user, including rootless Docker.
+. "$project_directory/scripts/backup-env.sh"
+prepare_backup_environment "$project_directory" "$tools_user"
 
 # Compose alone resolves private .env values. Never print or execute that file.
 if ! compose_configuration=$(docker compose config --format json); then
@@ -264,7 +268,7 @@ if [ -e "$reload_marker" ]; then
     [ -z "$meal_planner_container" ] || recreate_meal_planner=1
 fi
 printf '%s\n' 'Building and starting Compose services; existing backend migrations may be applied.'
-docker compose up -d --build --wait --wait-timeout 120
+docker compose up -d --build --wait --wait-timeout 360
 if [ "$recreate_frontend" -eq 1 ]; then
     printf '%s\n' 'Recreating frontend to load the updated local certificate.'
     docker compose up -d --no-deps --force-recreate --wait --wait-timeout 120 frontend
@@ -283,5 +287,7 @@ printf '%s\n' 'Share updates with Git commit/push; other computers load them on 
 
 printf '\nOpen https://%s:%s\n' "$server_name" "$https_port"
 printf 'Public API Tester: http://localhost:%s\n' "$meal_planner_port"
+printf 'Status: https://%s:%s/status\n' "$server_name" "$https_port"
+printf '%s\n' 'Private dated backups: data/backups/ (list with sh scripts/backups.sh list).'
 printf '%s\n' 'Fully restart Chrome after trust setup, including incognito windows.'
 printf '%s\n' 'Browser trust must be checked in the actual evaluation browser; this setup does not change system-client trust.'

@@ -145,6 +145,87 @@ services:
       retries: 5
       start_period: 10s
 
+  backups:
+    image: transcendence-private-backups:local
+    build:
+      context: .
+      dockerfile: scripts/backups.Dockerfile
+    init: true
+    restart: unless-stopped
+    user: "${BACKUP_USER:-65534:65534}"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: recipes
+      PGDATABASE: "${DJANGO_POSTGRES_DB:-recipes}"
+      PGPASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}"
+      PGCONNECT_TIMEOUT: "5"
+      BACKUP_INTERVAL_SECONDS: "${BACKUP_INTERVAL_SECONDS:-86400}"
+      BACKUP_KEEP_COUNT: "${BACKUP_KEEP_COUNT:-7}"
+    volumes:
+      - django_media:/media:ro
+      - type: bind
+        source: ./data/backups
+        target: /backups
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "/app/backups-worker.py", "health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 330s
+
+  backup-restore:
+    profiles: ["recovery"]
+    image: transcendence-private-backups:local
+    build:
+      context: .
+      dockerfile: scripts/backups.Dockerfile
+    init: true
+    restart: "no"
+    user: "0:0"
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: recipes
+      PGDATABASE: "${DJANGO_POSTGRES_DB:-recipes}"
+      PGPASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}"
+      PGCONNECT_TIMEOUT: "5"
+    volumes:
+      - django_media:/media
+      - type: bind
+        source: ./data/backups
+        target: /backups
+        read_only: true
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    command: ["list"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   django_static:
