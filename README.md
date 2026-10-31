@@ -17,6 +17,7 @@ The user and operator guides are kept together in this README:
 | Guide | What it covers |
 | --- | --- |
 | [Public API setup and usage](#public-api-guide) | Account API keys, endpoint paths, request examples and rate limits. |
+| [JSON API responses](#json-api-responses) | Disable the DRF HTML viewer, load the setting and check account/moderation access. |
 | [Public API Tester](#separate-public-api-tester) | Open the tester, connect a key and demonstrate GET/POST/PUT/DELETE. |
 | [Recipe JSON/CSV downloads and imports](#recipe-data-guide) | Use the Profile buttons to download, check and import recipe files. |
 | [Recipe analytics dashboard](#recipe-analytics-guide) | Open interactive charts, choose dates and filters, export results and check live updates. |
@@ -109,6 +110,22 @@ docker compose exec backend python manage.py createsuperuser
 ```
 
 Website staff status and Django model permissions are distinct: access to `/staff` does not by itself grant every Django-admin permission.
+
+### JSON API responses
+
+DRF API routes use JSON-only response renderers. Opening `/api/recipes/` displays JSON instead of DRF's browsable HTML page and request forms. Django REST Framework still handles the API, and existing authentication, permission checks and upload parsers remain configured as before. Django administration at `/admin/` remains available for account/permission demonstrations. Direct address-bar requests do not include the website's saved Token header, so protected URLs can reject them even when the website is signed in.
+
+With the project already running, load the backend setting:
+
+```sh
+docker compose up -d --no-deps --build --wait --wait-timeout 120 backend
+```
+
+User-run verification status (November 1, 2026):
+
+1. **Passed:** JSON display at `https://localhost:8443/api/recipes/`. Roh supplied the expected recipe JSON with `best_average`, `most_reviews` and `recently_added` sections.
+2. **Pending:** Through the website, confirm signup, login and staff approval of a disposable pending recipe still work.
+3. **Pending:** Without API credentials, open `https://localhost:8443/api/recipes/all_recipes/pending/` and confirm access is denied with a JSON permission error (401 or 403).
 
 ### Stop and inspect services
 
