@@ -101,7 +101,7 @@ docker compose stop
 
 ### Shared project data
 
-The current transfer folder is `data/shared-database/`, containing `shared-data`, `manifest.json` and referenced photos. Normal startup loads a changed downloaded copy, retains local-only recipes and linked records, and exports the combined result. Git delivery remains manual.
+The current transfer folder is `data/shared-database/`, containing `shared-data`, `manifest.json`, referenced photos, and (after a new export) actual recipe records in `recipes.json` and `recipes.csv`. Normal startup loads a changed downloaded copy, retains local-only recipes and linked records, and exports the combined result. Git delivery remains manual.
 
 To export changes made since startup:
 
@@ -199,14 +199,14 @@ The team confirmed the frontend/backend credits below. Roh and Hugo also handled
 | Discovery | Roh and Hugo (frontend); Tomaz (existing backend); Roh (Codex-assisted Module05 implementation and browser verification). | Approved recipe-title/user-name search, public author links, recent recipes and 30-day rating/review rankings with real photo previews. Recipe search has user-verified category/ingredient/minimum-rating filters, title/rating/review sorting and pagination. | `HomePage.jsx`, `SearchResultsPage.jsx`, `recipeSearch.js`, `RecipePreviewCard.jsx` |
 | Public recipe API | Roh (Codex-assisted Module06 integration), reusing Tomaz's recipe validation and write flows and the shared Roh/Hugo account frontend. | Separate versioned API with automatic account keys at first sign-in, private Profile key controls, expiry/revocation/rotation, five database paths and application/proxy rate limits. API actions follow website account permissions. Module06 is complete: the user reports the tester works, and user-run endpoint, API-key rejection and account rate-limit checks passed. | `backend/public_api/`, login/Profile components, `frontend/nginx.conf`, API section below |
 | Duplicate prevention | Roh and Hugo (frontend); Tomaz (backend). | Website names reuse existing IDs ignoring case/outer spaces; repeated ingredient/category rows are rejected, including direct API submissions. | Recipe serializers, `AddRecipePage.jsx` |
-| Local deployment/data transfer | Nuno (Docker setup/connection checks); Roh (Codex-assisted deployment/data-sharing work). | HTTPS startup, persistent volumes, health checks and shared database/photo import/export. | Compose, `frontend/nginx.conf`, `scripts/` |
+| Local deployment/data transfer | Nuno (Docker setup/connection checks); Roh (Codex-assisted deployment/data-sharing work). | HTTPS startup, persistent volumes, health checks, shared database/photo import/export and Module07 JSON/CSV recipe exports and website imports (user-confirmed working). | Compose, `frontend/nginx.conf`, `scripts/` |
 | Project policies | Roh and Hugo (frontend). | Public Privacy and Terms pages describe current data collection, public visibility, submission rules, moderation and deletion; footer and reciprocal links are defined. | `PrivacyPage.jsx`, `TermsPage.jsx`, `SiteFooter.jsx` |
 
 The agreed recipe-admin feature scope has been accepted by the user. Qualification for a particular subject module still depends on that module's complete requirements and its evaluation demonstration.
 
 ## Modules
 
-The combined React + Django frameworks Major, Django ORM Minor, advanced permissions Major, custom design system Minor, advanced recipe search Minor and secured public API Major are complete, with contributors recorded below. Four planned modules remain to qualify, and remaining contributor assignments are unfinished. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
+The combined React + Django frameworks Major, Django ORM Minor, advanced permissions Major, custom design system Minor, advanced recipe search Minor, secured public API Major and recipe data export/import Minor are complete, with contributors recorded below. Three planned modules remain to qualify, and remaining contributor assignments are unfinished. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
 
 | Module | Points | Current source evidence / remaining qualification |
 | --- | --- | --- |
@@ -220,11 +220,11 @@ The combined React + Django frameworks Major, Django ORM Minor, advanced permiss
 | Standard user management — Major | 2 | Profiles/authentication exist; friends, online status and a default avatar remain absent. |
 | User interaction — Major | 2 | Profiles/reviews exist; the module also requires chat and friends. |
 | Health/status/backups — Minor | 1 | Container health checks and automatic startup exports exist; a status page and complete recovery demonstration remain. |
-| Data export/import — Minor | 1 | Validated PostgreSQL bulk snapshot transfer exists; multiple record-export formats remain absent. JSON manifests are metadata rather than another record export. |
+| Data export/import — Minor | 1 | Module07 is complete: Profile → Recipe data provides own-recipe selection, portable JSON/CSV downloads with photos, file validation/preview and transactional bulk imports as new pending copies. Digest-bound import receipts support result checks and safe same-request retries. Roh reported both import and export working well on October 31, 2026, following the JSON/CSV downloads. The existing snapshot tools also export readable JSON/CSV and validate bulk restores. Its 1 point is included. Contributor: Roh (Codex-assisted integration), reusing Tomaz's recipe models/validation and the shared account frontend. |
 | Additional browsers — Minor | 1 | Requires completed feature checks in two additional browsers and documented limitations. No complete evidence is recorded. |
 | Accessibility — Major | 2 | Labels/ARIA/native dialogs help, but source review does not establish full WCAG 2.1 AA compliance. |
 
-The completed frameworks Major (**2 points**), Django ORM Minor (**1 point**), advanced permissions Major (**2 points**), custom design system Minor (**1 point**), advanced search Minor (**1 point**) and secured public API Major (**2 points**) total **9 of 14 target points**, leaving **5 points**. Other rows describe possibilities and remaining gaps; this table does not claim a completed 14-point total. Custom modules require their own scope, implementation evidence, contributor attribution and justification.
+The completed frameworks Major (**2 points**), Django ORM Minor (**1 point**), advanced permissions Major (**2 points**), custom design system Minor (**1 point**), advanced search Minor (**1 point**), secured public API Major (**2 points**) and recipe data export/import Minor (**1 point**) total **10 of 14 target points**, leaving **4 points**. Other rows describe possibilities and remaining gaps; this table does not claim a completed 14-point total. Custom modules require their own scope, implementation evidence, contributor attribution and justification.
 
 ### Custom design system — Module 04 (1 point, complete)
 
@@ -259,7 +259,7 @@ Roh requested and directed the Codex-assisted Module05 frontend implementation, 
 
 ### Secured public recipe API — Module 06 (2 points, complete)
 
-The public API lets an external client browse approved recipes and submit or manage recipes through the same account permissions and recipe rules used by the website. Its separate base path is **`https://localhost:8443/api/public/v1`** with the default configuration. Each active website account receives its own designated API key at first successful sign-in; normal users manage it from their private Profile instead of an administrator terminal. This API uses that dedicated key rather than the website login token. Roh directed the Codex-assisted account-key, Profile, rate-limit and endpoint integration, reusing Tomaz's existing recipe validation and transactional create/edit/delete flows and the shared Roh/Hugo account frontend. Roh reports the tester works, and all five public path reads plus missing/invalid-key rejection have passed user-run checks. On October 31, 2026, the user also recorded 60 HTTP 200 responses followed by HTTP 429 with `Retry-After: 49`. This completes the agreed Module06 checklist for **2 points**, bringing the completed total to **9/14**.
+The public API lets an external client browse approved recipes and submit or manage recipes through the same account permissions and recipe rules used by the website. Its separate base path is **`https://localhost:8443/api/public/v1`** with the default configuration. Each active website account receives its own designated API key at first successful sign-in; normal users manage it from their private Profile instead of an administrator terminal. This API uses that dedicated key rather than the website login token. Roh directed the Codex-assisted account-key, Profile, rate-limit and endpoint integration, reusing Tomaz's existing recipe validation and transactional create/edit/delete flows and the shared Roh/Hugo account frontend. Roh reports the tester works, and all five public path reads plus missing/invalid-key rejection have passed user-run checks. On October 31, 2026, the user also recorded 60 HTTP 200 responses followed by HTTP 429 with `Retry-After: 49`. This completed the agreed Module06 checklist for **2 points**, bringing the completed total at that stage to **9/14**.
 
 #### Load the implementation
 
@@ -430,7 +430,69 @@ The panel displays actual upstream methods, public API paths, statuses and respo
 
 Clean up the temporary recipe **before restarting the connector or exporting shared data**. Tracking is process memory only and can be lost when its browser cookie expires or the bounded session is evicted; if so, locate the named recipe in Recipe Site and use staff cleanup there. If a write response is uncertain, the panel blocks further writes until a read reconciles the known recipe; if a create returned no usable ID, check Recipe Site rather than creating repeated copies. Deleting the record follows the existing backend policy for retained photo files; the demo does not change that policy.
 
-On October 31, 2026, Roh reported that the converted Public API Tester works well. A subsequent user-run check returned HTTP 200 for all five public API paths (including recipe19 detail), and HTTP 401 for both missing and invalid keys; all seven checks passed. The subsequent quota check returned 60 HTTP 200 responses and one HTTP 429 with `Retry-After: 49`, completing the final required Module06 checklist item. Module06 is complete for **2 points** and the completed subtotal is **9/14**. Cross-account permissions, key-lifecycle regressions and post-limit recovery remain optional and unverified; individual CRUD statuses have not been separately reported. Do not export temporary demonstration recipes as finished project data.
+On October 31, 2026, Roh reported that the converted Public API Tester works well. A subsequent user-run check returned HTTP 200 for all five public API paths (including recipe19 detail), and HTTP 401 for both missing and invalid keys; all seven checks passed. The subsequent quota check returned 60 HTTP 200 responses and one HTTP 429 with `Retry-After: 49`, completing the final required Module06 checklist item. Module06 is complete for **2 points**; its completion brought the subtotal at that stage to **9/14**. Cross-account permissions, key-lifecycle regressions and post-limit recovery remain optional and unverified; individual CRUD statuses have not been separately reported. Do not export temporary demonstration recipes as finished project data.
+
+### Recipe data export/import — Module 07 (1 point, complete)
+
+This module lets signed-in users download recipe records to their computer and import multiple recipes from a file. Normal recipe saving keeps data in the website database. **Download JSON** writes a structured file with fields and ingredient/step lists; **Download CSV** writes spreadsheet rows. Both website formats include real recipe photos and can be imported back through the website. Roh directed the Codex-assisted Profile panel, private transfer endpoints, format validation and import-receipt integration, reusing Tomaz's recipe models/serializers and the shared Roh/Hugo account frontend. Roh reported both website import and export working well on October 31, 2026. This completes Module07 for **1 point**, bringing the completed total to **10/14**.
+
+#### Load the website controls
+
+With the existing project/PostgreSQL running, rebuild the backend and frontend:
+
+```sh
+docker compose up -d --no-deps --build --wait --wait-timeout 120 backend frontend
+```
+
+Backend startup applies recipe migration `0008_recipe_import_receipt`; the frontend rebuild loads the Profile controls. This migration changes the sharing fingerprint. Rebuild/migrate the existing selected database directly first; an older shared snapshot may fail the normal launcher's fingerprint check before that migration can run. After checking the feature and cleaning up unwanted temporary recipes, run `sh scripts/export.sh` to refresh the shared bundle for the new schema before the next normal shared-data startup or Git delivery. The website workflow is user-confirmed working; detailed build/migration and CLI export output was not supplied.
+
+#### Use Profile → Recipe data
+
+1. Sign in normally and open **Profile → Recipe data**. No public API key is needed.
+2. Select one or more of your own recipes and choose **Download JSON** or **Download CSV**. The file goes to the browser's downloads. Select multiple recipes for a bulk export.
+3. Under **Import recipes**, choose a JSON or CSV file downloaded from this section, then click **Check file**. This validates the whole batch and its photos without saving recipes, then lists the recipe names or row/field errors.
+4. Click **Import N recipes** after reviewing the names. The whole batch becomes new copies owned by your account, pending approval even for staff. Existing recipes, ownership and moderation decisions are not overwritten. Imported copies appear in your own recipes after refresh/live refresh.
+5. If a response is lost, use **Check import result** or **Retry same import** with the same file. The saved request ID and digest let the server return the existing result without creating that batch twice. A not-yet-confirmed result may still be running; retain the same request rather than starting another batch.
+
+The website accepts **1–25 recipes** and files up to **20 MiB**, with one or two JPEG/PNG/GIF/WebP photos per recipe (each at most **5 MiB**). Transfer records support up to 100 ingredients, 50 categories and 200 steps, using the existing field lengths, positive quantities, unique names/step numbers and image-byte validation. JSON includes a `recipe-transfer` marker and version. CSV has a fixed versioned header and nested JSON cells for ingredients/categories/steps/photos; its spreadsheet escaping is reversible to preserve leading apostrophes and formula-like text. Photos are embedded in both formats. Use the original downloaded CSV for import, since a spreadsheet editor can truncate large photo cells. The website files contain recipe contents, not account credentials, owner IDs, reviews or moderation instructions.
+
+Private website-token endpoints under `/api/me/recipe-data/` provide own-recipe metadata, export, validation, import and receipt status. Exports lock selected recipe rows while reading their related content. Every import is revalidated, and its receipt, recipes and photo database rows commit in one transaction; failures roll back the whole batch and remove newly saved photos. Only a request ID and file digest are kept for recovery in the browser session, never the uploaded file or any new credential. If browser storage is unavailable, the panel asks the user to keep the page open until the result is confirmed.
+
+Source files: [RecipeDataPanel.jsx](frontend/src/components/RecipeDataPanel.jsx), [recipeTransfer.js](frontend/src/data/recipeTransfer.js), [transfer_views.py](backend/recipes/transfer_views.py), [transfer_formats.py](backend/recipes/transfer_formats.py) and the import-receipt model/migration. Source reviews and Roh's working website download/import confirmation are recorded separately in WORK_LOG.md; no individual HTTP statuses, batch counts or forced failure/recovery outcomes were supplied.
+
+#### Existing project snapshot tools
+
+The CLI workflow remains available for project-wide backups/transfers. Its readable `recipe-records` files refer to shared photo blobs; they are a different format from the self-contained website downloads. Use the Profile controls to import website JSON/CSV files. Use the complete PostgreSQL bundle with the project snapshot importer.
+
+The normal export command now prepares both readable formats during the same backend-write pause used for the database snapshot:
+
+```sh
+sh scripts/export.sh
+```
+
+It saves these files in `data/shared-database/`:
+
+| File | Actual contents |
+| --- | --- |
+| `recipes.json` | A versioned document with a `recipes` array containing every recipe's title, description, owner ID/username, date, moderation status, revision, full ingredient quantities/units, categories, ordered steps and image references. |
+| `recipes.csv` | One row per recipe with the same fields and a snapshot ID. Ingredients, categories, steps and images are JSON arrays inside CSV cells. |
+| `shared-data`, `manifest.json`, `photos/` | The existing PostgreSQL bulk snapshot, validation metadata and referenced recipe/profile photo blobs. These remain the complete import bundle. |
+
+The readable files contain actual records, not just snapshot metadata. Both are generated from one ordered recipe query; the helper streams records with a 16 MiB limit per structured recipe row. Photo references point to the matching `photos/` blobs in the same shared folder. JSON preserves original text. CSV uses UTF-8 and quoted fields for commas/quotes/newlines; formula-like scalar text is prefixed with an apostrophe for spreadsheet use. Account emails, passwords, login tokens and API keys are not included in either readable recipe export. Empty catalogues produce an empty JSON array and a CSV header.
+
+The **CLI importer** uses the complete PostgreSQL snapshot bundle, rather than importing edits to its readable JSON/CSV sidecars:
+
+```sh
+python3 scripts/share-postgres.py import data/shared-database
+```
+
+This checks snapshot format/version, migration fingerprint, archive size/header, photo index and blob hashes before restoring. New bundles also require both readable exports to match their exact filenames, byte sizes and SHA-256 checksums. Snapshots without the optional `record_exports` metadata remain supported when their schema/migration fingerprint matches the checkout. Damaged new export files are rejected before a database is created or selected.
+
+Bulk restoration runs in a single PostgreSQL transaction into a **separate database**. For new bundles, its recipe count must match the exported count before a completed restore receipt is saved. A fresh successful import prints `Validated bulk recipe import: N recipes.` followed by the restored database name. This command does not change the website's selected database; the existing startup import/merge workflow is used when selection is wanted. Matching downloaded records take precedence and local-only recipes are retained under the existing merge rules.
+
+The exporter prepares files privately and publishes the manifest last. Individual file replacements are atomic, but the complete bundle is not replaced as one atomic operation; checksum checks reject mismatched new sidecars after an interrupted publication. Always transfer/stage the entire shared folder. The CLI extension preserves existing merge/photo/credential-exclusion behavior. The website controls add the import-receipt migration described above.
+
+On October 31, 2026, Roh reported the JSON/CSV downloads and then confirmed that both import and export work well. Together with the implemented file validation, bulk operations and README documentation, this completes the agreed Module07 checklist for **1 point**. The completed total is **10/14**. This records the user's functional acceptance without claiming specific batch sizes, rejection/recovery scenarios or a separate CLI restore result.
 
 ## Individual Contributions
 
@@ -440,7 +502,7 @@ Names, 42 logins, project roles and GitHub accounts are confirmed in Team Inform
 | --- | --- | --- | --- | --- |
 | Tomaz | [theetom](https://github.com/theetom) | `toferrei` | Pending | Backend APIs and serializers for signup/login, profiles, recipes/moderation and changed-content guards, reviews/favorites, discovery and duplicate prevention. |
 | Nuno | [NunoAndrezo](https://github.com/NunoAndrezo) | `nneves-a` | Pending | Coordinated team communications and meeting dates; checked that the project's Docker setup and connections worked properly. |
-| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Pending | Frontend features credited above with Hugo, Vite integration and visual-output testing; Codex-assisted deployment/data-sharing work, Savour Studio design-system implementation, Module05 search filters/sorting/pagination and Module06 public API/automatic account-key/Profile integration. Selected the visual direction and supplied references. Also performed and reported browser/API acceptance checks, including overlapping review/favorite writes, account isolation, stale-change rejection, extra recipe-card removal and Module05 filtering/sorting/pagination/URL restoration. Module06 accepted results include the working tester, all five path reads, missing/invalid-key rejection and the account rate-limit demonstration. Evidence is in [WORK_LOG.md](WORK_LOG.md). |
+| Roh | [IDsuroh](https://github.com/IDsuroh) | `suroh` | Pending | Frontend features credited above with Hugo, Vite integration and visual-output testing; Codex-assisted deployment/data-sharing work, Savour Studio design-system implementation, Module05 search filters/sorting/pagination and Module06 public API/automatic account-key/Profile integration and Module07 website/CLI JSON/CSV export/import integration with user-confirmed website import/export. Selected the visual direction and supplied references. Also performed and reported browser/API acceptance checks, including overlapping review/favorite writes, account isolation, stale-change rejection, extra recipe-card removal and Module05 filtering/sorting/pagination/URL restoration. Module06 accepted results include the working tester, all five path reads, missing/invalid-key rejection and the account rate-limit demonstration. Evidence is in [WORK_LOG.md](WORK_LOG.md). |
 | Hugo | [Anzohs](https://github.com/Anzohs) | `hladeiro` | Pending | Frontend work with Roh on authentication/profile pages, recipe/moderation screens, reviews/favorites, discovery, refresh and policy pages; Vite integration and visual-output testing. |
 | Fabio | [FaMe1337](https://github.com/FaMe1337) | `famendes` | Pending | Supported both backend and frontend development and provided help as needed. |
 
@@ -452,9 +514,10 @@ Selected-module assignments, additional implementation challenges and their solu
 
 - Category browsing and related-recipe suggestions have unfinished UI paths; they are not counted as completed features here.
 - Advanced recipe search is user-verified and implemented in the browser over the full approved collection. Large-catalogue transfer and processing would benefit from server-side search/pagination.
-- Module06 is complete for 2 points based on the working tester report and passed five-path/API-key rejection/account-quota checks, bringing the completed total to 9/14. Optional cross-account, key-lifecycle and post-limit recovery regressions have not been verified; individual CRUD statuses were not separately supplied.
+- Module06 is complete for 2 points based on the working tester report and passed five-path/API-key rejection/account-quota checks, bringing the completed total at that stage to 9/14. Optional cross-account, key-lifecycle and post-limit recovery regressions have not been verified; individual CRUD statuses were not separately supplied.
 - Friends/chat/presence, OAuth and 2FA are not implemented.
 - Photo URLs are served publicly. Pending/rejected recipe page/API access is restricted separately; media serving remains the project's accepted scope.
+- Module07 is complete for 1 point after Roh confirmed the Profile import/export workflow works, bringing the completed total to 10/14. Specific forced validation-failure/recovery scenarios and CLI restore outcomes were not reported. Website downloads embed photos; the separate CLI readable files use photo references and remain distinct from portable website files.
 - The shared-folder workflow preserves older duplicate-name records and has cross-computer conflict limitations.
 
 The Savour Studio desktop/mobile layout, menu focus, form-validation and mobile-navigation-clearance checks were performed and reported as passed by Roh on October 29, 2026, as detailed in Module 04 above. Source review and user-run verification are recorded separately in [WORK_LOG.md](WORK_LOG.md).
@@ -487,5 +550,7 @@ For the Savour Studio redesign, Roh selected and supplied six visual references.
 For Module05, Roh directed Codex-assisted implementation of the frontend recipe filters, sorting, URL settings and pagination using the existing API, plus a separate removable sample-data helper. Source review, Roh's passed user-run browser verification and user-confirmed sample cleanup are recorded separately; no new backend application implementation is attributed to this work.
 
 For Module06, Roh directed Codex-assisted implementation of the isolated public API, automatic account-key lifecycle, private Profile controls, database/proxy rate limits and this usage documentation, reusing Tomaz's existing recipe validation/write flows and the shared account frontend by Roh and Hugo. Source review and Roh's user-run working-tester, five-path, API-key rejection and rate-limit results are recorded separately. These accepted results complete the agreed 2-point checklist; optional security/lifecycle/recovery checks remain unverified. No raw API keys are included in this documentation.
+
+For Module07, Roh directed Codex-assisted implementation of private Profile download/import controls, portable JSON/CSV with photos, existing-rule batch validation and transactional/idempotent import receipts, plus the earlier CLI recipe-record exports/checksum/count integration and this documentation. Existing recipe models/serializers, account frontend and snapshot tools are reused. Source reviews are recorded separately from Roh's October 31, 2026 confirmation that website import and export work well.
 
 Team members must review, test and understand the implementation attributed to them.

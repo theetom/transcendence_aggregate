@@ -1,8 +1,16 @@
 from django.urls import path
 from . import views
+from .transfer_views import (
+    RecipeDataView, RecipeExportView, RecipeValidateView, RecipeImportView, RecipeImportStatusView,
+)
 
 
 urlpatterns = [
+    path("me/recipe-data/", RecipeDataView.as_view()),
+    path("me/recipe-data/export/", RecipeExportView.as_view()),
+    path("me/recipe-data/validate/", RecipeValidateView.as_view()),
+    path("me/recipe-data/import/", RecipeImportView.as_view()),
+    path("me/recipe-data/imports/<uuid:request_id>/", RecipeImportStatusView.as_view()),
     path("recipes/", views.recipe_landing_page),
     path("recipes/all_recipes/", views.recipe_list),
     path("recipes/manage/", views.managed_recipes),

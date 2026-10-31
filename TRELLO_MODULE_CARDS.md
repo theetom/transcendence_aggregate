@@ -12,11 +12,11 @@ Frameworks and ORM are already implemented. Both README entries are complete and
 
 Module 03 advanced permissions is implemented and user-verified. Its README entry and all three Trello tasks are complete.
 
-**Progress: Modules 01–06 complete — 9 of 14 target points.** Module06 implementation and README documentation are complete; the user reports Public API Tester works, all five public path reads and missing/invalid-key rejection passed, and the account quota returned 60 HTTP 200 responses followed by HTTP 429 with `Retry-After: 49`. Modules 07–10 remain pending; the four unqualified modules represent the remaining 5 target points. Module05 temporary sample cleanup remains user-confirmed.
+**Progress: Modules 01–07 complete — 10 of 14 target points.** Module07 implementation/documentation and agreed user acceptance are complete: after reporting the JSON/CSV downloads, Roh confirmed both website import and export work well on October 31, 2026. Modules 08–10 remain pending; the three unqualified modules represent the remaining 4 target points. Existing accepted Module05/06 checks and cleanup evidence remain preserved.
 
 The required README module information is the chosen module, its points, why/how it is implemented and its contributors (subject printed page 28 / PDF page 29). Exact file references, tutorials and separate evidence reports are not mandatory additions.
 
-Module 01's old card was archived because the connector cannot delete its excess native checklist items. Its verified replacement is linked below. Other module links are unchanged. Each card has one **Required work** native checklist; the items below record local progress. Module 04, Module 05 and Module 06 local updates have not been synchronized to Trello.
+Module 01's old card was archived because the connector cannot delete its excess native checklist items. Its verified replacement is linked below. Other module links are unchanged. Each card has one **Required work** native checklist; the items below record local progress. Module 04, Module 05, Module 06 and Module 07 local updates have not been synchronized to Trello.
 
 ## Card index
 
@@ -28,11 +28,11 @@ Module 01's old card was archived because the connector cannot delete its excess
 | 04 | [Custom design system](https://trello.com/c/8TOKaPvg/50-module-04-custom-design-system-minor-1-point) | Minor | 1 | 2 | Complete |
 | 05 | [Advanced recipe search](https://trello.com/c/TWEqD2Hb/51-module-05-advanced-recipe-search-minor-1-point) | Minor | 1 | 2 | Complete |
 | 06 | [Secured public recipe API](https://trello.com/c/ZvUXeo0H/52-module-06-secured-public-recipe-api-major-2-points) | Major | 2 | 5 | Complete |
-| 07 | [Recipe data export/import](https://trello.com/c/sonZzuGg/53-module-07-recipe-data-export-import-minor-1-point) | Minor | 1 | 4 | Pending |
+| 07 | [Recipe data export/import](https://trello.com/c/sonZzuGg/53-module-07-recipe-data-export-import-minor-1-point) | Minor | 1 | 4 | Complete |
 | 08 | [Health, status and automated backups](https://trello.com/c/T7ZPZQq9/54-module-08-health-status-and-automated-backups-minor-1-point) | Minor | 1 | 4 | Pending |
 | 09 | [Recipe analytics dashboard](https://trello.com/c/8fkox8yA/55-module-09-recipe-analytics-dashboard-major-2-points) | Major | 2 | 5 | Pending |
 | 10 | [Two additional browsers](https://trello.com/c/Djc38gP8/56-module-10-two-additional-browsers-minor-1-point) | Minor | 1 | 4 | Pending |
-| **Total** | **10 cards** | **4 Major + 6 Minor** | **14** | **31** | **6 complete; 4 pending** |
+| **Total** | **10 cards** | **4 Major + 6 Minor** | **14** | **31** | **7 complete; 3 pending** |
 
 ## [Module 01] React + Django frameworks — Major (2 points)
 
@@ -114,7 +114,7 @@ Module 01's old card was archived because the connector cannot delete its excess
 
 **Requirement:** Provide a public database API with a secured API key, rate limiting, documentation and at least five endpoints covering GET, POST, PUT and DELETE.
 
-**Current status:** Complete: a separate HTTPS `/api/public/v1/` API provides five database paths covering GET/POST/PUT/DELETE, automatic account-bound API keys and private Profile controls, secret digests/expiry, a shared per-account PostgreSQL quota and per-IP Nginx limit. Existing recipe validation/moderation/revision/photo rules and credential snapshot exclusions are preserved. README purpose/how/2-point/contributor and setup/key/endpoint/error/CRUD/quota documentation is complete. On October 31, the user reported Public API Tester works, supplied five public path HTTP 200 passes plus missing/invalid-key HTTP 401 passes, and then recorded 60 HTTP 200 responses followed by one HTTP 429 with `Retry-After: 49`. The final required rate-limit checklist item is complete, bringing Modules 01–06 to **9/14 points**. Optional cross-account/key-lifecycle/post-limit recovery tests were not run; individual CRUD statuses were not separately supplied. This local progress update has not been synchronized to Trello.
+**Current status:** Complete: a separate HTTPS `/api/public/v1/` API provides five database paths covering GET/POST/PUT/DELETE, automatic account-bound API keys and private Profile controls, secret digests/expiry, a shared per-account PostgreSQL quota and per-IP Nginx limit. Existing recipe validation/moderation/revision/photo rules and credential snapshot exclusions are preserved. README purpose/how/2-point/contributor and setup/key/endpoint/error/CRUD/quota documentation is complete. On October 31, the user reported Public API Tester works, supplied five public path HTTP 200 passes plus missing/invalid-key HTTP 401 passes, and then recorded 60 HTTP 200 responses followed by one HTTP 429 with `Retry-After: 49`. The final required rate-limit checklist item is complete, bringing Modules 01–06 at that stage to **9/14 points**. Optional cross-account/key-lifecycle/post-limit recovery tests were not run; individual CRUD statuses were not separately supplied. This local progress update has not been synchronized to Trello.
 
 **Required work:**
 
@@ -132,14 +132,14 @@ Module 01's old card was archived because the connector cannot delete its excess
 
 **Requirement:** Export data in multiple formats, import data with validation, and support bulk operations.
 
-**Current status:** Existing snapshots provide a foundation. Record exports must contain actual data, not only snapshot metadata.
+**Current status:** Complete: private Profile → Recipe data selects own recipes and downloads portable JSON/CSV files with actual contents/photos; either website format supports validation/preview and transactional bulk import as new pending owner copies. Strict field/photo/file validation precedes writes. A digest-bound per-user receipt commits with the batch, supporting result recovery and safe same-request retries. README 1-point/purpose/how/contributor/usage/limits documentation is complete. On October 31, 2026, following the reported JSON/CSV downloads, Roh confirmed both import and export work well. This functional acceptance completes all four required checklist items and adds 1 point, bringing Modules 01–07 to **10/14 points**. No specific batch counts, individual HTTP outcomes, forced rejection/recovery cases or separate CLI restore result were supplied. Earlier CLI exports and validated bulk snapshot tools remain available. This local update has not been synchronized to Trello.
 
 **Required work:**
 
-- [ ] Export actual data in multiple formats.
-- [ ] Import data with validation.
-- [ ] Support bulk operations on multiple records.
-- [ ] Record this module, its 1 point, why/how it is implemented, and contributors in README.
+- [x] Export actual data in multiple formats.
+- [x] Import data with validation.
+- [x] Support bulk operations on multiple records.
+- [x] Record this module, its 1 point, why/how it is implemented, and contributors in README.
 
 ---
 

@@ -5,7 +5,8 @@ Run from the host with the existing backend and postgres services running.
 Shared files are unencrypted and require no sharing key. Startup combines local
 recipes with a downloaded copy before selecting it; previous databases remain.
 Referenced recipe/profile photos travel with the database. Git push/pull remain
-manual; previous local databases and photo files are preserved.
+manual; previous local databases and photo files are preserved. Readable JSON
+and CSV exports carry actual recipe records alongside each new snapshot.
 """
 
 import argparse
@@ -259,6 +260,50 @@ class Operation:
         return major
 
 
+def verify_record_exports(directory, metadata):
+    """Check optional readable exports before restoring a new-format bundle."""
+    if (not isinstance(metadata, dict)
+            or set(metadata) != {"format_version", "recipe_count", "files"}
+            or type(metadata.get("format_version")) is not int
+            or metadata["format_version"] != 1
+            or type(metadata.get("recipe_count")) is not int
+            or metadata["recipe_count"] < 0
+            or not isinstance(metadata.get("files"), dict)
+            or set(metadata["files"]) != {"recipes.json", "recipes.csv"}):
+        fail("The recipe export metadata is invalid; existing data was preserved.")
+    for name in ("recipes.json", "recipes.csv"):
+        details = metadata["files"][name]
+        if (not isinstance(details, dict) or set(details) != {"bytes", "sha256"}
+                or type(details.get("bytes")) is not int or details["bytes"] <= 0
+                or not isinstance(details.get("sha256"), str)
+                or not HEX_DIGEST.fullmatch(details["sha256"])):
+            fail("The recipe export metadata is invalid; existing data was preserved.")
+        path = directory / name
+        if (path.is_symlink() or not path.is_file()
+                or path.stat().st_size != details["bytes"]
+                or digest(path) != details["sha256"]):
+            fail("A recipe export is missing or damaged; download the complete shared folder.")
+
+
+def collect_record_exports(operation, database, snapshot_id, photos):
+    script = ROOT / "scripts/recipe-record-exports.py"
+    if script.is_symlink() or not script.is_file():
+        fail("The recipe export helper is missing; no shared files were replaced.")
+    tools = runpy.run_path(str(script))
+    # Query once while website writes are paused; both formats use these rows.
+    with private_file(operation.directory / "recipe-records.ndjson") as stream:
+        operation.postgres(
+            "psql", "--no-password", "-X", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1",
+            "-U", "recipes", "-d", database, "-c", tools["RECIPE_RECORD_SQL"], output=stream,
+        )
+    try:
+        metadata = tools["build_exports"](operation.directory, snapshot_id, photos)
+    except (ValueError, TypeError, KeyError, UnicodeError):
+        fail("Recipe records could not be exported; no shared files were replaced.")
+    verify_record_exports(operation.directory, metadata)
+    return metadata
+
+
 def photo_script():
     path = ROOT / "scripts/shared-photos.py"
     if path.is_symlink() or not path.is_file():
@@ -438,6 +483,7 @@ def export_snapshot(operation):
                 output=stream,
             )
         photos, photo_directory = collect_photos(operation, database)
+        record_exports = collect_record_exports(operation, database, snapshot_id, photos)
     finally:
         try:
             # Older Compose versions support waiting on up, but not on start.
@@ -466,6 +512,7 @@ def export_snapshot(operation):
         "media_included": True,
         "media_sha256": media_hash,
         "photos": photos,
+        "record_exports": record_exports,
     }
     staged_manifest = operation.directory / "manifest.json"
     encoded_manifest = (json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n").encode()
@@ -479,6 +526,10 @@ def export_snapshot(operation):
     if present:
         if len(present) != 2 or any(path.is_symlink() or not path.is_file() for path in present):
             fail("The existing shared data pair is incomplete or unsafe; it was left unchanged.")
+    for name in record_exports["files"]:
+        target = SHARED / name
+        if target.is_symlink() or (target.exists() and not target.is_file()):
+            fail("A recipe export destination is unsafe; existing shared files were preserved.")
     # All files are content-named. Prepare the complete photo set before
     # advancing the source marker or replacing the database/manifest pair.
     publish_photos(photo_directory, photos)
@@ -486,13 +537,18 @@ def export_snapshot(operation):
     # export cannot make its next startup import its own just-saved data.
     record_initialized(database, manifest)
     data.replace(public_pair[0])
-    # Publish matching metadata last, after the complete database file is saved.
+    for name in record_exports["files"]:
+        (operation.directory / name).replace(SHARED / name)
+    # Each replacement is atomic, but the group is not. Publish metadata last;
+    # new manifests verify sidecar hashes; legacy manifests have no sidecars.
     staged_manifest.replace(public_pair[1])
     prune_photos(photos)
     # These files belong only to this completed export. Keep the current shared
     # pair, initialization marker and all import receipts outside this tree.
     shutil.rmtree(operation.directory)
     print("Shared records and photos saved: data/shared-database/")
+    print("Recipe records exported as JSON and CSV: " + str(record_exports["recipe_count"]))
+    print("Readable files: data/shared-database/recipes.json and recipes.csv")
     print("Git needs the whole folder, including photos and manifest.json. No sharing key is needed.")
 
 
@@ -546,6 +602,11 @@ def read_manifest(snapshot_argument, *, check_migrations=True):
                 or hashlib.sha256(photo_index_bytes(index)).hexdigest() != media_hash):
             fail("The shared photo index checksum does not match its manifest.")
         verify_photo_files(supplied / "photos", index)
+    # Older snapshots have no readable exports and remain supported.
+    if "record_exports" in manifest:
+        if version != 3:
+            fail("Recipe exports require the snapshot's photo-aware format.")
+        verify_record_exports(supplied, manifest["record_exports"])
     if not isinstance(manifest.get("source_database"), str) or not DATABASE_NAME.fullmatch(manifest["source_database"]):
         fail("The snapshot source database name is invalid.")
     revision = manifest.get("source_git_revision")
@@ -710,6 +771,18 @@ def restore_snapshot(operation, snapshot_argument, *, from_image=False):
             "pg_restore", "--no-password", "-U", "recipes", "-d", database, "--no-owner", "--no-acl",
             "--single-transaction", "--exit-on-error", input_stream=stream,
         )
+    recipe_count = None
+    if "record_exports" in manifest:
+        raw_count = operation.postgres(
+            "psql", "--no-password", "-X", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1",
+            "-U", "recipes", "-d", database, "-c", "SELECT count(*) FROM public.recipes_recipe",
+        )
+        try:
+            recipe_count = int(raw_count.strip())
+        except ValueError:
+            fail("The restored recipe count could not be read; no database was selected.")
+        if recipe_count != manifest["record_exports"]["recipe_count"]:
+            fail("The restored recipe count differs from its export; no database was selected.")
     with private_file(operation.directory / "restore-complete.txt") as stream:
         stream.write((database + "\n").encode("ascii"))
     receipt = {
@@ -731,6 +804,8 @@ def restore_snapshot(operation, snapshot_argument, *, from_image=False):
     # Publish the completed receipt without replacing a concurrently created one.
     os.link(metadata_path, receipt_path(manifest))
     restore_photos(operation, manifest, data.parent, database=database, from_image=from_image)
+    if recipe_count is not None:
+        print("Validated bulk recipe import: " + str(recipe_count) + " recipes.")
     return manifest, database
 
 
@@ -821,7 +896,8 @@ def prepare_startup(operation, snapshot_argument=None, *, force=False):
 
 
 def remove_operation_plaintext(operation):
-    for name in ("shared-data", "photos-export.tar", "photos-import.tar", "photo-index.json"):
+    for name in ("shared-data", "photos-export.tar", "photos-import.tar", "photo-index.json",
+                 "recipe-records.ndjson", "recipes.json", "recipes.csv"):
         path = operation.directory / name
         try:
             details = path.lstat()
@@ -838,7 +914,7 @@ def remove_operation_plaintext(operation):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("export", help="Save the database and referenced photos for Git without encryption.")
+    commands.add_parser("export", help="Save the database, photos and JSON/CSV recipe records for Git without encryption.")
     commands.add_parser("prepare-startup", help="Automatically load shared updates and retain local recipes.")
     importer = commands.add_parser("import", help="Restore into a new database without selecting it.")
     importer.add_argument("snapshot_directory")

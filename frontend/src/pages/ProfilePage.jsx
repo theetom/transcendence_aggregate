@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import FieldError from '../components/FieldError'
 import AccountAPIKeyPanel from '../components/AccountAPIKeyPanel'
+import RecipeDataPanel from '../components/RecipeDataPanel'
 import RecipePreviewCard from '../components/RecipePreviewCard'
 import { getCurrentProfile, getRecipeDetails, getRecipePath, readAuthoredReviews, readRecipeSummary, requestRecipeApi, setRecipeFavorite, updateCurrentProfile } from '../data/recipeApi'
 import { formatDate } from '../data/siteData'
@@ -636,6 +637,12 @@ function ProfilePage({ showAllRecipes = false }) {
             {!showAllRecipes ? (
               <section className="page-section">
                 <AccountAPIKeyPanel key={profile.user.id} userId={profile.user.id} />
+              </section>
+            ) : null}
+
+            {!showAllRecipes ? (
+              <section className="page-section">
+                <RecipeDataPanel key={profile.user.id} userId={profile.user.id} />
               </section>
             ) : null}
 

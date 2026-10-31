@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 class Recipe(models.Model):
@@ -72,3 +73,20 @@ class Category(models.Model):
 class RecipeImage(models.Model):
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name="images")
     image = models.ImageField(upload_to="recipes/")
+
+
+class RecipeImportReceipt(models.Model):
+    """A completed per-account import, committed together with its new recipes."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    request_id = models.UUIDField()
+    file_sha256 = models.CharField(max_length=64)
+    recipes = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "request_id"], name="unique_recipe_import_request",
+            ),
+        ]
