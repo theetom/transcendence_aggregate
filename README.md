@@ -20,6 +20,7 @@ The user and operator guides are kept together in this README:
 | [Public API Tester](#separate-public-api-tester) | Open the tester, connect a key and demonstrate GET/POST/PUT/DELETE. |
 | [Recipe JSON/CSV downloads and imports](#recipe-data-guide) | Use the Profile buttons to download, check and import recipe files. |
 | [Recipe analytics dashboard](#recipe-analytics-guide) | Open interactive charts, choose dates and filters, export results and check live updates. |
+| [Firefox and Edge support](#browser-support-guide) | Open the site securely in both browsers, handle local CA trust and verify feature compatibility. |
 | [Website status](#start-and-check-the-status-page) | Open the Status page and understand service availability. |
 | [Automatic private backups](#automated-private-backups) | Where backups are saved, scheduling, retention and privacy. |
 | [Backup command reference](#backup-command-reference) | Start, list, make, verify, restore and activate a backup. |
@@ -35,7 +36,7 @@ The user and operator guides are kept together in this README:
 - Docker Engine and the Docker Compose plugin, already installed, running and accessible to your account without `sudo`.
 - A local Docker socket. The launcher does not support a remote Docker endpoint.
 - Internet access for the initial container-image and dependency downloads.
-- Chrome for the current local browser-trust workflow. WSL also needs Windows interoperability with `certutil.exe` and `wslpath` available.
+- A current desktop browser. Chrome is the existing verified baseline; Firefox and Edge are the additional targets described in the [browser support guide](#browser-support-guide). WSL uses Windows browsers and requires Windows interoperability with `certutil.exe` and `wslpath` available.
 - A private root `.env` with the project's credentials.
 
 Node, Django and PostgreSQL run inside containers; installing them on the host is unnecessary for the normal launcher.
@@ -77,7 +78,7 @@ sh scripts/start.sh
 
 The launcher prepares certificate tools in Docker, creates or checks the local HTTPS certificate, imports the public CA into the supported user/browser trust store, prepares the shared database selection, and builds/starts Recipe Site, the separate Public API Tester and the scheduled private backup service. Django migrations and static-file collection run during backend startup. It then exports the current database and referenced photos to the shared folder.
 
-On WSL, confirm the Windows user certificate-trust prompt if it appears. Fully restart Chrome after trust setup, including private windows.
+On WSL, confirm the Windows user certificate-trust prompt if it appears. Fully restart the browser you will use (Chrome, Firefox or Edge) after trust setup, including private windows. The launcher prints the public CA path for manual import if needed; see [Firefox and Edge support](#browser-support-guide). Native Linux startup imports into Chrome's user store; Firefox needs the separate import described there.
 
 Open **https://localhost:8443/** for Recipe Site and **http://localhost:8765/** for Public API Tester with the default configuration. HTTP on `http://localhost:5173/` redirects to Recipe Site HTTPS. Compose binds all three published ports to the local loopback interface.
 
@@ -93,6 +94,8 @@ Open **https://localhost:8443/** for Recipe Site and **http://localhost:8765/** 
 | `/profile` | Your own profile, submitted recipes, favorites, review history and private public-API access controls. |
 | `/users/<account-id>` | A public profile and its approved recipes. |
 | `/staff` | Website recipe management for staff. |
+| `/analytics` | Public recipe/review charts, date and filter controls, live updates and CSV/JSON reports. |
+| `/status` | Public service readiness and refresh controls. |
 | `/admin/` | Django administration for accounts with the necessary permissions. |
 | `/privacy` | Public privacy information about stored data, visibility, moderation and deletion. |
 | `/terms` | Public terms for accounts, submissions, reviews and moderation. |
@@ -217,6 +220,7 @@ The team confirmed the frontend/backend credits below. Roh and Hugo also handled
 | Discovery | Roh and Hugo (frontend); Tomaz (existing backend); Roh (Codex-assisted Module05 implementation and browser verification). | Approved recipe-title/user-name search, public author links, recent recipes and 30-day rating/review rankings with real photo previews. Recipe search has user-verified category/ingredient/minimum-rating filters, title/rating/review sorting and pagination. | `HomePage.jsx`, `SearchResultsPage.jsx`, `recipeSearch.js`, `RecipePreviewCard.jsx` |
 | Public recipe API | Roh (Codex-assisted Module06 integration), reusing Tomaz's recipe validation and write flows and the shared Roh/Hugo account frontend. | Separate versioned API with automatic account keys at first sign-in, private Profile key controls, expiry/revocation/rotation, five database paths and application/proxy rate limits. API actions follow website account permissions. Module06 is complete: the user reports the tester works, and user-run endpoint, API-key rejection and account rate-limit checks passed. | `backend/public_api/`, login/Profile components, `frontend/nginx.conf`, API section below |
 | Recipe analytics dashboard | Roh (Codex-assisted Module09 implementation), reusing Tomaz's recipe/review models and the shared Roh/Hugo frontend. | Public approved-recipe summaries, interactive activity/rating/ranking charts, UTC date/category/title/star filters, visible-page live refresh and filtered CSV/JSON exports. Source implementation is ready; user browser verification is pending. | `recipes/analytics.py`, `AnalyticsPage.jsx`, `recipeAnalytics.js`, `recipe-analytics.css` |
+| Firefox and Edge compatibility preparation | Roh (Codex-assisted Module10 source review/configuration/guides), building on the shared frontend by Roh and Hugo and existing HTTPS tooling. | Explicit production browser targets, Windows browser-trust guidance, public CA path output, Firefox manual import and documented feature checks. Actual Firefox/Edge runs remain pending. | `frontend/vite.config.js`, `scripts/start.sh`, browser guide below |
 | Duplicate prevention | Roh and Hugo (frontend); Tomaz (backend). | Website names reuse existing IDs ignoring case/outer spaces; repeated ingredient/category rows are rejected, including direct API submissions. | Recipe serializers, `AddRecipePage.jsx` |
 | Local deployment/data transfer | Nuno (Docker setup/connection checks); Roh (Codex-assisted deployment/data-sharing work). | HTTPS startup, persistent volumes, health checks, shared database/photo import/export, Module07 JSON/CSV recipe exports and website imports (user-confirmed working), and Module08 status/private-backup/recovery integration (user-verified). | Compose, `frontend/nginx.conf`, `scripts/` |
 | Project policies | Roh and Hugo (frontend). | Public Privacy and Terms pages describe current data collection, public visibility, submission rules, moderation and deletion; footer and reciprocal links are defined. | `PrivacyPage.jsx`, `TermsPage.jsx`, `SiteFooter.jsx` |
@@ -225,7 +229,7 @@ The agreed recipe-admin feature scope has been accepted by the user. Qualificati
 
 ## Modules
 
-The combined React + Django frameworks Major, Django ORM Minor, advanced permissions Major, custom design system Minor, advanced recipe search Minor, secured public API Major, recipe data export/import Minor and health/status/backups Minor are complete, with contributors recorded below. Module09 analytics is implemented and awaiting user verification; Module10 additional browsers remains pending. Remaining contributor assignments are unfinished. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
+The combined React + Django frameworks Major, Django ORM Minor, advanced permissions Major, custom design system Minor, advanced recipe search Minor, secured public API Major, recipe data export/import Minor and health/status/backups Minor are complete, with contributors recorded below. Module09 analytics is implemented and awaiting user verification; Module10 Firefox/Edge compatibility preparation and guides are ready, with browser runs pending. Remaining contributor assignments are unfinished. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
 
 | Module | Points | Current source evidence / remaining qualification |
 | --- | --- | --- |
@@ -241,7 +245,7 @@ The combined React + Django frameworks Major, Django ORM Minor, advanced permiss
 | Health/status/backups — Minor | 1 | Module08 is complete: a public Status page/readiness endpoint, existing Docker health checks, automatic daily private database/photo backups retaining seven copies, and documented separate-database recovery are implemented. Roh reported the setup works, listed a backup of 16 recipes / 17 photos and successfully restored it to a separate database. Its 1 point is included; actual activation was not needed for verification. Contributor: Roh (Codex-assisted integration), building on the existing Docker and data-sharing work. |
 | Data export/import — Minor | 1 | Module07 is complete: Profile → Recipe data provides own-recipe selection, portable JSON/CSV downloads with photos, file validation/preview and transactional bulk imports as new pending copies. Digest-bound import receipts support result checks and safe same-request retries. Roh reported both import and export working well on October 31, 2026, following the JSON/CSV downloads. The existing snapshot tools also export readable JSON/CSV and validate bulk restores. Its 1 point is included. Contributor: Roh (Codex-assisted integration), reusing Tomaz's recipe models/validation and the shared account frontend. |
 | Recipe analytics dashboard — Major | 2 | Module09 source implementation is ready: public approved-recipe charts, five-second visible-page refresh, displayed-snapshot CSV/JSON exports and customizable UTC dates/category/title/review-star filters. Browser verification is pending, so its 2 points are not yet included. Contributor: Roh (Codex-assisted implementation), reusing Tomaz's recipe/review models and the shared Roh/Hugo frontend. See the analytics guide below. |
-| Additional browsers — Minor | 1 | Requires completed feature checks in two additional browsers and documented limitations. No complete evidence is recorded. |
+| Additional browsers — Minor | 1 | Module10 targets desktop Firefox and Edge in addition to the accepted Chrome baseline. Explicit build targets, source compatibility review, HTTPS/browser-trust setup, known differences and feature-check instructions are recorded. Actual runs in both browsers remain pending; its 1 point is not yet included. Contributor: Roh (Codex-assisted review/configuration/guides), building on the shared Roh/Hugo frontend and existing HTTPS tooling. |
 | Accessibility — Major | 2 | Labels/ARIA/native dialogs help, but source review does not establish full WCAG 2.1 AA compliance. |
 
 The completed frameworks Major (**2 points**), Django ORM Minor (**1 point**), advanced permissions Major (**2 points**), custom design system Minor (**1 point**), advanced search Minor (**1 point**), secured public API Major (**2 points**), recipe data export/import Minor (**1 point**) and health/status/backups Minor (**1 point**) total **11 of 14 target points**, leaving **3 points**. Other rows describe possibilities and remaining gaps; this table does not claim a completed 14-point total. Custom modules require their own scope, implementation evidence, contributor attribution and justification.
@@ -638,6 +642,70 @@ The website reads **`GET /api/analytics/`**. Optional parameters are `start`, `e
 
 These checks cover the new module without repeating accepted API/permission/backup tests or creating bulk fixtures. They are instructions for user verification and have not been reported passed. Source files: [analytics.py](backend/recipes/analytics.py), [AnalyticsPage.jsx](frontend/src/pages/AnalyticsPage.jsx), [recipeAnalytics.js](frontend/src/data/recipeAnalytics.js), [recipe-analytics.css](frontend/src/styles/recipe-analytics.css). No assistant runtime/build/browser tests were performed under the standing user-led verification boundary.
 
+<a id="browser-support-guide"></a>
+
+### Firefox and Edge — Module 10 (1 point, browser verification pending)
+
+This module makes the implemented website features available in two additional browsers, with consistent layouts and usable controls. The chosen additional browsers are **current desktop Firefox and Microsoft Edge on Windows**, using the existing WSL-hosted website. Chrome remains the accepted baseline. Roh directed the Codex-assisted source review, browser-target configuration, launcher guidance and documentation, building on Roh and Hugo's shared frontend and the existing HTTPS tools. This Minor is worth **1 point**, counted after actual feature checks pass in both browsers; the completed total remains **11/14** while Modules09 and10 await their outstanding verification.
+
+The production build explicitly targets Chrome111, Edge111, Firefox128, Safari16.4 and iOS16.4. Firefox128 matches the [Tailwind4 CSS minimum](https://tailwindcss.com/docs/compatibility); the other targets preserve the [Vite8 build baseline](https://v8.vite.dev/config/build-options). These are build settings, not evidence that every historical browser version has been tested. Use current desktop Firefox and Edge for the evaluation and record their actual versions.
+
+Source review covered the shared layout/forms, authentication/storage, photo uploads, file import/export, clipboard fallback, live refresh, analytics SVG/keyboard controls and Public API Tester. The existing implementation uses portable APIs: ordinary file inputs/FormData, attached Blob download links with delayed cleanup, user-activated clipboard writes with manual-copy advice, normalized date values and standard visibility/focus/abort handling. No browser-specific application rewrite or new dependency was needed.
+
+#### Load the current frontend
+
+If the project is already running, rebuild only the changed frontend:
+
+```sh
+docker compose up -d --no-deps --build --wait --wait-timeout 120 frontend
+```
+
+For a stopped or fresh installation, use the normal `sh scripts/start.sh` instructions above. Open **https://localhost:8443/** in Windows Firefox and Edge, and **https://localhost:8443/analytics** for the dashboard. Each browser has its own login session, so sign in separately. Use the same host/port throughout a session.
+
+#### HTTPS in Windows Firefox and Edge
+
+The WSL launcher already imports the project's public CA into the Windows current-user Root store. Edge trusts locally installed roots; current Firefox can automatically use user-added OS roots when its default third-party-root setting is enabled. After the import, fully restart the target browser, including private windows. See the [Microsoft trust guidance](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-security-cert-verification) and [Mozilla trust guidance](https://support.mozilla.org/en-US/kb/automatically-trust-third-party-certificates).
+
+If Firefox still reports an unknown issuer, use its certificate settings rather than bypassing HTTPS:
+
+1. Use the **Windows public CA path** printed by `sh scripts/start.sh`. The file is the public `rootCA.pem`; the default Linux location is `~/.local/share/mkcert/rootCA.pem`, with `CAROOT` or `XDG_DATA_HOME` overrides respected by the launcher.
+2. In Firefox Settings, search for **certificates**, open **View Certificates**, then **Authorities → Import**. Select that public CA file and enable trust for identifying websites. Mozilla documents the [Authorities import procedure](https://wiki.mozilla.org/CA/Changing_Trust_Settings).
+3. Restart Firefox and reopen the site. Import only the public CA; keep `rootCA-key.pem` private.
+
+For native Linux Firefox, the launcher prints the Linux public CA path; import that file through the same Firefox Authorities procedure. Native Linux startup continues to manage only the existing Chrome NSS store automatically. Native Linux Edge trust is not part of this Windows verification target and is not claimed automatic. Browser certificate/profile settings are never broadly mounted or rewritten by this change.
+
+#### Feature checks in both browsers
+
+Run this once in Firefox and once in Edge. Record the browser version, OS, date and any failing step. Firefox shows its version under **Help → About Firefox**; Edge uses **`edge://settings/help`**. Use ordinary existing accounts and a disposable recipe for recipe changes; remove demonstration/imported copies through the normal moderation flow when finished.
+
+| Area | Check | Firefox | Edge |
+| --- | --- | --- | --- |
+| Pages and navigation | Trusted HTTPS; home, recipe and public profile pages; direct URL reload, Back, links and images; readable Privacy/Terms pages. | Pending | Pending |
+| Accounts and profile | Signup/login/logout, visible invalid-form messages, profile bio/photo update, own recipes/favorites/review history and public profile. | Pending | Pending |
+| Recipe forms | Submit a recipe with ingredients/steps/categories/photos; edit it and retain/remove photos; confirm form errors and previews are usable. | Pending | Pending |
+| Staff and administration | With an authorized account, approve/reject with a reason, resubmit and decide a deletion request; open the permitted Django-admin account/permission screens. | Pending | Pending |
+| Reviews, favorites and search | Post/remove an own review, toggle favorites, observe live counts; use title/category/ingredient/rating filters, sorting, page controls and URL restoration. | Pending | Pending |
+| Public API interface | Use the Profile key panel and Copy/manual-copy path; connect the separate tester at `http://localhost:8765/` and use its request buttons as described in the API guide. | Pending | Pending |
+| Recipe files | Download JSON/CSV through Profile, choose a file, preview validation and import; confirm the result and normal form/error display. | Pending | Pending |
+| Analytics and status | Use dates/filters and chart interactions/tables; download analytics CSV/JSON; verify a relevant review change appears automatically while visible; open Status and refresh. | Pending | Pending |
+| Layout and keyboard | Check desktop and a narrow window; mobile navigation, dialogs, Tab/Enter/Escape/focus, file/date controls and chart/table scrolling remain usable. | Pending | Pending |
+
+This is browser coverage of the implemented UI, not a repeat of the accepted concurrency, rate-quota or backup/restore checks. Existing Chrome results stay recorded. Browser-specific failures should be fixed and the affected row rechecked; do not mark a browser passed from the homepage alone.
+
+#### Known differences and verification record
+
+- Native date calendars, file pickers, validation wording and download prompts vary by browser/OS. The chosen values, exported contents and submitted data must agree; identical native popup styling is not required.
+- Automatic updates pause while a page is hidden and resume when it becomes visible/focused. This is the existing shared-refresh behavior, not a Firefox/Edge failure.
+- Clipboard permission settings can deny Copy; the key remains available for manual copying. Certificate trust and site-storage restrictions must allow the local HTTPS site for normal sign-in/import behavior. [MDN documents clipboard differences](https://developer.mozilla.org/en-US/docs/Web/API/Clipboard_API).
+- This scope covers desktop Firefox/Edge on Windows. Older unsupported releases, mobile variants, managed policies that block local CA trust and native Linux Edge have not been qualified.
+
+| Browser | Actual version / OS / date | Result |
+| --- | --- | --- |
+| Firefox | Not yet reported | Source reviewed; runtime pending |
+| Edge | Not yet reported | Source reviewed; runtime pending |
+
+The compatibility preparation and limitations above are saved; **no Firefox/Edge runtime pass is claimed**. The standing user-led testing boundary means no assistant build, browser or application tests were performed. Relevant source: [vite.config.js](frontend/vite.config.js), [start.sh](scripts/start.sh), existing shared controls/styles, file helpers and [useLiveRefresh.js](frontend/src/hooks/useLiveRefresh.js). Update this record with the actual runs before checking off Module10.
+
 ## Individual Contributions
 
 Names, 42 logins, project roles and GitHub accounts are confirmed in Team Information. The feature table records the confirmed frontend/backend credits, and individual work is summarised below. Commit-author names or email aliases and selected-module assignments remain to be matched to those identities.
@@ -652,6 +720,8 @@ Names, 42 logins, project roles and GitHub accounts are confirmed in Team Inform
 
 Roh also directed the Codex-assisted Module09 analytics endpoint, charts, date/filter controls, live refresh, exports and README guide. This reuses Tomaz's recipe/review models and the shared Roh/Hugo frontend; source review is complete and user browser verification is pending.
 
+For Module10, Roh directed the Codex-assisted Firefox/Edge source audit, explicit build targets, local HTTPS/browser-trust guidance and feature-check documentation. The shared frontend and existing certificate tooling are reused; both additional-browser runs remain pending.
+
 Verification challenge documented for `suroh`: establish that actions actually overlap and that old versions cannot overwrite newer contents. Two account sessions used one shared future start time with three Gunicorn workers; saved data and account isolation were checked afterward, and stale edits/approvals were rejected with HTTP 409. The original one-worker configuration was restored.
 
 Selected-module assignments, additional implementation challenges and their solutions, and Git contribution evidence still need team confirmation. Shared challenges can be described with their actual contributors; the subject does not prescribe one unique challenge per member.
@@ -663,6 +733,7 @@ Selected-module assignments, additional implementation challenges and their solu
 - Module06 is complete for 2 points based on the working tester report and passed five-path/API-key rejection/account-quota checks, bringing the completed total at that stage to 9/14. Optional cross-account, key-lifecycle and post-limit recovery regressions have not been verified; individual CRUD statuses were not separately supplied.
 - Module08 is complete for 1 point after the working setup report, completed 16-recipe/17-photo backup and successful separate-database restore. The completed total is 11/14. Activation was not exercised because verification left the current website database selected. Local backups require Docker to run and a separate private off-machine copy for host-loss protection.
 - Module09 analytics is implemented and documented, with saved-source review only. User checks of charts/filters, exports and live updates remain pending; its 2 points are not yet counted. Updates use five-second visible-page polling rather than an instantaneous server push. Reports reflect the currently approved catalogue and creation/review timestamps; approval history is not stored.
+- Module10 Firefox/Edge compatibility preparation, primary-documentation review, build targets and browser guide are ready. Actual feature runs/version records in both Windows desktop browsers remain pending; its 1 point is not yet counted. Known native-control/trust/clipboard/platform differences are recorded in the browser guide.
 - Friends/chat/presence, OAuth and 2FA are not implemented.
 - Photo URLs are served publicly. Pending/rejected recipe page/API access is restricted separately; media serving remains the project's accepted scope.
 - Module07 is complete for 1 point after Roh confirmed the Profile import/export workflow works, bringing the subtotal at that stage to 10/14. Specific forced validation-failure/recovery scenarios and CLI restore outcomes were not reported. Website downloads embed photos; the separate CLI readable files use photo references and remain distinct from portable website files.
@@ -704,5 +775,7 @@ For Module07, Roh directed Codex-assisted implementation of private Profile down
 For Module08, Roh directed Codex-assisted implementation of the sanitized database health endpoint, public Status page, PostgreSQL/photo snapshot worker, private storage/scheduling/retention, receipt-bound recovery commands and this README. Existing Docker/data-sharing/photo helpers are reused. Source reviews are recorded separately from Roh's October 31, 2026working setup report, 16-recipe/17-photo backup listing and successful separate-database restore. Activation was not performed in the reported verification.
 
 For Module09, Roh directed Codex-assisted implementation of the public approved-recipe aggregate endpoint, interactive SVG charts and tables, UTC date/category/title/star filters, visible-page polling and CSV/JSON snapshot downloads. Existing recipe/review models, shared components and the live-refresh hook are reused. Source reviews and operating instructions are recorded separately from the pending user browser checks; no runtime acceptance is claimed.
+
+For Module10, Roh directed Codex-assisted source audits of CSS/forms, browser APIs/downloads and HTTPS/build setup. The work added explicit Vite browser targets, clearer launcher/public-CA guidance and the Firefox/Edge operating and verification guide. No speculative frontend rewrite or dependency was added after the audit found no actionable app-source incompatibility. Source review is separate from the pending actual Firefox/Edge runs; no runtime pass is claimed.
 
 Team members must review, test and understand the implementation attributed to them.

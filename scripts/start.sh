@@ -222,12 +222,16 @@ esac
 if [ -n "${WSL_INTEROP:-}" ] || [ -n "${WSL_DISTRO_NAME:-}" ]; then
     wsl_detected=1
 fi
+printf 'Public CA for browser import: %s\n' "$ca_directory/rootCA.pem"
 if [ "$wsl_detected" -eq 1 ]; then
     command -v certutil.exe >/dev/null 2>&1 &&
         command -v wslpath >/dev/null 2>&1 ||
-        fail 'WSL startup targets Windows Chrome and requires certutil.exe and wslpath. Enable permitted Windows interoperability, or import rootCA.pem into Windows user trust manually.'
+        fail 'WSL startup targets Windows Chrome, Firefox and Edge and requires certutil.exe and wslpath. Enable permitted Windows interoperability; see README.md for browser trust guidance.'
+    windows_ca_path=$(wslpath -w "$ca_directory/rootCA.pem") ||
+        fail 'Could not translate the public CA path for Windows browser trust.'
+    printf 'Windows public CA path: %s\n' "$windows_ca_path"
     printf '%s\n' 'Importing the public CA into Windows user trust. Confirm the Windows prompt if shown.'
-    certutil.exe -user -addstore Root "$(wslpath -w "$ca_directory/rootCA.pem")" ||
+    certutil.exe -user -addstore Root "$windows_ca_path" ||
         fail 'Windows user CA import failed; your browser still needs this public CA trusted.'
 else
     chrome_legacy="$browser_home/.pki/nssdb"
@@ -246,6 +250,7 @@ else
         --mount "type=bind,source=$ca_directory/rootCA.pem,target=/opt/public-rootCA.pem,readonly" \
         --mount "type=bind,source=$chrome_store,target=$chrome_store" \
         "$tools_image" python3 /opt/local-tools/install-browser-trust.py /opt/public-rootCA.pem required chrome
+    printf '%s\n' 'For Linux Firefox, import the public CA above in Firefox Authorities; see the Firefox and Edge guide in README.md.'
 fi
 
 # Load a downloaded update and retain local recipes before starting the website.
@@ -289,5 +294,6 @@ printf '\nOpen https://%s:%s\n' "$server_name" "$https_port"
 printf 'Public API Tester: http://localhost:%s\n' "$meal_planner_port"
 printf 'Status: https://%s:%s/status\n' "$server_name" "$https_port"
 printf '%s\n' 'Private dated backups: data/backups/ (list with sh scripts/backups.sh list).'
-printf '%s\n' 'Fully restart Chrome after trust setup, including incognito windows.'
+printf '%s\n' 'Fully restart Chrome, Firefox or Edge after trust setup, including all private windows.'
+printf '%s\n' 'Firefox and Edge setup and verification: see the browser support guide in README.md.'
 printf '%s\n' 'Browser trust must be checked in the actual evaluation browser; this setup does not change system-client trust.'

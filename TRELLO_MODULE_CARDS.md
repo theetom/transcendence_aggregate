@@ -12,11 +12,11 @@ Frameworks and ORM are already implemented. Both README entries are complete and
 
 Module 03 advanced permissions is implemented and user-verified. Its README entry and all three Trello tasks are complete.
 
-**Progress: Modules 01–08 complete — 11 of 14 target points.** Module08 health/status, automated private backups and documented recovery are complete: the user reported the setup works, listed a completed backup with 16 recipes / 17 photos and successfully restored it to a separate database on October 31, 2026. Module09 analytics is implemented and awaiting user browser verification; Module10 remains pending. These two modules represent 3 unqualified target points. Existing accepted module results remain preserved.
+**Progress: Modules 01–08 complete — 11 of 14 target points.** Module08 health/status, automated private backups and documented recovery are complete: the user reported the setup works, listed a completed backup with 16 recipes / 17 photos and successfully restored it to a separate database on October 31, 2026. Module09 analytics is implemented and awaiting user browser verification; Module10 Firefox/Edge compatibility preparation and guides are ready with actual browser runs pending. These two modules represent 3 unqualified target points. Existing accepted module results remain preserved.
 
 The required README module information is the chosen module, its points, why/how it is implemented and its contributors (subject printed page 28 / PDF page 29). Exact file references, tutorials and separate evidence reports are not mandatory additions.
 
-Module 01's old card was archived because the connector cannot delete its excess native checklist items. Its verified replacement is linked below. Other module links are unchanged. Each card has one **Required work** native checklist; the items below record local progress. Module 04, Module 05, Module 06, Module 07, Module 08 and Module 09 local updates have not been synchronized to Trello.
+Module 01's old card was archived because the connector cannot delete its excess native checklist items. Its verified replacement is linked below. Other module links are unchanged. Each card has one **Required work** native checklist; the items below record local progress. Module 04, Module 05, Module 06, Module 07, Module 08, Module 09 and Module 10 local updates have not been synchronized to Trello.
 
 ## Card index
 
@@ -31,8 +31,8 @@ Module 01's old card was archived because the connector cannot delete its excess
 | 07 | [Recipe data export/import](https://trello.com/c/sonZzuGg/53-module-07-recipe-data-export-import-minor-1-point) | Minor | 1 | 4 | Complete |
 | 08 | [Health, status and automated backups](https://trello.com/c/T7ZPZQq9/54-module-08-health-status-and-automated-backups-minor-1-point) | Minor | 1 | 4 | Complete |
 | 09 | [Recipe analytics dashboard](https://trello.com/c/8fkox8yA/55-module-09-recipe-analytics-dashboard-major-2-points) | Major | 2 | 5 | In progress: browser verification pending |
-| 10 | [Two additional browsers](https://trello.com/c/Djc38gP8/56-module-10-two-additional-browsers-minor-1-point) | Minor | 1 | 4 | Pending |
-| **Total** | **10 cards** | **4 Major + 6 Minor** | **14** | **31** | **8 complete; 1 in progress; 1 pending** |
+| 10 | [Two additional browsers](https://trello.com/c/Djc38gP8/56-module-10-two-additional-browsers-minor-1-point) | Minor | 1 | 4 | In progress: Firefox/Edge runs pending |
+| **Total** | **10 cards** | **4 Major + 6 Minor** | **14** | **31** | **8 complete; 2 in progress** |
 
 ## [Module 01] React + Django frameworks — Major (2 points)
 
@@ -184,11 +184,11 @@ Module 01's old card was archived because the connector cannot delete its excess
 
 **Requirement:** Full compatibility in at least two additional browsers, testing/fixing all features, documented limitations and consistent UI/UX.
 
-**Current status:** Qualify at least two browsers beyond Chrome. Retain accepted Chrome results.
+**Current status:** Compatibility preparation ready for current Windows desktop Firefox and Edge alongside accepted Chrome. Explicit Vite targets align Firefox with Tailwind4's CSS baseline; launcher messages/public-CA paths and README explain WSL Windows trust, Firefox manual import, native-control differences and full implemented-feature checks. CSS/JS/HTTPS source audits found no actionable existing app incompatibility; no speculative rewrite or dependency was added. README records why/how, 1 point, contributors and known limitations. Actual browser versions/results and consistent UI/UX runs remain pending, so this point is not counted and the completed subtotal remains **11/14**. This local update has not been synchronized to Trello.
 
 **Required work:**
 
 - [ ] Test all features in two additional browsers and fix compatibility problems.
 - [ ] Keep UI/UX consistent across supported browsers.
-- [ ] Document browser-specific limitations.
-- [ ] Record this module, its 1 point, why/how it is implemented, and contributors in README.
+- [x] Document browser-specific limitations.
+- [x] Record this module, its 1 point, why/how it is implemented, and contributors in README.
