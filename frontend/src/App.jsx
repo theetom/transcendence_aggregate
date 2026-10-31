@@ -5,6 +5,7 @@ import SiteFooter from './components/SiteFooter'
 import AddRecipePage from './pages/AddRecipePage'
 import AddRecipeSubmittedPage from './pages/AddRecipeSubmittedPage'
 import AdminPage from './pages/AdminPage'
+import AnalyticsPage from './pages/AnalyticsPage'
 import CategoryPage from './pages/CategoryPage'
 import ConnectPage from './pages/ConnectPage'
 import HomePage from './pages/HomePage'
@@ -45,7 +46,7 @@ function EditRecipeRoute() {
 function AppShell() {
   const location = useLocation()
   const isHomePage = location.pathname === '/'
-  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+(?:\/edit)?|\/results\/search|\/users\/[^/]+|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile(?:\/recipes)?|\/staff|\/privacy|\/status|\/terms)$/
+  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+(?:\/edit)?|\/results\/search|\/users\/[^/]+|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile(?:\/recipes)?|\/staff|\/privacy|\/status|\/analytics|\/terms)$/
   const hideShell = !knownPathPattern.test(location.pathname)
   const mainClassName = isHomePage ? 'page-main page-main--home' : 'page-main'
 
@@ -123,6 +124,7 @@ function AppShell() {
           <Route path="/staff" element={<AdminPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/status" element={<StatusPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

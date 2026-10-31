@@ -19,6 +19,7 @@ The user and operator guides are kept together in this README:
 | [Public API setup and usage](#public-api-guide) | Account API keys, endpoint paths, request examples and rate limits. |
 | [Public API Tester](#separate-public-api-tester) | Open the tester, connect a key and demonstrate GET/POST/PUT/DELETE. |
 | [Recipe JSON/CSV downloads and imports](#recipe-data-guide) | Use the Profile buttons to download, check and import recipe files. |
+| [Recipe analytics dashboard](#recipe-analytics-guide) | Open interactive charts, choose dates and filters, export results and check live updates. |
 | [Website status](#start-and-check-the-status-page) | Open the Status page and understand service availability. |
 | [Automatic private backups](#automated-private-backups) | Where backups are saved, scheduling, retention and privacy. |
 | [Backup command reference](#backup-command-reference) | Start, list, make, verify, restore and activate a backup. |
@@ -215,6 +216,7 @@ The team confirmed the frontend/backend credits below. Roh and Hugo also handled
 | Shared-view refresh | Roh and Hugo (frontend). | Visible recipe, profile, home, search and staff views refresh on a five-second delay after the previous request completes and when focus returns. Unsaved editor drafts are retained. | `useLiveRefresh.js` and its page callers |
 | Discovery | Roh and Hugo (frontend); Tomaz (existing backend); Roh (Codex-assisted Module05 implementation and browser verification). | Approved recipe-title/user-name search, public author links, recent recipes and 30-day rating/review rankings with real photo previews. Recipe search has user-verified category/ingredient/minimum-rating filters, title/rating/review sorting and pagination. | `HomePage.jsx`, `SearchResultsPage.jsx`, `recipeSearch.js`, `RecipePreviewCard.jsx` |
 | Public recipe API | Roh (Codex-assisted Module06 integration), reusing Tomaz's recipe validation and write flows and the shared Roh/Hugo account frontend. | Separate versioned API with automatic account keys at first sign-in, private Profile key controls, expiry/revocation/rotation, five database paths and application/proxy rate limits. API actions follow website account permissions. Module06 is complete: the user reports the tester works, and user-run endpoint, API-key rejection and account rate-limit checks passed. | `backend/public_api/`, login/Profile components, `frontend/nginx.conf`, API section below |
+| Recipe analytics dashboard | Roh (Codex-assisted Module09 implementation), reusing Tomaz's recipe/review models and the shared Roh/Hugo frontend. | Public approved-recipe summaries, interactive activity/rating/ranking charts, UTC date/category/title/star filters, visible-page live refresh and filtered CSV/JSON exports. Source implementation is ready; user browser verification is pending. | `recipes/analytics.py`, `AnalyticsPage.jsx`, `recipeAnalytics.js`, `recipe-analytics.css` |
 | Duplicate prevention | Roh and Hugo (frontend); Tomaz (backend). | Website names reuse existing IDs ignoring case/outer spaces; repeated ingredient/category rows are rejected, including direct API submissions. | Recipe serializers, `AddRecipePage.jsx` |
 | Local deployment/data transfer | Nuno (Docker setup/connection checks); Roh (Codex-assisted deployment/data-sharing work). | HTTPS startup, persistent volumes, health checks, shared database/photo import/export, Module07 JSON/CSV recipe exports and website imports (user-confirmed working), and Module08 status/private-backup/recovery integration (user-verified). | Compose, `frontend/nginx.conf`, `scripts/` |
 | Project policies | Roh and Hugo (frontend). | Public Privacy and Terms pages describe current data collection, public visibility, submission rules, moderation and deletion; footer and reciprocal links are defined. | `PrivacyPage.jsx`, `TermsPage.jsx`, `SiteFooter.jsx` |
@@ -223,7 +225,7 @@ The agreed recipe-admin feature scope has been accepted by the user. Qualificati
 
 ## Modules
 
-The combined React + Django frameworks Major, Django ORM Minor, advanced permissions Major, custom design system Minor, advanced recipe search Minor, secured public API Major, recipe data export/import Minor and health/status/backups Minor are complete, with contributors recorded below. Two planned modules remain to qualify, and remaining contributor assignments are unfinished. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
+The combined React + Django frameworks Major, Django ORM Minor, advanced permissions Major, custom design system Minor, advanced recipe search Minor, secured public API Major, recipe data export/import Minor and health/status/backups Minor are complete, with contributors recorded below. Module09 analytics is implemented and awaiting user verification; Module10 additional browsers remains pending. Remaining contributor assignments are unfinished. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
 
 | Module | Points | Current source evidence / remaining qualification |
 | --- | --- | --- |
@@ -238,6 +240,7 @@ The combined React + Django frameworks Major, Django ORM Minor, advanced permiss
 | User interaction — Major | 2 | Profiles/reviews exist; the module also requires chat and friends. |
 | Health/status/backups — Minor | 1 | Module08 is complete: a public Status page/readiness endpoint, existing Docker health checks, automatic daily private database/photo backups retaining seven copies, and documented separate-database recovery are implemented. Roh reported the setup works, listed a backup of 16 recipes / 17 photos and successfully restored it to a separate database. Its 1 point is included; actual activation was not needed for verification. Contributor: Roh (Codex-assisted integration), building on the existing Docker and data-sharing work. |
 | Data export/import — Minor | 1 | Module07 is complete: Profile → Recipe data provides own-recipe selection, portable JSON/CSV downloads with photos, file validation/preview and transactional bulk imports as new pending copies. Digest-bound import receipts support result checks and safe same-request retries. Roh reported both import and export working well on October 31, 2026, following the JSON/CSV downloads. The existing snapshot tools also export readable JSON/CSV and validate bulk restores. Its 1 point is included. Contributor: Roh (Codex-assisted integration), reusing Tomaz's recipe models/validation and the shared account frontend. |
+| Recipe analytics dashboard — Major | 2 | Module09 source implementation is ready: public approved-recipe charts, five-second visible-page refresh, displayed-snapshot CSV/JSON exports and customizable UTC dates/category/title/review-star filters. Browser verification is pending, so its 2 points are not yet included. Contributor: Roh (Codex-assisted implementation), reusing Tomaz's recipe/review models and the shared Roh/Hugo frontend. See the analytics guide below. |
 | Additional browsers — Minor | 1 | Requires completed feature checks in two additional browsers and documented limitations. No complete evidence is recorded. |
 | Accessibility — Major | 2 | Labels/ARIA/native dialogs help, but source review does not establish full WCAG 2.1 AA compliance. |
 
@@ -588,6 +591,53 @@ This prevents an older downloaded shared-data bundle from undoing the recovery t
 
 Source files: [health.py](backend/config/health.py), [StatusPage.jsx](frontend/src/pages/StatusPage.jsx), [backups-worker.py](scripts/backups-worker.py), [backups.sh](scripts/backups.sh), [backup-env.sh](scripts/backup-env.sh), the backup image and Compose service configuration. Documentation and saved-source reviews are complete. Roh reported the new setup works and supplied a completed-backup listing on October 31, 2026: `20261031T094946Z_84a9f9191644`, completed at `2026-10-31T09:49:46.951359+00:00`, containing **16 recipes and 17 photos**. Roh then successfully ran the restore command, which printed `Restored database: recipes_recovery_20261031t095520z_24a07a4cf410` and the optional activation instruction. The buildx/Bake warning did not prevent the observed build or restore. This completes the agreed Module08 verification and **1-point** checklist; the completed total is **11/14**. No activation was reported or needed for this verification. The current database selection is unchanged by the restore command.
 
+<a id="recipe-analytics-guide"></a>
+
+### Recipe analytics dashboard — Module 09 (2 points, verification pending)
+
+The dashboard answers questions such as “How many recipes were created this month?”, “When were reviews posted?” and “Which recipes received the most reviews in this category?” It turns the existing recipe/review data into interactive charts and downloadable reports. This Major module is worth **2 points**. Roh directed the Codex-assisted analytics endpoint, charts, filtering, refresh and export implementation, reusing Tomaz's recipe/review models and the shared Roh/Hugo frontend and live-refresh hook. The source implementation and documentation are ready; browser verification remains pending, so the completed total stays **11/14**.
+
+#### Open the dashboard
+
+With the current project and PostgreSQL already running, load the changed backend and frontend from the repository root:
+
+```sh
+docker compose up -d --no-deps --build --wait --wait-timeout 120 backend frontend
+```
+
+Open **[https://localhost:8443/analytics](https://localhost:8443/analytics)** or click **Analytics** in the website footer. No account or API key is needed. This feature adds no migration or package dependency.
+
+#### Dates, filters and charts
+
+The initial view covers the last 30 UTC days. Choose **Last 7/30/90/365 days**, or enter inclusive **Start date** and **End date** values. Custom ranges may contain at most 366 days. Choose **Recipe category**, search **Recipe title** (up to 100 characters), or choose **Review stars**, then click **Apply filters**. **Clear filters** restores the default view. Applied settings are in the URL, so links, reload and browser Back preserve the selected view.
+
+| Display | Meaning and interaction |
+| --- | --- |
+| Matching recipes | Current approved catalogue matching category/title, across all creation dates. |
+| Recipes created | Matching approved recipes whose creation dates fall in the range. Creation time is not an approval/publication timestamp. |
+| Reviews and average rating | Reviews posted during the range on any matching approved recipe, including recipes created earlier. The optional star filter applies to review metrics only. No matching reviews shows an unavailable average rather than zero stars. |
+| Daily activity | Hover or focus a date for counts; select it to show that day. Arrow keys, Home/End and Enter/Space also work. Toggle the recipe/review lines or switch to **Average rating**. |
+| Review ratings | All five grades for the date range and category/title filters, before the star filter. Select a bar to filter reviews to that grade; select it again to clear the star filter. |
+| Most reviewed recipes | Up to ten recipes ranked by matching reviews during the range. Select a recipe to open it. |
+
+Each chart also has an expandable data table. All dates use UTC. Only currently approved recipes contribute; approval/removal changes can therefore alter a historical report. The dashboard exposes aggregate review counts/ratings and public recipe titles/IDs, without account identities, review comments or unpublished recipes.
+
+#### Live updates and downloads
+
+While the page is visible, it refreshes automatically five seconds after the preceding request finishes; returning focus also refreshes it. **Refresh** requests an immediate update. The snapshot time and applied filters are displayed. If a refresh fails, the previous snapshot remains labelled with its actual time; when newly requested filters have not loaded, chart filtering and downloads are disabled until matching data arrives.
+
+**Export CSV** and **Export JSON** download the displayed filtered snapshot as `analytics.csv` or `analytics.json`. Files include the generation time, UTC timezone, filters/category label, summary, daily data, all-grade distribution and recipe rankings. CSV groups these into labelled sections and protects text cells against spreadsheet formulas. JSON keeps structured arrays. These are analytics reports; use [Profile recipe data](#recipe-data-guide) to export/import actual recipes and photos.
+
+The website reads **`GET /api/analytics/`**. Optional parameters are `start`, `end`, `category`, `q` and `rating`; supply both dates or neither. Dates use `YYYY-MM-DD`, category is an ID, and rating is 1–5. For example: `/api/analytics/?start=2026-10-01&end=2026-10-31&rating=5`. Invalid filters return 400 and a database-read failure returns a sanitized 503. Responses are not cached. Aggregate queries share a read-only consistent database snapshot, and category membership does not multiply recipe/review counts.
+
+#### Short browser check
+
+1. Open the dashboard and confirm the summary and charts load. Change a date range and category/title filter; apply a star filter by selecting a ratings bar. Confirm the displayed filters and results follow the selections. Clear filters when finished.
+2. Download CSV and JSON. Check that their filters and summary values match the snapshot shown on the page. Open a chart's data table to compare its daily or rating values.
+3. Keep Analytics visible in one window. In another, make one ordinary relevant data change, such as adding a review to an approved recipe within the displayed range. Confirm Analytics updates automatically after the next refresh without reloading the page. A different star filter or date range can legitimately exclude that change.
+
+These checks cover the new module without repeating accepted API/permission/backup tests or creating bulk fixtures. They are instructions for user verification and have not been reported passed. Source files: [analytics.py](backend/recipes/analytics.py), [AnalyticsPage.jsx](frontend/src/pages/AnalyticsPage.jsx), [recipeAnalytics.js](frontend/src/data/recipeAnalytics.js), [recipe-analytics.css](frontend/src/styles/recipe-analytics.css). No assistant runtime/build/browser tests were performed under the standing user-led verification boundary.
+
 ## Individual Contributions
 
 Names, 42 logins, project roles and GitHub accounts are confirmed in Team Information. The feature table records the confirmed frontend/backend credits, and individual work is summarised below. Commit-author names or email aliases and selected-module assignments remain to be matched to those identities.
@@ -600,6 +650,8 @@ Names, 42 logins, project roles and GitHub accounts are confirmed in Team Inform
 | Hugo | [Anzohs](https://github.com/Anzohs) | `hladeiro` | Pending | Frontend work with Roh on authentication/profile pages, recipe/moderation screens, reviews/favorites, discovery, refresh and policy pages; Vite integration and visual-output testing. |
 | Fabio | [FaMe1337](https://github.com/FaMe1337) | `famendes` | Pending | Supported both backend and frontend development and provided help as needed. |
 
+Roh also directed the Codex-assisted Module09 analytics endpoint, charts, date/filter controls, live refresh, exports and README guide. This reuses Tomaz's recipe/review models and the shared Roh/Hugo frontend; source review is complete and user browser verification is pending.
+
 Verification challenge documented for `suroh`: establish that actions actually overlap and that old versions cannot overwrite newer contents. Two account sessions used one shared future start time with three Gunicorn workers; saved data and account isolation were checked afterward, and stale edits/approvals were rejected with HTTP 409. The original one-worker configuration was restored.
 
 Selected-module assignments, additional implementation challenges and their solutions, and Git contribution evidence still need team confirmation. Shared challenges can be described with their actual contributors; the subject does not prescribe one unique challenge per member.
@@ -610,6 +662,7 @@ Selected-module assignments, additional implementation challenges and their solu
 - Advanced recipe search is user-verified and implemented in the browser over the full approved collection. Large-catalogue transfer and processing would benefit from server-side search/pagination.
 - Module06 is complete for 2 points based on the working tester report and passed five-path/API-key rejection/account-quota checks, bringing the completed total at that stage to 9/14. Optional cross-account, key-lifecycle and post-limit recovery regressions have not been verified; individual CRUD statuses were not separately supplied.
 - Module08 is complete for 1 point after the working setup report, completed 16-recipe/17-photo backup and successful separate-database restore. The completed total is 11/14. Activation was not exercised because verification left the current website database selected. Local backups require Docker to run and a separate private off-machine copy for host-loss protection.
+- Module09 analytics is implemented and documented, with saved-source review only. User checks of charts/filters, exports and live updates remain pending; its 2 points are not yet counted. Updates use five-second visible-page polling rather than an instantaneous server push. Reports reflect the currently approved catalogue and creation/review timestamps; approval history is not stored.
 - Friends/chat/presence, OAuth and 2FA are not implemented.
 - Photo URLs are served publicly. Pending/rejected recipe page/API access is restricted separately; media serving remains the project's accepted scope.
 - Module07 is complete for 1 point after Roh confirmed the Profile import/export workflow works, bringing the subtotal at that stage to 10/14. Specific forced validation-failure/recovery scenarios and CLI restore outcomes were not reported. Website downloads embed photos; the separate CLI readable files use photo references and remain distinct from portable website files.
@@ -649,5 +702,7 @@ For Module06, Roh directed Codex-assisted implementation of the isolated public 
 For Module07, Roh directed Codex-assisted implementation of private Profile download/import controls, portable JSON/CSV with photos, existing-rule batch validation and transactional/idempotent import receipts, plus the earlier CLI recipe-record exports/checksum/count integration and this documentation. Existing recipe models/serializers, account frontend and snapshot tools are reused. Source reviews are recorded separately from Roh's October 31, 2026 confirmation that website import and export work well.
 
 For Module08, Roh directed Codex-assisted implementation of the sanitized database health endpoint, public Status page, PostgreSQL/photo snapshot worker, private storage/scheduling/retention, receipt-bound recovery commands and this README. Existing Docker/data-sharing/photo helpers are reused. Source reviews are recorded separately from Roh's October 31, 2026working setup report, 16-recipe/17-photo backup listing and successful separate-database restore. Activation was not performed in the reported verification.
+
+For Module09, Roh directed Codex-assisted implementation of the public approved-recipe aggregate endpoint, interactive SVG charts and tables, UTC date/category/title/star filters, visible-page polling and CSV/JSON snapshot downloads. Existing recipe/review models, shared components and the live-refresh hook are reused. Source reviews and operating instructions are recorded separately from the pending user browser checks; no runtime acceptance is claimed.
 
 Team members must review, test and understand the implementation attributed to them.

@@ -12,11 +12,11 @@ Frameworks and ORM are already implemented. Both README entries are complete and
 
 Module 03 advanced permissions is implemented and user-verified. Its README entry and all three Trello tasks are complete.
 
-**Progress: Modules 01–08 complete — 11 of 14 target points.** Module08 health/status, automated private backups and documented recovery are complete: the user reported the setup works, listed a completed backup with 16 recipes / 17 photos and successfully restored it to a separate database on October 31, 2026. Modules 09–10 remain pending: two modules / 3 target points. Existing accepted module results remain preserved.
+**Progress: Modules 01–08 complete — 11 of 14 target points.** Module08 health/status, automated private backups and documented recovery are complete: the user reported the setup works, listed a completed backup with 16 recipes / 17 photos and successfully restored it to a separate database on October 31, 2026. Module09 analytics is implemented and awaiting user browser verification; Module10 remains pending. These two modules represent 3 unqualified target points. Existing accepted module results remain preserved.
 
 The required README module information is the chosen module, its points, why/how it is implemented and its contributors (subject printed page 28 / PDF page 29). Exact file references, tutorials and separate evidence reports are not mandatory additions.
 
-Module 01's old card was archived because the connector cannot delete its excess native checklist items. Its verified replacement is linked below. Other module links are unchanged. Each card has one **Required work** native checklist; the items below record local progress. Module 04, Module 05, Module 06, Module 07 and Module 08 local updates have not been synchronized to Trello.
+Module 01's old card was archived because the connector cannot delete its excess native checklist items. Its verified replacement is linked below. Other module links are unchanged. Each card has one **Required work** native checklist; the items below record local progress. Module 04, Module 05, Module 06, Module 07, Module 08 and Module 09 local updates have not been synchronized to Trello.
 
 ## Card index
 
@@ -30,9 +30,9 @@ Module 01's old card was archived because the connector cannot delete its excess
 | 06 | [Secured public recipe API](https://trello.com/c/ZvUXeo0H/52-module-06-secured-public-recipe-api-major-2-points) | Major | 2 | 5 | Complete |
 | 07 | [Recipe data export/import](https://trello.com/c/sonZzuGg/53-module-07-recipe-data-export-import-minor-1-point) | Minor | 1 | 4 | Complete |
 | 08 | [Health, status and automated backups](https://trello.com/c/T7ZPZQq9/54-module-08-health-status-and-automated-backups-minor-1-point) | Minor | 1 | 4 | Complete |
-| 09 | [Recipe analytics dashboard](https://trello.com/c/8fkox8yA/55-module-09-recipe-analytics-dashboard-major-2-points) | Major | 2 | 5 | Pending |
+| 09 | [Recipe analytics dashboard](https://trello.com/c/8fkox8yA/55-module-09-recipe-analytics-dashboard-major-2-points) | Major | 2 | 5 | In progress: browser verification pending |
 | 10 | [Two additional browsers](https://trello.com/c/Djc38gP8/56-module-10-two-additional-browsers-minor-1-point) | Minor | 1 | 4 | Pending |
-| **Total** | **10 cards** | **4 Major + 6 Minor** | **14** | **31** | **8 complete; 2 pending** |
+| **Total** | **10 cards** | **4 Major + 6 Minor** | **14** | **31** | **8 complete; 1 in progress; 1 pending** |
 
 ## [Module 01] React + Django frameworks — Major (2 points)
 
@@ -166,7 +166,7 @@ Module 01's old card was archived because the connector cannot delete its excess
 
 **Requirement:** Provide interactive charts/graphs, real-time data updates, export functionality, and customizable date ranges and filters.
 
-**Current status:** Existing recipe/review data can support the dashboard.
+**Current status:** Source implementation ready: public `/analytics` and approved-only `/api/analytics/` aggregates provide interactive activity/average-rating/all-grade/ranking charts, five-second visible-page refresh, displayed-snapshot CSV/JSON export and URL-backed UTC date/category/title/review-star filters. README records its purpose, implementation, 2 points, Roh's Codex-assisted contribution (reusing Tomaz's models and the shared Roh/Hugo frontend), operating guide and short browser check. Independent source review is separate from runtime acceptance. The first four checklist items await user verification; no new points are counted, so the completed subtotal remains **11/14**. This local update has not been synchronized to Trello.
 
 **Required work:**
 
@@ -174,7 +174,7 @@ Module 01's old card was archived because the connector cannot delete its excess
 - [ ] Update displayed data in real time.
 - [ ] Provide data export.
 - [ ] Provide customizable date ranges and filters.
-- [ ] Record this module, its 2 points, why/how it is implemented, and contributors in README.
+- [x] Record this module, its 2 points, why/how it is implemented, and contributors in README.
 
 ---
 

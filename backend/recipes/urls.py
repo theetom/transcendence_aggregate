@@ -1,11 +1,13 @@
 from django.urls import path
 from . import views
+from .analytics import RecipeAnalyticsView
 from .transfer_views import (
     RecipeDataView, RecipeExportView, RecipeValidateView, RecipeImportView, RecipeImportStatusView,
 )
 
 
 urlpatterns = [
+    path("analytics/", RecipeAnalyticsView.as_view()),
     path("me/recipe-data/", RecipeDataView.as_view()),
     path("me/recipe-data/export/", RecipeExportView.as_view()),
     path("me/recipe-data/validate/", RecipeValidateView.as_view()),

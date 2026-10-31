@@ -28,6 +28,9 @@ function SiteFooter() {
 
         <div className="site-footer__aside">
           <nav className={footerLinksClassName} aria-label="Footer links">
+            <Link className="footer-link" to="/analytics" aria-current={location.pathname === '/analytics' ? 'page' : undefined}>
+              Analytics
+            </Link>
             <Link className="footer-link" to="/status" aria-current={location.pathname === '/status' ? 'page' : undefined}>
               Status
             </Link>
