@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import AuthPageShell from '../components/AuthPageShell'
+import Button from '../components/Button'
 import { authTokenStorageKey } from '../data/siteData'
+import { clearAccountAPIKeyState, rememberAccountAPIKey } from '../data/accountApiKey'
 
 function LoginPage() {
   const navigate = useNavigate()
-  const [username, setUsername] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -17,45 +19,48 @@ function LoginPage() {
       return
     }
 
-    if (!username.trim() || !password) {
-      setStatus('Enter both username and password before continuing.')
+    if (!identifier.trim() || !password) {
+      setStatus('Enter your username or email and password before continuing.')
       return
     }
 
     setIsSubmitting(true)
     setStatus('Signing in...')
-    let responseDetails = 'POST /api/login/'
 
     try {
       const response = await fetch('/api/login/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: username.trim(),
+          username: identifier.trim(),
           password,
         }),
       })
 
-      responseDetails += `\nHTTP ${response.status} ${response.statusText}`
-      const body = await response.text()
-      responseDetails += `\n\n${body}`
+      const data = await response.json().catch(() => null)
 
       if (!response.ok) {
-        setStatus(responseDetails)
+        const invalidCredentials = response.status === 400
+          && Array.isArray(data?.non_field_errors)
+          && data.non_field_errors.includes('Unable to log in with provided credentials.')
+
+        setStatus(invalidCredentials
+          ? 'Incorrect login details. Please try again.'
+          : 'Unable to sign in right now. Please try again later.')
         return
       }
-
-      const data = JSON.parse(body)
 
       if (typeof data?.token !== 'string' || !data.token.trim()) {
-        setStatus(`${responseDetails}\n\nFrontend: The response did not contain a login token.`)
+        setStatus('Unable to sign in right now. Please try again later.')
         return
       }
 
+      clearAccountAPIKeyState()
       window.sessionStorage.setItem(authTokenStorageKey, data.token)
+      rememberAccountAPIKey(data.account_api_key, data.token)
       navigate('/', { replace: true })
-    } catch (error) {
-      setStatus(`${responseDetails}\n\n${error.name}: ${error.message}`)
+    } catch {
+      setStatus('Unable to complete sign-in. Check your connection and try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -77,15 +82,15 @@ function LoginPage() {
     >
       <form className="field-list" onSubmit={handleSubmit} style={{ marginTop: '18px' }}>
         <div className="field">
-          <label htmlFor="login-username">Username</label>
+          <label htmlFor="login-username">Username or email</label>
           <input
             id="login-username"
             name="username"
             type="text"
             autoComplete="username"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            placeholder="Enter your username"
+            value={identifier}
+            onChange={(event) => setIdentifier(event.target.value)}
+            placeholder="Enter your username or email"
           />
         </div>
 
@@ -103,9 +108,9 @@ function LoginPage() {
         </div>
 
         <div className="auth-card__actions">
-          <button type="submit" className="button button--ghost" disabled={isSubmitting}>
+          <Button type="submit" variant="ghost" disabled={isSubmitting}>
             Continue
-          </button>
+          </Button>
           <Link className="button button--ghost" to="/signup">
             Need an account?
           </Link>

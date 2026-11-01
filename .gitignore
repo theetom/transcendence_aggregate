@@ -1,2 +1,21 @@
 djangorecipe/
 venv/
+
+# Local environment configuration; keep examples available to teammates.
+.env
+.env.*
+!.env.example
+
+# Retired private database-transfer files; keep existing archives ignored.
+/data/postgres-transfer/
+
+# Local database setup state, import receipts, retired data and temporary files.
+/data/database-private/
+
+# Private disaster-recovery backups contain account data and credentials.
+/data/backups/
+
+# Local TLS certificates and private keys are machine-specific.
+/certs/
+*.key
+*-key.pem

@@ -16,13 +16,19 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from rest_framework.authtoken.views import obtain_auth_token
+from users.views import WebsiteLoginView
+from public_api.account_views import AccountAPIKeyView
+from .health import health
 
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/health/", health, name="service-health"),
 
-    path("api/login/", obtain_auth_token),
+    path("api/login/", WebsiteLoginView.as_view()),
+    path("api/me/api-key/", AccountAPIKeyView.as_view(), name="account-api-key"),
+
+    path("api/public/v1/", include("public_api.urls")),
 
     path("api/", include("recipes.urls")),
     path("api/recipes/", include("reviews.urls")),

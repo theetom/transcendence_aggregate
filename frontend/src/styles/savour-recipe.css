@@ -1,0 +1,471 @@
+.savour-recipe {
+  --recipe-image-background: #343e35;
+  min-width: 0;
+  padding-bottom: 24px;
+}
+
+.savour-recipe .recipe-shell__hero {
+  gap: 16px;
+  padding: 0 0 30px;
+  border: 0;
+  background: transparent;
+}
+
+.savour-recipe__back {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--ss-muted);
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.savour-recipe__back:hover {
+  color: var(--ss-gold);
+}
+
+.savour-recipe .recipe-shell__hero .eyebrow {
+  margin: 0;
+  color: var(--ss-gold);
+}
+
+.savour-recipe .recipe-shell__hero h1 {
+  max-width: 22ch;
+  margin: 0;
+  color: var(--ss-ivory);
+  font-family: var(--font-display);
+  font-size: clamp(2.35rem, 4.8vw, 4rem);
+  font-weight: 400;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.savour-recipe .page-hero__lead {
+  max-width: 70ch;
+  margin: 0;
+  color: var(--ss-muted);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.savour-recipe .recipe-shell__rating-strip {
+  align-items: center;
+  gap: 12px 24px;
+}
+
+.savour-recipe .recipe-shell__rating-pill {
+  min-width: 0;
+  min-height: 0;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ss-muted);
+}
+
+.savour-recipe .recipe-shell__rating-pill > span {
+  font-size: 0.85rem;
+}
+
+.savour-recipe .recipe-shell__rating-pill strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ss-ivory);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.savour-recipe .recipe-shell__rating-pill .icon {
+  width: 16px;
+  height: 16px;
+  fill: var(--ss-gold);
+  color: var(--ss-gold);
+}
+
+.savour-recipe .recipe-shell__rating-strip > a {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ss-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.savour-recipe .recipe-shell__rating-strip > a:hover {
+  color: var(--ss-gold);
+}
+
+.savour-recipe__overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+  grid-template-areas:
+    'media ingredients'
+    'actions ingredients';
+  gap: 22px 32px;
+  align-items: start;
+  margin-top: 8px;
+}
+
+.savour-recipe__overview > .page-section {
+  min-width: 0;
+  margin-top: 0;
+}
+
+.savour-recipe .recipe-shell__media-section {
+  grid-area: media;
+}
+
+.savour-recipe .detail-panel.recipe-shell__carousel-stage {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.savour-recipe .recipe-shell__image-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  max-width: none;
+}
+
+.savour-recipe .recipe-shell__image-frame {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border: 1px solid var(--ss-line);
+  border-radius: var(--ss-radius-card, 14px);
+  background: var(--recipe-image-background);
+}
+
+.savour-recipe .recipe-shell__image-frame:first-child {
+  grid-column: 1 / -1;
+  aspect-ratio: 16 / 9;
+}
+
+.savour-recipe .recipe-shell__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: cover;
+}
+
+.savour-recipe .recipe-shell__image-empty {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 24px;
+  background: transparent;
+  color: var(--ss-muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.savour-recipe .recipe-shell__favorite-actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
+}
+
+.savour-recipe .recipe-shell__favorite-actions:empty {
+  display: none;
+}
+
+.savour-recipe .savour-recipe__favorite-button[aria-pressed='true'] .icon {
+  fill: var(--ss-gold);
+  color: var(--ss-gold);
+}
+
+.savour-recipe .recipe-shell__favorite-actions .status-banner {
+  flex-basis: 100%;
+  overflow-wrap: anywhere;
+}
+
+.savour-recipe__ingredients-section {
+  grid-area: ingredients;
+}
+
+.savour-recipe__ingredients-section > .detail-panel {
+  min-height: 100%;
+  padding: 28px;
+  border: 1px solid var(--ss-line);
+  border-radius: var(--ss-radius-card, 14px);
+  background: var(--ss-panel);
+}
+
+.savour-recipe .recipe-shell__section-label {
+  margin: 0 0 22px;
+  color: var(--ss-ivory);
+  font-family: var(--font-body);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+.savour-recipe .ingredient-list {
+  display: grid;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.savour-recipe .ingredient-list li {
+  position: relative;
+  padding: 0 0 0 20px;
+  border: 0;
+  background: transparent;
+  color: var(--ss-ivory);
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.savour-recipe .ingredient-list li::before {
+  position: absolute;
+  top: 0.7em;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ss-sage);
+  content: '';
+}
+
+.savour-recipe__method {
+  margin-top: 46px;
+}
+
+.savour-recipe__method > .detail-panel {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.savour-recipe .step-list {
+  display: grid;
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: method-step;
+}
+
+.savour-recipe .step-list li {
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr);
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ss-ivory);
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  counter-increment: method-step;
+}
+
+.savour-recipe .step-list li::before {
+  color: var(--ss-gold);
+  font-size: 0.9rem;
+  font-weight: 600;
+  content: counter(method-step, decimal-leading-zero);
+}
+
+.savour-recipe .recipe-shell__author-panel,
+.savour-recipe .recipe-shell__comments-panel {
+  padding: 28px;
+  border: 1px solid var(--ss-line);
+  border-radius: var(--ss-radius-card, 14px);
+  background: var(--ss-panel);
+}
+
+.savour-recipe .recipe-shell__author-intro {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--ss-line);
+}
+
+.savour-recipe .recipe-shell__author-intro h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.savour-recipe .recipe-shell__author-mark {
+  overflow: hidden;
+  border: 1px solid var(--ss-line);
+  border-radius: 50%;
+  background: var(--ss-bg);
+  color: var(--ss-gold);
+}
+
+.savour-recipe .recipe-shell__author-copy a,
+.savour-recipe .comment-card a {
+  color: var(--ss-ivory);
+  text-underline-offset: 4px;
+}
+
+.savour-recipe .recipe-shell__author-recipes > h3 {
+  margin-top: 14px;
+}
+
+.savour-recipe .recipe-shell__author-recipes .recipe-preview-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.savour-recipe .recipe-shell__suggestion-panel {
+  gap: 8px;
+  padding: 24px 0;
+  border: 0;
+  border-top: 1px solid var(--ss-line);
+  background: transparent;
+}
+
+.savour-recipe .recipe-shell__suggestion-panel h2,
+.savour-recipe .recipe-shell__suggestion-panel p {
+  margin: 0;
+}
+
+.savour-recipe .recipe-shell__suggestion-panel h2 {
+  font-size: 1.4rem;
+}
+
+.savour-recipe .recipe-shell__suggestion-panel p {
+  color: var(--ss-muted);
+}
+
+.savour-recipe .recipe-shell__comments-section {
+  scroll-margin-top: 100px;
+}
+
+.savour-recipe .recipe-shell__comments-label {
+  font-family: var(--font-body);
+  font-size: 1.65rem;
+}
+
+.savour-recipe .recipe-review-form {
+  padding-top: 22px;
+  border-top: 1px solid var(--ss-line);
+}
+
+.savour-recipe .comment-card {
+  min-width: 0;
+  padding: 22px;
+  border: 1px solid var(--ss-line);
+  border-radius: var(--ss-radius-control, 10px);
+  background: var(--ss-bg);
+}
+
+.savour-recipe .comment-card__meta {
+  color: var(--ss-muted);
+}
+
+.savour-recipe .comment-card__meta > span {
+  color: var(--ss-gold);
+}
+
+.savour-recipe .comment-card__text {
+  color: var(--ss-ivory);
+}
+
+.savour-recipe .savour-recipe__moderation .detail-panel {
+  border-color: var(--ss-line);
+  background: var(--ss-panel);
+}
+
+@media (max-width: 800px) {
+  .savour-recipe__overview {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'media' 'actions' 'ingredients';
+    gap: 22px;
+  }
+
+  .savour-recipe .recipe-shell__image-frame:first-child {
+    aspect-ratio: 3 / 2;
+  }
+
+  .savour-recipe__ingredients-section > .detail-panel {
+    padding: 26px 0 0;
+    border: 0;
+    border-top: 1px solid var(--ss-line);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .savour-recipe .recipe-shell__favorite-actions .button {
+    width: 100%;
+  }
+
+  .savour-recipe .recipe-shell__author-recipes .recipe-preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .savour-recipe .recipe-shell__hero {
+    gap: 12px;
+    padding-bottom: 24px;
+  }
+
+  .savour-recipe .recipe-shell__hero > .eyebrow {
+    font-size: 0.7rem;
+  }
+
+  .savour-recipe .recipe-shell__hero h1 {
+    font-size: 2.2rem;
+    line-height: 1.15;
+  }
+
+  .savour-recipe .recipe-shell__rating-strip {
+    gap: 8px 16px;
+  }
+
+  .savour-recipe .recipe-shell__rating-strip > a {
+    justify-content: flex-start;
+    width: auto;
+    font-size: 0.85rem;
+  }
+
+  .savour-recipe .recipe-shell__section-label {
+    font-size: 1.45rem;
+  }
+
+  .savour-recipe .recipe-shell__author-panel,
+  .savour-recipe .recipe-shell__comments-panel {
+    padding: 20px;
+  }
+
+  .savour-recipe .recipe-shell__author-recipes .recipe-preview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .savour-recipe .recipe-shell__author-header {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .savour-recipe .recipe-shell__author-mark {
+    width: 48px;
+    height: 48px;
+  }
+
+  .savour-recipe__method {
+    margin-top: 36px;
+  }
+}

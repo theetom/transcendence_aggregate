@@ -1,18 +1,24 @@
-from urllib import request
+import json
+import logging
 from datetime import timedelta
+from uuid import uuid4
 
-from django.db.models import Avg, Count, Q
+from django.db import transaction
+from django.db.models import Avg, Count, Prefetch, Q
 from django.utils import timezone
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, parser_classes
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import serializers, status
 
-from .models import Recipe, Category, Ingredient
-from .serializers import RecipeSummarySerializer, RecipeDetailedSerializer, RecipeUpdateSerializer, CategorySerializer, IngredientSerializer
+from .models import Recipe, Category, Ingredient, RecipeImage
+from .serializers import RecipeSummarySerializer, RecipeDetailedSerializer, RecipeUpdateSerializer, RecipeDecisionSerializer, RecipeRejectionSerializer, CategorySerializer, IngredientSerializer
+from reviews.models import Review
 from reviews.serializers import ReviewSerializer
 
-@api_view(["GET", "POST"])
-def recipe_intake(request):
+logger = logging.getLogger(__name__)
+
+def _recipe_intake(request):
 	if request.method == "GET":
 		categories = Category.objects.all()
 		ingredients = Ingredient.objects.all()
@@ -23,132 +29,539 @@ def recipe_intake(request):
 		})
 	
 	if request.method == "POST":
-
-		serializer = RecipeDetailedSerializer(
-			data=request.data
-		)
-
-		if serializer.is_valid():
-
-			serializer.save(user=request.user)
-
+		if not request.user.is_authenticated:
 			return Response(
-				serializer.data,
-				status=status.HTTP_201_CREATED
+				{"error": "You must be logged in to add a recipe."},
+				status=status.HTTP_401_UNAUTHORIZED,
 			)
 
-		return Response(
-			serializer.errors,
-			status=status.HTTP_400_BAD_REQUEST
-		)
+		raw_data = request.data
+		if not isinstance(raw_data, dict):
+			return Response(
+				{"non_field_errors": ["Recipe data must be an object."]},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		image_files = request.FILES.getlist("images")
+		if not image_files:
+			return Response(
+				{"images": "Add at least one photo before submitting."},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+		if len(image_files) > 2:
+			return Response(
+				{"images": "Add no more than two photos per recipe."},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+		if sum(image_file.size for image_file in image_files) > 20 * 1024 * 1024:
+			return Response(
+				{"images": "Photos must total 20 MiB or smaller."},
+				status=status.HTTP_400_BAD_REQUEST,
+			)
+
+		image_field = serializers.ImageField(allow_empty_file=False)
+		image_extensions = {
+			"JPEG": ".jpg", "PNG": ".png", "GIF": ".gif",
+			"WEBP": ".webp",
+		}
+		for index, image_file in enumerate(image_files, start=1):
+			if image_file.size > 5 * 1024 * 1024:
+				return Response(
+					{"images": f"Photo {index} must be 5 MiB or smaller."},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			try:
+				image_field.run_validation(image_file)
+			except serializers.ValidationError as error:
+				return Response(
+					{"images": {str(index): error.detail}},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			extension = image_extensions.get(image_file.image.format)
+			if extension is None:
+				return Response(
+					{"images": f"Photo {index} must be JPEG, PNG, GIF or WebP."},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			# Match the served extension to verified bytes, not the original filename.
+			image_file.name = f"{uuid4().hex}{extension}"
+			image_file.seek(0)
+
+		# Keep uploaded files separate and give nested serializers a plain dict.
+		data = {
+			key: raw_data.get(key)
+			for key in raw_data
+			if key not in request.FILES
+		}
+		for field in ("ingredients", "categories", "steps"):
+			if field in data and isinstance(data[field], str):
+				try:
+					data[field] = json.loads(data[field])
+				except json.JSONDecodeError:
+					return Response(
+						{field: "This field must contain a valid JSON array."},
+						status=status.HTTP_400_BAD_REQUEST,
+					)
+
+		serializer = RecipeDetailedSerializer(data=data, context={"review_viewer": request.user})
+		if not serializer.is_valid():
+			return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+		created_files = []
+		try:
+			with transaction.atomic():
+				recipe = serializer.save(user=request.user)
+				for image_file in image_files:
+					photo = RecipeImage(recipe=recipe)
+					photo.image.save(image_file.name, image_file, save=False)
+					created_files.append((photo.image.storage, photo.image.name))
+					photo.save()
+
+				# Serialize before committing so a response-data failure rolls back.
+				response = Response(serializer.data, status=status.HTTP_201_CREATED)
+		except Exception:
+			for storage, name in created_files:
+				try:
+					storage.delete(name)
+				except Exception:
+					logger.exception("Could not remove recipe photo %s after failed creation.", name)
+			raise
+
+		return response
+
+
+@api_view(["GET", "POST"])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
+def recipe_intake(request):
+	return _recipe_intake(request)
+
 
 @api_view(["GET"])
 def recipe_list(request):
 
 	# GET /api/recipes/
-	if request.method == "GET":
-		recipes = Recipe.objects.all()
+	recipes = Recipe.objects.filter(approved=True)
 
-		serializer = RecipeSummarySerializer(
-			recipes,
-			many=True
+	serializer = RecipeSummarySerializer(
+		recipes,
+		many=True
+	)
+
+	return Response(serializer.data)
+
+
+@api_view(["GET"])
+def managed_recipes(request):
+	if not request.user.is_staff:
+		return Response(
+			{"error": "You do not have permission to manage all recipes."},
+			status=status.HTTP_403_FORBIDDEN,
+		)
+	recipes = Recipe.objects.all().order_by("-date_created", "-id")
+	return Response(RecipeSummarySerializer(recipes, many=True).data)
+
+
+@api_view(["GET"])
+def pending_approval(request):
+	if not request.user.is_staff:
+		return Response(
+			{"error": "You do not have permission to approve recipes."},
+			status=status.HTTP_403_FORBIDDEN
+		)
+	recipes = Recipe.objects.filter(
+		Q(approved=False, rejected=False) | Q(deletion_requested=True)
+	)
+
+	serializer = RecipeSummarySerializer(
+		recipes,
+		many=True
+	)
+
+	return Response(serializer.data)
+	
+
+@api_view(["POST"])
+def recipe_approve(request, recipe_id):
+	if not request.user.is_staff:
+		return Response(
+			{"error": "You do not have permission to approve recipes."},
+			status=status.HTTP_403_FORBIDDEN
 		)
 
-		return Response(serializer.data)
+	serializer = RecipeDecisionSerializer(data=request.data)
+	if not serializer.is_valid():
+		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+	with transaction.atomic():
+		try:
+			recipe = Recipe.objects.select_for_update().get(pk=recipe_id)
+		except Recipe.DoesNotExist:
+			return Response(
+				{"error": "Recipe not found"},
+				status=status.HTTP_404_NOT_FOUND
+			)
+
+		if recipe.deletion_requested:
+			return Response(
+				{"error": "Review this recipe's deletion request before its approval status."},
+				status=status.HTTP_409_CONFLICT,
+			)
+
+		if recipe.content_revision != serializer.validated_data["content_revision"]:
+			return Response(
+				{
+					"code": "recipe_changed",
+					"error": "The recipe's contents changed. Reload and review them again.",
+				},
+				status=status.HTTP_409_CONFLICT,
+			)
+
+		if recipe.rejected:
+			return Response(
+				{"error": "This recipe has already been rejected. Reload to see its current status."},
+				status=status.HTTP_409_CONFLICT,
+			)
+
+		if not recipe.approved:
+			recipe.approved = True
+			recipe.save(update_fields=["approved"])
+
+		return Response(RecipeSummarySerializer(recipe).data)
+
+
+@api_view(["POST"])
+def recipe_reject(request, recipe_id):
+	if not request.user.is_staff:
+		return Response(
+			{"error": "You do not have permission to reject recipes."},
+			status=status.HTTP_403_FORBIDDEN,
+		)
+
+	serializer = RecipeRejectionSerializer(data=request.data)
+	if not serializer.is_valid():
+		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+	with transaction.atomic():
+		try:
+			recipe = Recipe.objects.select_for_update().get(pk=recipe_id)
+		except Recipe.DoesNotExist:
+			return Response(
+				{"error": "Recipe not found"},
+				status=status.HTTP_404_NOT_FOUND,
+			)
+
+		if recipe.deletion_requested:
+			return Response(
+				{"error": "Review this recipe's deletion request before its approval status."},
+				status=status.HTTP_409_CONFLICT,
+			)
+
+		if recipe.content_revision != serializer.validated_data["content_revision"]:
+			return Response(
+				{
+					"code": "recipe_changed",
+					"error": "The recipe's contents changed. Reload and review them again.",
+				},
+				status=status.HTTP_409_CONFLICT,
+			)
+
+		if recipe.approved or recipe.rejected:
+			return Response(
+				{"error": "This recipe has already been reviewed. Reload to see its current status."},
+				status=status.HTTP_409_CONFLICT,
+			)
+
+		recipe.rejected = True
+		recipe.rejection_reason = serializer.validated_data["reason"]
+		recipe.save(update_fields=["rejected", "rejection_reason"])
+
+		return Response(RecipeSummarySerializer(recipe).data)
+
+
+@api_view(["POST"])
+def recipe_deletion_reject(request, recipe_id):
+	if not request.user.is_staff:
+		return Response(
+			{"error": "You do not have permission to review deletion requests."},
+			status=status.HTTP_403_FORBIDDEN,
+		)
+
+	with transaction.atomic():
+		try:
+			recipe = Recipe.objects.select_for_update().get(pk=recipe_id)
+		except Recipe.DoesNotExist:
+			return Response(
+				{"error": "Recipe not found"},
+				status=status.HTTP_404_NOT_FOUND,
+			)
+		if not recipe.deletion_requested:
+			return Response(
+				{"error": "There is no deletion request to reject. Reload to see the current recipe."},
+				status=status.HTTP_409_CONFLICT,
+			)
+		recipe.deletion_requested = False
+		recipe.save(update_fields=["deletion_requested"])
+		return Response(RecipeSummarySerializer(recipe).data)
+
 
 @api_view(["GET"])
 def recipe_landing_page(request):
 	cutoff = timezone.now() - timedelta(days=30)
 	recent_reviews = Q(reviews__timestamp__gte=cutoff)
-	recipes = Recipe.objects.annotate(
+	recipes = Recipe.objects.filter(approved=True).annotate(
 		recent_average_score=Avg("reviews__grade", filter=recent_reviews),
 		recent_number_of_reviews=Count("reviews", filter=recent_reviews),
 	)
 	reviewed_recipes = recipes.filter(recent_number_of_reviews__gt=0)
-	unreviewed_recipes = recipes.filter(recent_number_of_reviews=0)
 
 	best_average = reviewed_recipes.order_by(
 		"-recent_average_score", "-recent_number_of_reviews", "id"
 	)[:5]
-	best_average_ids = best_average.values_list("id", flat=True)
-	most_reviews = reviewed_recipes.exclude(id__in=best_average_ids).order_by(
+	most_reviews = reviewed_recipes.order_by(
 		"-recent_number_of_reviews", "-recent_average_score", "id"
 	)[:5]
-	remaining_slots = 5 - len(most_reviews)
-	if remaining_slots > 0:
-		most_reviews = list(most_reviews) + list(
-			unreviewed_recipes.order_by("-date_created")[:remaining_slots]
-		)
+	recently_added = Recipe.objects.filter(approved=True).order_by(
+		"-date_created", "-id"
+	)[:5]
 
 	return Response({
 		"best_average": RecipeSummarySerializer(best_average, many=True).data,
 		"most_reviews": RecipeSummarySerializer(most_reviews, many=True).data,
+		"recently_added": RecipeSummarySerializer(recently_added, many=True).data,
 	})
 
-@api_view(["GET", "POST", "PUT"])
-def recipe_detail(request, recipe_name):
+def _recipe_edit_or_delete(request, recipe_id):
+	if not request.user.is_authenticated:
+		return Response(
+			{"error": "You must be logged in to manage a recipe."},
+			status=status.HTTP_401_UNAUTHORIZED,
+		)
+
+	created_files = []
+	try:
+		with transaction.atomic():
+			try:
+				recipe = Recipe.objects.select_for_update().get(pk=recipe_id)
+			except Recipe.DoesNotExist:
+				return Response(
+					{"error": "Recipe not found"},
+					status=status.HTTP_404_NOT_FOUND,
+				)
+			if not request.user.is_staff and recipe.user_id != request.user.id:
+				return Response(
+					{"error": "You do not have permission to manage this recipe."},
+					status=status.HTTP_403_FORBIDDEN,
+				)
+
+			if request.method == "DELETE":
+				if not request.user.is_staff:
+					if not recipe.deletion_requested:
+						recipe.deletion_requested = True
+						recipe.save(update_fields=["deletion_requested"])
+					return Response(
+						RecipeSummarySerializer(recipe).data,
+						status=status.HTTP_202_ACCEPTED,
+					)
+				# Retained database snapshots may still reference the stored photo files.
+				recipe.delete()
+				return Response(status=status.HTTP_204_NO_CONTENT)
+
+			if recipe.deletion_requested and not request.user.is_staff:
+				return Response(
+					{"error": "Wait for an admin to review your deletion request before editing this recipe."},
+					status=status.HTTP_409_CONFLICT,
+				)
+
+			raw_data = request.data
+			if not isinstance(raw_data, dict):
+				return Response(
+					{"non_field_errors": ["Recipe data must be an object."]},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			data = {
+				key: raw_data.get(key)
+				for key in raw_data
+				if key not in request.FILES
+			}
+			allowed_fields = {
+				"title", "description", "ingredients", "categories", "steps",
+				"retained_image_ids", "resubmit", "content_revision",
+			}
+			if set(data) - allowed_fields:
+				return Response(
+					{"non_field_errors": ["Only recipe contents and photos can be edited."]},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			revision_serializer = RecipeDecisionSerializer(data=data)
+			if not revision_serializer.is_valid():
+				return Response(revision_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+			if recipe.content_revision != revision_serializer.validated_data["content_revision"]:
+				return Response(
+					{
+						"code": "recipe_changed",
+						"error": "This recipe changed since you opened it. Reload and check it again before saving.",
+					},
+					status=status.HTTP_409_CONFLICT,
+				)
+			data.pop("content_revision")
+			for field in ("ingredients", "categories", "steps", "retained_image_ids"):
+				if field in data and isinstance(data[field], str):
+					try:
+						data[field] = json.loads(data[field])
+					except json.JSONDecodeError:
+						return Response(
+							{field: "This field must contain a valid JSON array."},
+							status=status.HTTP_400_BAD_REQUEST,
+						)
+
+			existing_photos = list(recipe.images.all())
+			existing_ids = {photo.pk for photo in existing_photos}
+			retained_ids = data.pop("retained_image_ids", list(existing_ids))
+			if (
+				not isinstance(retained_ids, list)
+				or any(type(image_id) is not int for image_id in retained_ids)
+				or len(retained_ids) != len(set(retained_ids))
+				or not set(retained_ids).issubset(existing_ids)
+			):
+				return Response(
+					{"retained_image_ids": "Choose each retained photo once from this recipe."},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+
+			image_files = request.FILES.getlist("images")
+			if not 1 <= len(retained_ids) + len(image_files) <= 2:
+				return Response(
+					{"images": "Keep one or two photos per recipe."},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			if sum(image_file.size for image_file in image_files) > 20 * 1024 * 1024:
+				return Response(
+					{"images": "Photos must total 20 MiB or smaller."},
+					status=status.HTTP_400_BAD_REQUEST,
+				)
+			image_field = serializers.ImageField(allow_empty_file=False)
+			image_extensions = {
+				"JPEG": ".jpg", "PNG": ".png", "GIF": ".gif", "WEBP": ".webp",
+			}
+			for index, image_file in enumerate(image_files, start=1):
+				if image_file.size > 5 * 1024 * 1024:
+					return Response(
+						{"images": f"Photo {index} must be 5 MiB or smaller."},
+						status=status.HTTP_400_BAD_REQUEST,
+					)
+				try:
+					image_field.run_validation(image_file)
+				except serializers.ValidationError as error:
+					return Response(
+						{"images": {str(index): error.detail}},
+						status=status.HTTP_400_BAD_REQUEST,
+					)
+				extension = image_extensions.get(image_file.image.format)
+				if extension is None:
+					return Response(
+						{"images": f"Photo {index} must be JPEG, PNG, GIF or WebP."},
+						status=status.HTTP_400_BAD_REQUEST,
+					)
+				image_file.name = f"{uuid4().hex}{extension}"
+				image_file.seek(0)
+
+			serializer = RecipeUpdateSerializer(recipe, data=data)
+			if not serializer.is_valid():
+				return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+			resubmit = serializer.validated_data.pop("resubmit", False)
+			serializer.save()
+			recipe.images.exclude(pk__in=retained_ids).delete()
+			for image_file in image_files:
+				photo = RecipeImage(recipe=recipe)
+				photo.image.save(image_file.name, image_file, save=False)
+				created_files.append((photo.image.storage, photo.image.name))
+				photo.save()
+
+			recipe.content_revision += 1
+			recipe.save(update_fields=["content_revision"])
+			if not request.user.is_staff or resubmit:
+				recipe.approved = False
+				recipe.rejected = False
+				recipe.rejection_reason = ""
+				recipe.save(update_fields=["approved", "rejected", "rejection_reason"])
+			# Include response serialization in the same all-or-nothing transaction.
+			response = Response(RecipeDetailedSerializer(recipe, context={"review_viewer": request.user}).data)
+	except Exception:
+		for storage, name in created_files:
+			try:
+				storage.delete(name)
+			except Exception:
+				logger.exception("Could not remove recipe photo %s after failed edit.", name)
+		raise
+	return response
+
+
+def _recipe_review(request, recipe_id):
+	if not request.user.is_authenticated:
+		return Response(
+			{"error": "You must be logged in to write a review."},
+			status=status.HTTP_401_UNAUTHORIZED,
+		)
+
+	# Recipe edits take this same lock, so an approval change cannot race the save.
+	with transaction.atomic():
+		try:
+			recipe = Recipe.objects.select_for_update().get(pk=recipe_id)
+		except Recipe.DoesNotExist:
+			return Response(
+				{"error": "Recipe not found"},
+				status=status.HTTP_404_NOT_FOUND,
+			)
+
+		if not recipe.approved:
+			return Response(
+				{"error": "Only approved recipes can receive reviews."},
+				status=status.HTTP_403_FORBIDDEN,
+			)
+
+		serializer = ReviewSerializer(data=request.data, context={"review_viewer": request.user})
+		if not serializer.is_valid():
+			return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+		serializer.save(recipe=recipe, user=request.user)
+		return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+def _recipe_detail(request, recipe_id):
+	if request.method in ("PUT", "DELETE"):
+		return _recipe_edit_or_delete(request, recipe_id)
+	if request.method == "POST":
+		return _recipe_review(request, recipe_id)
 
 	try:
-		recipe = Recipe.objects.get(title=recipe_name)
+		recipe = Recipe.objects.select_related("user").prefetch_related(
+			Prefetch("reviews", queryset=Review.objects.select_related("user")),
+		).get(pk=recipe_id)
 	except Recipe.DoesNotExist:
 		return Response(
 			{"error": "Recipe not found"},
 			status=status.HTTP_404_NOT_FOUND
 		)
-
-	if request.method == "GET":
-		serializer = RecipeDetailedSerializer(recipe)
-		return Response(serializer.data)
-
-	if request.method == "PUT":
-		if not request.user.is_authenticated:
-			return Response(
-				{"error": "You must be logged in to edit a recipe."},
-				status=status.HTTP_401_UNAUTHORIZED
-			)
-
-		if not request.user.is_staff and recipe.user_id != request.user.id:
-			return Response(
-				{"error": "You do not have permission to edit this recipe."},
-				status=status.HTTP_403_FORBIDDEN
-			)
-
-		serializer = RecipeUpdateSerializer(
-			recipe,
-			data=request.data,
-			partial=True
-		)
-
-		if serializer.is_valid():
-			serializer.save()
-			return Response(RecipeDetailedSerializer(recipe).data)
-
+	
+	if (
+		not recipe.approved
+		and not request.user.is_staff
+		and recipe.user_id != request.user.id
+	):
 		return Response(
-			serializer.errors,
-			status=status.HTTP_400_BAD_REQUEST
+			{"error": "This recipe has not been approved."},
+			status=status.HTTP_403_FORBIDDEN
 		)
 
-	if request.method == "POST":
-		if not request.user.is_authenticated:
-			return Response(
-				{"error": "You must be logged in to write a review."},
-				status=status.HTTP_401_UNAUTHORIZED
-			)
-		serializer = ReviewSerializer(data=request.data)
+	serializer = RecipeDetailedSerializer(recipe, context={"review_viewer": request.user})
+	return Response(serializer.data)
 
-		if serializer.is_valid():
-			serializer.save(
-				recipe=recipe,
-				user=request.user
-			)
-			return Response(
-				serializer.data,
-				status=status.HTTP_201_CREATED
-			)
-		return Response(
-			serializer.errors,
-			status=status.HTTP_400_BAD_REQUEST
-		)
+
+@api_view(["GET", "POST", "PUT", "DELETE"])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
+def recipe_detail(request, recipe_id):
+	return _recipe_detail(request, recipe_id)
+
 
 """ import json
 

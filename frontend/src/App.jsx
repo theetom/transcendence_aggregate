@@ -1,10 +1,11 @@
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import './App.css'
 import SiteHeader from './components/SiteHeader'
 import SiteFooter from './components/SiteFooter'
 import AddRecipePage from './pages/AddRecipePage'
 import AddRecipeSubmittedPage from './pages/AddRecipeSubmittedPage'
 import AdminPage from './pages/AdminPage'
+import AnalyticsPage from './pages/AnalyticsPage'
 import CategoryPage from './pages/CategoryPage'
 import ConnectPage from './pages/ConnectPage'
 import HomePage from './pages/HomePage'
@@ -12,12 +13,14 @@ import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import PrivacyPage from './pages/PrivacyPage'
 import ProfilePage from './pages/ProfilePage'
+import PublicUserProfilePage from './pages/PublicUserProfilePage'
 import RecipePage from './pages/RecipePage'
-import ReviewRequestPage from './pages/ReviewRequestPage'
 import SearchResultsPage from './pages/SearchResultsPage'
 import SignupPage from './pages/SignupPage'
+import StatusPage from './pages/StatusPage'
 import TermsPage from './pages/TermsPage'
 import { isViewerAuthenticated } from './data/siteData'
+import './styles/savour-system.css'
 
 function ProtectedRoute({ children }) {
   if (!isViewerAuthenticated()) {
@@ -35,25 +38,40 @@ function PublicOnlyRoute({ children }) {
   return children
 }
 
+function EditRecipeRoute() {
+  const { recipeId } = useParams()
+  return <AddRecipePage key={recipeId} editMode />
+}
+
 function AppShell() {
   const location = useLocation()
   const isHomePage = location.pathname === '/'
-  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+|\/results\/search|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile(?:\/recipes)?|\/admin(?:\/review\/[^/]+)?|\/privacy|\/terms)$/
+  const knownPathPattern = /^(?:\/|\/home|\/category(?:\/[^/]+)?|\/recipe\/[^/]+(?:\/edit)?|\/results\/search|\/users\/[^/]+|\/connect|\/login|\/signup|\/add-recipe(?:\/submitted)?|\/profile(?:\/recipes)?|\/staff|\/privacy|\/status|\/analytics|\/terms)$/
   const hideShell = !knownPathPattern.test(location.pathname)
   const mainClassName = isHomePage ? 'page-main page-main--home' : 'page-main'
 
   return (
     <div className="site-frame">
+      <a className="skip-link" href="#main-content">Skip to content</a>
       {!hideShell && <SiteHeader />}
 
-      <main className={mainClassName}>
+      <main id="main-content" className={mainClassName} tabIndex={-1}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/home" element={<Navigate replace to="/" />} />
           <Route path="/category" element={<Navigate replace to="/" />} />
           <Route path="/category/:slug" element={<CategoryPage />} />
-          <Route path="/recipe/:slug" element={<RecipePage />} />
+          <Route path="/recipe/:recipeId" element={<RecipePage />} />
+          <Route
+            path="/recipe/:recipeId/edit"
+            element={
+              <ProtectedRoute>
+                <EditRecipeRoute />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/results/search" element={<SearchResultsPage />} />
+          <Route path="/users/:userId" element={<PublicUserProfilePage />} />
           <Route
             path="/connect"
             element={
@@ -103,9 +121,10 @@ function AppShell() {
               </ProtectedRoute>
             }
           />
-          <Route path="/admin" element={<AdminPage />} />
-          <Route path="/admin/review/:slug" element={<ReviewRequestPage />} />
+          <Route path="/staff" element={<AdminPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/status" element={<StatusPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

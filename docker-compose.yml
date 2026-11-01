@@ -1,21 +1,232 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: recipes
+      POSTGRES_USER: recipes
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "recipes", "-d", "recipes"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   backend:
     build:
       context: ./backend
-    ports:
-      - "8000:8000"
+    init: true
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      DJANGO_SECRET_KEY: "${DJANGO_SECRET_KEY:?Set DJANGO_SECRET_KEY in the root .env file}"
+      DJANGO_DEBUG: "${DJANGO_DEBUG:-False}"
+      DJANGO_ALLOWED_HOSTS: "${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend}"
+      DJANGO_DB_ENGINE: postgresql
+      POSTGRES_DB: "${DJANGO_POSTGRES_DB:-recipes}"
+      POSTGRES_USER: recipes
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
     volumes:
-      - ./data:/data
+      - django_static:/srv/django/static
+      - django_media:/app/media
+    depends_on:
+      postgres:
+        condition: service_healthy
     command: >-
-      sh -c "if [ ! -f /data/db.sqlite3 ]; then
-      cp /app/db.sqlite3 /data/db.sqlite3;
-      fi && python manage.py migrate &&
-      gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+      sh -c "python manage.py migrate --noinput &&
+      python manage.py collectstatic --noinput &&
+      exec gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import os, socket; os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings'); import django; django.setup(); from django.db import connection; connection.cursor().execute('SELECT 1'); socket.create_connection(('127.0.0.1', 8000), timeout=3).close()"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   frontend:
     build:
       context: ./frontend
+    init: true
+    restart: unless-stopped
+    environment:
+      HTTPS_PORT: "${HTTPS_PORT:-8443}"
+      SERVER_NAME: "${SERVER_NAME:-localhost}"
+      NGINX_ENVSUBST_FILTER: "HTTPS_PORT|SERVER_NAME"
     ports:
-      - "5173:5173"
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:80"
+      - "127.0.0.1:${HTTPS_PORT:-8443}:443"
+    volumes:
+      - django_static:/srv/django/static:ro
+      - django_media:/srv/django/media:ro
+      - type: bind
+        source: "${TLS_CERT_DIR:-./certs}"
+        target: /etc/nginx/certs
+        read_only: true
+        bind:
+          create_host_path: false
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - --fail
+        - --silent
+        - --show-error
+        - --insecure
+        - https://127.0.0.1/
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Retain the service identity so existing installations replace the same container.
+  meal-planner:
+    build:
+      context: ./demos/public-api-tester
+    init: true
+    restart: unless-stopped
+    user: "${MEAL_PLANNER_USER:-65534:65534}"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      MEAL_PLANNER_PORT: "${MEAL_PLANNER_PORT:-8765}"
+      CAROOT: /app/ca
+    ports:
+      - "127.0.0.1:${MEAL_PLANNER_PORT:-8765}:${MEAL_PLANNER_PORT:-8765}"
+    volumes:
+      - type: bind
+        source: "${MEAL_PLANNER_CA_FILE:-./certs/rootCA.pem}"
+        target: /app/ca/rootCA.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - python
+      - server.py
+      - --bind
+      - 0.0.0.0
+      - --port
+      - "${MEAL_PLANNER_PORT:-8765}"
+      - --api-base
+      - "https://${SERVER_NAME:-localhost}:${HTTPS_PORT:-8443}/api/public/v1"
+      - --upstream
+      - frontend:443
+      - --ca
+      - /app/ca/rootCA.pem
+    depends_on:
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import os, urllib.request;
+          request = urllib.request.Request('http://127.0.0.1:' + os.environ['MEAL_PLANNER_PORT'] + '/api/status', headers={'X-Public-API-Tester': '1'});
+          urllib.request.build_opener(urllib.request.ProxyHandler({})).open(request, timeout=3).close()
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backups:
+    image: transcendence-private-backups:local
+    build:
+      context: .
+      dockerfile: scripts/backups.Dockerfile
+    init: true
+    restart: unless-stopped
+    user: "${BACKUP_USER:-65534:65534}"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: recipes
+      PGDATABASE: "${DJANGO_POSTGRES_DB:-recipes}"
+      PGPASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}"
+      PGCONNECT_TIMEOUT: "5"
+      BACKUP_INTERVAL_SECONDS: "${BACKUP_INTERVAL_SECONDS:-86400}"
+      BACKUP_KEEP_COUNT: "${BACKUP_KEEP_COUNT:-7}"
+    volumes:
+      - django_media:/media:ro
+      - type: bind
+        source: ./data/backups
+        target: /backups
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    depends_on:
+      postgres:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "/app/backups-worker.py", "health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 330s
+
+  backup-restore:
+    profiles: ["recovery"]
+    image: transcendence-private-backups:local
+    build:
+      context: .
+      dockerfile: scripts/backups.Dockerfile
+    init: true
+    restart: "no"
+    user: "0:0"
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - DAC_OVERRIDE
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: recipes
+      PGDATABASE: "${DJANGO_POSTGRES_DB:-recipes}"
+      PGPASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env file}"
+      PGCONNECT_TIMEOUT: "5"
+    volumes:
+      - django_media:/media
+      - type: bind
+        source: ./data/backups
+        target: /backups
+        read_only: true
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    command: ["list"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  django_static:
+  django_media:

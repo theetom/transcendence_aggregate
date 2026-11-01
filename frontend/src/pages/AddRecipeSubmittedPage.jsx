@@ -6,11 +6,11 @@ function AddRecipeSubmittedPage() {
       <section className="page-section add-recipe-submitted">
         <div className="add-recipe-submitted__content">
           <article className="form-panel add-recipe-submitted__panel">
-            <h1>Recipe submission</h1>
+            <h1>Recipe submitted successfully</h1>
             <div className="form-panel__body add-recipe-submitted__body">
               <p>
-                The database-backed submission flow is not connected yet, so no
-                recipe data was saved.
+                Your recipe is pending approval and waiting for an admin to
+                review it. It will appear publicly once approved.
               </p>
             </div>
           </article>

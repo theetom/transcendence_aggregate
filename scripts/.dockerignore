@@ -1,0 +1,8 @@
+# Build with scripts/ as the context. Include only certificate tooling sources.
+**
+!.dockerignore
+!cert-tools.Dockerfile
+!install-mkcert.py
+!bootstrap-local-ca.py
+!prepare-local-cert.py
+!install-browser-trust.py
