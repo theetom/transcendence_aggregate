@@ -76,15 +76,29 @@ The related database changes finish together or are undone together if saving fa
 
 ### How the photos are linked to the recipe
 
-The actual image is saved as a file in the photo folder. In the database, a separate **photo record** stores the recipe's ID and the image's file location. For example:
+**Uploaded recipe images are stored inside the `backend` Docker container at `/app/media/recipes/`.** In the database, a separate **photo record** stores the recipe's ID and the image's relative file location. Using `photo.jpg` as an example filename:
 
 ```text
 Recipe record: id=60, title="Lemon and Herb Roast Chicken"
 Photo record: recipe_id=60, image="recipes/photo.jpg"
-Actual image file: /app/media/recipes/photo.jpg
+File inside the backend container: /app/media/recipes/photo.jpg
 ```
 
-The matching `60` links that photo to that recipe. Two photos create two photo records with the same recipe ID. The photo folder survives normal service restarts. When displaying the recipe, the server returns the image addresses and the browser loads those files.
+The matching `60` links that photo to that recipe. Two photos create two photo records with the same recipe ID. Django combines its storage folder `/app/media/` with the saved value `recipes/photo.jpg` to find the file.
+
+### Where that file lives in Docker and the project
+
+Docker keeps the images in a **volume**, a storage folder managed by Docker that survives normal container restarts and replacement. Our Compose configuration calls it `django_media`. Both containers have access to the same stored files through different paths:
+
+| Where you look | Location of the example image | What happens there |
+| --- | --- | --- |
+| `backend` container | `/app/media/recipes/photo.jpg` | Django saves the uploaded image. |
+| `frontend` container, which runs Nginx | `/srv/django/media/recipes/photo.jpg` | Nginx reads the same file through a read-only connection to the volume. |
+| Browser | `/media/recipes/photo.jpg` | The browser requests this address; Nginx sends back the image file. |
+
+**On this installation**, the full volume name is `transcendence_aggregate_django_media`. Docker reports its storage folder as `/var/lib/docker/volumes/transcendence_aggregate_django_media/_data/`, so the example image would be under `_data/recipes/photo.jpg`. Another computer's Docker storage path can differ.
+
+In the project folder, `data/shared-database/photos/` contains **exported photo copies** for sharing with partners. Those copies use generated filenames; `data/shared-database/manifest.json` records the mapping. The running website saves and reads its images through the Docker volume.
 
 **Files and functions to check**
 
@@ -93,6 +107,20 @@ The matching `60` links that photo to that recipe. Two photos create two photo r
 - [serializers.py → RecipeDetailedSerializer](backend/recipes/serializers.py#L126), especially [create](backend/recipes/serializers.py#L224).
 - [models.py → RecipeIngredient](backend/recipes/models.py#L41), [RecipeStep](backend/recipes/models.py#L54) and [RecipeImage](backend/recipes/models.py#L73).
 - [views.py → save the photo file and its database record](backend/recipes/views.py#L113), [settings.py → photo storage paths](backend/config/settings.py#L169) and [nginx.conf → serve photo files](frontend/nginx.conf#L77).
+- [docker-compose.yml → backend image storage](docker-compose.yml#L35) and [the same storage connected to Nginx](docker-compose.yml#L68).
+- [share-postgres.py → publish exported photo copies](scripts/share-postgres.py#L403).
+
+From the project root, list the actual image files inside the backend container with:
+
+```sh
+docker compose exec -T backend ls /app/media/recipes
+```
+
+To check where Docker stores this installation's volume, run:
+
+```sh
+docker volume inspect transcendence_aggregate_django_media --format '{{.Mountpoint}}'
+```
 
 ## 4. Approving, rejecting and deleting recipes
 

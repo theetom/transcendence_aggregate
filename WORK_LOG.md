@@ -7966,3 +7966,14 @@ observations are recorded in WORK_LOG.md.
 
 - Explicitly staged only guide/README/log; staged whitespace and scope review passed. Commit94bc87c(Simplify evaluation guide and explain photo storage) succeeded, and normal git push origin main succeeded e62c182..94bc87c. No application/data/runtime changes.
 - Requested guide work is complete. This final log-only delivery record is being staged/committed and pushed normally; final command outputs establish its result. Next work follows user feedback; no deferred tests or backend implementation started.
+
+### 2026-11-01 — Make image locations explicit in the evaluation guide
+
+- User points out the image explanation still omitted which Docker container and where to find its storage. Acknowledged the omission; revised only EVALUATION_GUIDE.md and this log. Guide now explicitly connects the database-relative image path to backend /app/media/recipes/, frontend/Nginx /srv/django/media/recipes/, browser /media/recipes/, the shared django_media volume, its inspected local full name/host storage path, and exported project copies under data/shared-database/photos/. Added read-only listing/volume-location commands and Compose/export source links at the section end. Example photo.jpg is explicitly illustrative.
+- Read-only source review and independent reviewer confirm the storage mounts, serving mapping and exported-copy distinction. docker volume inspect succeeded and reported /var/lib/docker/volumes/transcendence_aggregate_django_media/_data. Initial container listing hit sandbox Docker socket denial; approved escalated retry succeeded and listed actual recipe images. Initial lookup of data/shared-database/media failed (directory does not exist); verified actual project export directory is photos/. No data/service/account/application/backend change or runtime acceptance test.
+- Previous session delivery is confirmed: final log-only commit533014b and push94bc87c..533014b succeeded, with clean synced main at this turn's start. Current guide correction awaits static link/whitespace review and documentation delivery. Existing14pointcompletion and accepted testing boundaries preserved.
+
+### Current checkpoint — Exact Docker image locations documented
+
+- Final independent review passed; all66localguidefile/line references resolve, generic-user/no-question checks pass, and git diff --check passes. Read-only Docker listing and volume inspection verified actual storage; no browser/API/runtime acceptance tests or service/data changes.
+- Documentation delivery scope is only EVALUATION_GUIDE.md and WORK_LOG.md. Stage/review/commit/push this bounded correction normally; next work follows user feedback.
