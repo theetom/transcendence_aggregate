@@ -7961,3 +7961,8 @@ observations are recorded in WORK_LOG.md.
 
 - Guide changes complete: generic users, no preparation questions, plain logic before references, brief concrete database/photo linkage example. README points to EVALUATION_GUIDE.md. Static reference and whitespace checks passed; confirmed14pointcompletion and credentials unchanged.
 - Remaining delivery: inspect staged documentation, commit and push origin main, then confirm status. No further implementation or testing requested.
+
+### Final checkpoint — Generic-user guide delivered
+
+- Explicitly staged only guide/README/log; staged whitespace and scope review passed. Commit94bc87c(Simplify evaluation guide and explain photo storage) succeeded, and normal git push origin main succeeded e62c182..94bc87c. No application/data/runtime changes.
+- Requested guide work is complete. This final log-only delivery record is being staged/committed and pushed normally; final command outputs establish its result. Next work follows user feedback; no deferred tests or backend implementation started.
