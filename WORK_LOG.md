@@ -7977,3 +7977,8 @@ observations are recorded in WORK_LOG.md.
 
 - Final independent review passed; all66localguidefile/line references resolve, generic-user/no-question checks pass, and git diff --check passes. Read-only Docker listing and volume inspection verified actual storage; no browser/API/runtime acceptance tests or service/data changes.
 - Documentation delivery scope is only EVALUATION_GUIDE.md and WORK_LOG.md. Stage/review/commit/push this bounded correction normally; next work follows user feedback.
+
+### Final checkpoint — Docker image location correction delivered
+
+- Staged only EVALUATION_GUIDE.md and WORK_LOG.md; staged whitespace/scope checks passed. Commit70846ff(Document exact Docker image storage locations) succeeded. Normal origin main push succeeded533014b..70846ff. Exact container/volume/host/project-copy locations and read-only discovery commands are now delivered.
+- This final log-only record is being staged/committed/pushed normally, followed by read-only status confirmation; outputs establish success. No further implementation or testing pending for this correction.
