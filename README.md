@@ -35,6 +35,7 @@ The user and operator guides are kept together in this README:
 | [Partner starting sequence](#partner-start) | Update main, configure, start once and arrange account access. |
 | [Core website walkthrough](#core-website-walkthrough) | Accounts, profiles, recipe submission/editing, moderation, reviews, favorites and cleanup. |
 | [Module test route and result format](#partner-test-route) | Where to read and what result to check for all ten selected modules. |
+| [Evaluation: understand the code](EVALUATION_CODE_GUIDE.md) | The main logic, important functions and simple questions to prepare. |
 | [Public API setup and usage](#public-api-guide) | Account API keys, endpoint paths, request examples and rate limits. |
 | [JSON API responses](#json-api-responses) | Disable the DRF HTML viewer, load the setting and check account/moderation access. |
 | [Public API Tester](#separate-public-api-tester) | Open the tester, connect a key and demonstrate GET/POST/PUT/DELETE. |
