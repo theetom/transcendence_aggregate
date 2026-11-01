@@ -1,0 +1,14 @@
+{
+  "format": "recipe-transfer",
+  "format_version": 1,
+  "recipes": [
+    {
+      "title": "Invalid demo: validation should reject this record",
+      "description": "Intentional invalid import sample: zero ingredient quantity, no steps and no photo. No record should be imported.",
+      "ingredients": [{"name": "Rice", "quantity": "0", "unit": "g"}],
+      "categories": [{"name": "Demo"}],
+      "steps": [],
+      "images": []
+    }
+  ]
+}
