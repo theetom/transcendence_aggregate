@@ -1,33 +1,47 @@
 # How the project works
 
-Each section explains what the user does, what the server checks and what gets saved. File and function references are at the end. A function is a named group of instructions doing one job; use **Ctrl+F** to find it by name.
+This guide follows each action from what the user does to what appears on the page. Each section ends with the files and functions involved. A **function** is a named group of instructions that performs one job; use **Ctrl+F** to find the named function when opening the code.
 
-## What the site stores
+## What the different parts do
 
-A **user** is someone using the site. The **recipe owner** is the user who submitted that recipe. **Staff** can approve, reject and manage recipes. The existing `admin` handles this moderation; `superadmin` can also manage accounts and their permissions.
+The **browser** runs React, our page-building JavaScript code. React displays forms, reads what the user enters and sends requests when it needs saved information or wants to change it.
 
-A recipe has a name, ingredient amounts, ordered instructions, photos, an author and an approval state. A review is a written opinion with a score from 1 to 5. A favorite saves a recipe in one person's collection.
+Those requests first reach **Nginx**, the web server running in the `frontend` Docker container. Nginx either sends a requested file itself or forwards an API request to **Django**, our Python application in the `backend` container. Django checks who made the request, decides whether the action is allowed and reads or changes records in **PostgreSQL**, our database in the `postgres` container. Django's reply returns through Nginx to the browser, where React updates the page.
 
-The **browser** displays the page and collects what a person types. The **server** checks requests and decides what is allowed. The **database** keeps saved information after the page closes. An **ID** is a number identifying one saved record, such as recipe 60.
+Docker runs these programs in separate **containers**, each with its own environment and file paths. The containers communicate with each other, which is how Nginx can pass a request to Django and Django can query PostgreSQL.
+
+An **API** is a set of addresses that programs call to request data or changes. A **request** contains an address, an action and, when needed, data. For example, `GET` asks to read information, while `POST` submits information. The **response** is the server's reply, including a status number and any returned data.
+
+The saved information connects these actions: a **user account** identifies someone; a **recipe** belongs to its submitting user and has ingredients, instructions, photos and an approval state; a **review** connects a user to a recipe with a comment and a score; a **favorite** connects a recipe to one user's saved collection. An **ID** is the number identifying a particular record, such as recipe 60.
+
+The **recipe owner** is the submitting user. **Staff** can moderate recipes. The existing `admin` handles recipe moderation, while `superadmin` can also manage accounts and permissions.
 
 **Files and functions to check**
 
 - [README → Demo account logins](README.md#demo-catalogue).
 - [models.py → Recipe](backend/recipes/models.py#L4).
 
-## 1. Opening a recipe
+## 1. Opening a recipe: from the page address to saved data
 
-When the user opens `/recipe/60`, the page needs the saved name, instructions, photos and reviews for recipe 60.
+Suppose the user enters `https://localhost:8443/recipe/60` in the browser. The `/recipe/60` part is the path asking to open recipe 60's page. Opening that page starts two connected requests:
 
-1. On the first visit, the website sends the browser the files needed to display its pages.
-2. The page address tells the browser to open the recipe screen for recipe 60.
-3. That screen asks the server for the saved data at `/api/recipes/60/`.
-4. The server finds recipe 60 and checks access. If approved, it is public. If not approved, only its owner or staff may view it.
-5. The server sends the recipe data back. The browser puts those values into the visible page.
+1. The browser first requests `/recipe/60` from Nginx. Nginx sends the website's starting HTML page, and the browser loads the JavaScript and styles needed to run React.
+2. React reads `/recipe/60`, selects the recipe screen and takes `60` as the recipe ID. At this point it knows which recipe to show, but it still needs that recipe's saved contents.
+3. To get those contents, React makes an **API call**: the browser sends `GET /api/recipes/60/` to Nginx. This explicitly asks to read recipe 60's data.
+4. Nginx recognizes the `/api/` path and forwards the complete request to Django at `backend:8000` inside Docker. Nginx does not look up the recipe itself.
+5. Django's main address list matches the `api/` prefix and passes the remaining `recipes/60/` to its recipe address list. That list recognizes the recipe ID and selects the function that handles this request. Keeping recipe addresses together lets the main list connect several areas, such as accounts and recipes, without containing every individual address.
+6. That function finds recipe 60 in PostgreSQL and checks access. An approved recipe is public; an unapproved recipe can be read only by its owner or staff. If access is refused or the recipe does not exist, Django returns an error for the page to display.
+7. If access is allowed, Django turns the saved recipe and its related records into **JSON**, text containing named values and lists. The response travels back through Nginx to the browser. React reads those values and displays the name, ingredients, instructions and reviews.
 
-The two addresses have different jobs: `/recipe/60` chooses the screen; `/api/recipes/60/` supplies its information. Nginx is the website's entry point: it delivers page files and forwards data requests to Django, which runs our server-side checks. Django's main address list delegates recipe addresses to the recipe-specific list, which chooses the handling function.
+For example, part of the JSON response could be:
 
-The reply identifies the recipe (`id`), gives its name (`title`) and says whether staff approved it for public display (`approved`). **`approved: true` means staff approved this recipe, so it may appear publicly.** `approved: false` means it is not approved for public display; its owner and staff can still access it. These named values are sent as text in a format called **JSON**.
+```json
+{"id": 60, "title": "Lemon and Herb Roast Chicken", "approved": true}
+```
+
+Here, `id: 60` identifies the saved recipe and `title` contains the name to display. **`approved: true` means staff approved that recipe for public display.** If `approved` is `false`, it has not been approved for public display, although its owner and staff can still access it.
+
+The response also contains image addresses. After React places those addresses in the page, the browser requests the actual image files separately. Section 3 follows that part of the process.
 
 **Files and functions to check**
 
@@ -35,23 +49,17 @@ The reply identifies the recipe (`id`), gives its name (`title`) and says whethe
 - [recipeApi.js → getRecipeDetails](frontend/src/data/recipeApi.js#L245).
 - [nginx.conf](frontend/nginx.conf), [main address list](backend/config/urls.py#L24), [recipe address list](backend/recipes/urls.py#L9), then [views.py → _recipe_detail](backend/recipes/views.py#L530).
 
-A shortened data reply can look like this:
+## 2. Signing in: how later requests belong to an account
 
-```json
-{"id": 60, "title": "Lemon and Herb Roast Chicken", "approved": true}
-```
+Reading an approved recipe does not require an account. Saving a recipe, review or favorite does, because Django must know which user is making the change.
 
-## 2. Signing in
+1. During signup, the browser sends the entered account details and passwords to `/api/sign_up/` using `POST`. Nginx forwards the request to Django, which checks the fields, duplicate accounts and password rules. Django saves the account and its profile, storing a protected password-check value called a **hash**. After successful signup, the website opens the login page.
+2. On that page, the user enters a username or email and a password. The browser sends them in `POST /api/login/`, again through Nginx to Django. Django checks whether those credentials match a saved active account.
+3. If they match, Django returns a **token**, a secret value linked to that account. The browser stores it in that tab's session storage, an area the page can read on later requests.
+4. When the user saves something, the browser includes this token in the request's **headers**, information sent alongside the main data. Django looks up the token to identify the user before handling the requested change. It can then use that user as the recipe author or choose that user's favorites collection.
+5. On logout, the browser sends `POST /api/logout/` with the token. Django deletes the server's token record, and the browser clears its stored login. That token can no longer authorize a save.
 
-Before accepting a recipe, review or favorite, the server needs to identify the signed-in user.
-
-1. During signup, the server checks the account details, matching passwords and password rules. It saves a protected password-check value instead of readable password text.
-2. Login checks the user's username/email and password.
-3. A successful login returns a **token**, a secret identifying that account on later website requests.
-4. The browser keeps it for that tab and sends it with requests. The server uses it to identify the user.
-5. Logout deletes the server token, so it can no longer identify a valid login.
-
-The server uses the signed-in identity as the recipe author. Sending another account's ID does not let a user act as that account.
+This connects signing in to ownership: Django gets the author from the checked login token. Entering someone else's account ID in submitted data does not prove that the request belongs to them.
 
 **Files and functions to check**
 
@@ -59,46 +67,35 @@ The server uses the signed-in identity as the recipe author. Sending another acc
 - [users/serializers.py → SignupSerializer](backend/users/serializers.py#L120).
 - [users/views.py → WebsiteLoginView](backend/users/views.py#L35), [sign_up](backend/users/views.py#L62) and [logout](backend/users/views.py#L117).
 - [recipeApi.js → requestRecipeApi](frontend/src/data/recipeApi.js#L5).
+- [SignupPage.jsx → signup request and login navigation](frontend/src/pages/SignupPage.jsx#L86) and [SiteHeader.jsx → logout](frontend/src/components/SiteHeader.jsx#L70).
 
-## 3. Saving a recipe and its photos
+## 3. Saving a recipe: connected records and actual photo files
 
-The user fills in the recipe form with ingredients, amounts, instructions and a photo, then clicks **Add recipe**.
+The user fills in a recipe form and clicks **Add recipe**. React has to send both the written information and the selected image files so Django can save the complete submission.
 
-1. The page collects the fields and selected photos.
-2. It checks obvious mistakes before sending them.
-3. The server checks again: requests can be sent without using our form. It checks quantities, required fields, duplicate names, step numbers and actual photo contents and sizes.
-4. It saves the recipe with the signed-in user as its owner and links its ingredients, instructions and photo records.
-5. It replies with success or errors; the page displays that result.
+1. React collects the name, categories, ingredient amounts, ordered instructions and photos. It checks the form and highlights invalid fields before sending anything.
+2. If the form passes, the browser sends `POST /api/recipes/add_recipe/` with the login token. The request carries the text fields and image contents together in separate parts. Nginx forwards that request to Django.
+3. Django identifies the user from the token and checks the submitted values and actual image contents. These checks are necessary because someone could send a request directly without using our form.
+4. Django saves a recipe owned by that user, then saves the related ingredient amounts, instructions and photo records connected to its ID. It uses a **transaction**: these database changes finish together, or they are undone together if saving fails. Newly written image files also receive separate cleanup if creation fails.
+5. Once saving succeeds, Django returns status **201**, meaning a new record was created. The response comes back through Nginx, and React opens the submission confirmation page. The recipe is saved as pending approval, leading to the moderation process in section 4.
 
-Each ingredient amount belongs to a particular recipe. One recipe can use **600 g of potatoes** and another **300 g**, while both refer to the ingredient “Potatoes.” Instructions are also saved as separate records linked to the recipe.
+The connected records matter because the same ingredient can appear in several recipes with different amounts. One recipe's ingredient record can link “Potatoes” to **600 g**, while another recipe's record links it to **300 g**. Each amount belongs to that recipe's connection to the ingredient. Instructions and photos likewise have their own records linked to a particular recipe.
 
-The related database changes finish together or are undone together if saving fails. New image files are also cleaned up if creation fails.
+### Following one photo from saving to display
 
-### How the photos are linked to the recipe
+Use `photo.jpg` as an example filename. A photo record in PostgreSQL could contain `recipe_id=60` and `image="recipes/photo.jpg"`. The first value connects it to recipe 60. The second tells Django where to find its file relative to the image storage folder. Two photos have two records with the same recipe ID.
 
-**Uploaded recipe images are stored inside the `backend` Docker container at `/app/media/recipes/`.** In the database, a separate **photo record** stores the recipe's ID and the image's relative file location. Using `photo.jpg` as an example filename:
+When Django saves that image, it combines its storage folder `/app/media/` with `recipes/photo.jpg`. **The actual file is therefore at `/app/media/recipes/photo.jpg` inside the `backend` container.** The image contents live in that file; the database record keeps the connection and file location.
 
-```text
-Recipe record: id=60, title="Lemon and Herb Roast Chicken"
-Photo record: recipe_id=60, image="recipes/photo.jpg"
-File inside the backend container: /app/media/recipes/photo.jpg
-```
+Docker connects `/app/media/` to a persistent storage folder called a **volume**. Our Compose configuration calls it `django_media`. Because the volume keeps the files separately from the container, normal container restarts or replacement preserve them.
 
-The matching `60` links that photo to that recipe. Two photos create two photo records with the same recipe ID. Django combines its storage folder `/app/media/` with the saved value `recipes/photo.jpg` to find the file.
+The `frontend` container connects to that same volume at `/srv/django/media/`, with read-only access. It therefore sees the same image as `/srv/django/media/recipes/photo.jpg`. Django can save the file through its path, and Nginx can read that file through its own path.
 
-### Where that file lives in Docker and the project
+When the recipe response gives React an image address such as `/media/recipes/photo.jpg`, React places it in the page. The browser then sends `GET /media/recipes/photo.jpg` to Nginx. Nginx matches `/media/` to its `/srv/django/media/` folder, reads the image file and sends its contents to the browser. The browser can now display the photo beside the recipe information fetched in section 1.
 
-Docker keeps the images in a **volume**, a storage folder managed by Docker that survives normal container restarts and replacement. Our Compose configuration calls it `django_media`. Both containers have access to the same stored files through different paths:
+**On this installation**, Docker names the volume `transcendence_aggregate_django_media` and reports its storage folder as `/var/lib/docker/volumes/transcendence_aggregate_django_media/_data/`. The example file would therefore be at `/var/lib/docker/volumes/transcendence_aggregate_django_media/_data/recipes/photo.jpg` on the Docker host. Another computer's Docker storage location can differ.
 
-| Where you look | Location of the example image | What happens there |
-| --- | --- | --- |
-| `backend` container | `/app/media/recipes/photo.jpg` | Django saves the uploaded image. |
-| `frontend` container, which runs Nginx | `/srv/django/media/recipes/photo.jpg` | Nginx reads the same file through a read-only connection to the volume. |
-| Browser | `/media/recipes/photo.jpg` | The browser requests this address; Nginx sends back the image file. |
-
-**On this installation**, the full volume name is `transcendence_aggregate_django_media`. Docker reports its storage folder as `/var/lib/docker/volumes/transcendence_aggregate_django_media/_data/`, so the example image would be under `_data/recipes/photo.jpg`. Another computer's Docker storage path can differ.
-
-In the project folder, `data/shared-database/photos/` contains **exported photo copies** for sharing with partners. Those copies use generated filenames; `data/shared-database/manifest.json` records the mapping. The running website saves and reads its images through the Docker volume.
+The project folder also contains `data/shared-database/photos/`. Those are photo copies created when exporting shared project data for partners. Their generated filenames are mapped in `data/shared-database/manifest.json`; the live website reads its images through the Docker volume described above.
 
 **Files and functions to check**
 
@@ -122,17 +119,17 @@ To check where Docker stores this installation's volume, run:
 docker volume inspect transcendence_aggregate_django_media --format '{{.Mountpoint}}'
 ```
 
-## 4. Approving, rejecting and deleting recipes
+## 4. Approval and deletion: how the saved state controls access
 
-Submitting a recipe saves it as **pending approval**. It is saved, but ordinary visitors cannot see it yet.
+Saving a submission does not make it public immediately. Django initially marks it pending approval, so the owner and staff can inspect it while ordinary visitors cannot see it.
 
-1. The recipe owner and staff can view the pending submission.
-2. Staff approve it for public display or reject it with a reason.
-3. If rejected, the owner sees the reason, corrects the recipe and submits it again.
-4. An ordinary owner's content edit sends it back for approval. Staff edits normally preserve its approval state.
-5. An owner's deletion request waits for a staff decision. An approved recipe can remain public until staff approve its removal.
+1. Staff open the submission and inspect its contents. Clicking Approve sends `POST /api/recipes/60/approve/` with their login token and the version they inspected. Nginx forwards the request to Django, which checks staff permission and that the contents still match that version.
+2. If those checks pass, Django marks the recipe approved and returns the saved result through Nginx. Later requests for public recipe lists can include it, and ordinary visitors can open its page.
+3. If staff reject it instead, their request includes a reason. Django saves the rejection and reason. The owner can then read that reason, correct the recipe and submit it for approval again.
+4. When an ordinary owner edits a recipe's contents, the browser sends the changes to Django using `PUT`, meaning update, at `/api/recipes/60/`. After checking ownership and the loaded version, Django saves the contents and returns the recipe to pending approval. Staff content edits normally preserve its existing approval state.
+5. If the owner requests deletion, the browser uses `DELETE /api/recipes/60/`. Django records a deletion request and returns status **202**, meaning the request was accepted for later action. An approved recipe can stay public while staff decide. When staff approve removal, Django deletes it and returns **204**, meaning success with no response data.
 
-For editing, the server rejects a person who is **neither staff nor the owner**. These checks happen on the server even if somebody changes the browser's buttons. Managing user accounts and granting permissions is a separate administration job.
+Django checks these permissions on the request itself. Hiding a button in React helps show appropriate controls, but changing those controls cannot give a user staff permission or ownership. Managing accounts and granting permissions is a separate administration action.
 
 **Files and functions to check**
 
@@ -141,31 +138,33 @@ For editing, the server rejects a person who is **neither staff nor the owner**.
 - [recipe_approve](backend/recipes/views.py#L184) and [recipe_reject](backend/recipes/views.py#L233).
 - [users/admin.py](backend/users/admin.py).
 
-## 5. Preventing an old edit from overwriting a newer one
+## 5. Two people edit: how the newer save is protected
 
-A user and a staff member open version **3** of the same recipe. The staff member saves a changed instruction first, producing version **4**.
+Opening an edit form loads both the recipe contents and a version number. Suppose a user and a staff member each load version **3**. The staff member saves a changed instruction first, so the database now contains version **4**. The user's open form still holds the older contents and version 3.
 
-1. The user's older form still sends version 3.
-2. Before changing anything, the server compares that number with the saved version 4.
-3. The numbers differ, so the server refuses the old save with response **409**, meaning a conflict. The user must reload before editing again.
+1. When the user submits that form, the browser sends the edits and version 3 in `PUT /api/recipes/60/`. Nginx passes the request to Django.
+2. Django locks that recipe's database record while checking and saving. If another request is currently changing the same record, this request waits for it to finish before checking the latest saved state.
+3. After checking permission, Django compares the submitted version 3 with the saved version 4. Because they differ, Django leaves the saved contents unchanged and returns status **409**, meaning the request conflicts with newer data.
+4. Nginx returns that response to the browser. React displays the conflict message and requires the user to reload the current recipe before trying another edit.
 
-A second protection makes competing changes to the same recipe wait while one save finishes. This keeps the comparison and save together. Waiting handles changes happening together; version numbers catch an old form even much later. Content edits increase the number; adding a review or favorite does not.
+If the versions match, Django can save the changes and increase the version before releasing the lock. The lock keeps simultaneous saves from both passing the check against the same old state; the version number also catches an old form submitted much later.
+
+Staff approval and rejection requests carry the inspected version too, so a decision about old contents cannot silently apply to newer contents. Adding a review or favorite does not change the recipe's content version because it does not edit the recipe itself.
 
 **Files and functions to check**
 
 - [views.py → _recipe_edit_or_delete](backend/recipes/views.py#L333) and [recipe_approve](backend/recipes/views.py#L184).
 - In those functions, find `content_revision` for the version comparison, `select_for_update()` for waiting, and `transaction.atomic()` for keeping the operation together.
 
-## 6. Saving reviews, favorites and updated results
+## 6. Reviews and favorites: saving a change and seeing it elsewhere
 
-The user can rate an approved recipe and add it to their saved collection.
+When a signed-in user posts a review, the browser sends the comment and a grade from **1 to 5** in `POST /api/recipes/60/`. Nginx forwards it to Django. Django identifies the user from the token, checks that the recipe is still approved and saves a review connecting that user to that recipe.
 
-1. A review saves the signed-in user, the recipe, a comment and a grade from **1–5**.
-2. The server calculates the count and average from saved reviews, and the page displays them. Grades **4** and **5** give **(4 + 5) / 2 = 4.5**. With no reviews, it returns zero instead of dividing by zero.
-3. A favorite links the signed-in user's profile to the recipe. It changes only that user's saved collection.
-4. Other open pages request fresh data five seconds after the previous request finishes and when focus returns. This is how the changed review count appears without a manual reload. Hidden pages pause these reads.
+After Django confirms creation, the browser requests the recipe details again. Django reads the saved reviews and calculates their count and average, then returns the updated result. React confirms that the new review appears and displays it with the updated figures. For example, grades **4** and **5** give **(4 + 5) / 2 = 4.5**. With no reviews, the recipe response gives a count and average of zero.
 
-The server chooses the user from the login, not from a name typed into the review or favorite request.
+A favorite saves a different connection. Clicking the favorite control sends `PUT /api/me/favorites/60/` with the login token. Django uses that token to select the current user's profile, adds the link to recipe 60 and returns that profile's updated favorite IDs. React uses the reply to show the saved state. Removing the favorite uses `DELETE` at the same address. Each request changes the identified user's collection.
+
+Another person's open recipe page will not receive these changes automatically from Django. Instead, the page periodically sends new read requests through Nginx to Django. Each refresh gets the latest saved data, and React updates the visible review count and other relevant values. The next refresh starts five seconds after the previous one finishes; returning focus to the page also triggers a refresh, while hidden pages pause these requests.
 
 **Files and functions to check**
 
@@ -174,65 +173,70 @@ The server chooses the user from the login, not from a name typed into the revie
 - [users/views.py → user_favorite](backend/users/views.py#L150).
 - [useLiveRefresh.js](frontend/src/hooks/useLiveRefresh.js#L5).
 
-## 7. Filtering and sorting search results
+## 7. Search: from downloaded recipes to the selected results page
 
-The user can combine choices such as vegetarian recipes, an ingredient containing “chickpea,” and a minimum rating of three stars.
+Suppose the user wants vegetarian recipes containing “chickpea,” with an average rating of at least three stars. The search screen needs the approved recipe collection before it can apply those choices.
 
-1. Start with the approved recipe collection.
-2. Keep recipes satisfying **all** the selected choices.
-3. Sort those matches, for example from highest rating to lowest.
-4. Take the selected page of matches, such as the first six.
+1. The browser sends `GET /api/recipes/all_recipes/` to Nginx. Nginx forwards it to Django, which reads approved recipe summaries from the database and returns them as JSON.
+2. React keeps that returned collection in the browser. It reads the user's search choices and keeps recipes satisfying **all** of them: the selected category, an ingredient containing the text and the minimum average rating.
+3. React sorts all the matching recipes using the selected order, such as highest rating first. Only then does it choose the displayed page, such as the first six results, and draw their cards.
+4. Changing a filter updates the choices in the page address and returns to page 1. Reloading or using browser Back lets React read those saved choices from the address and apply them again.
 
-Filtering only one page could hide matches elsewhere, so filtering comes before dividing results into pages. Our search does this in the browser after downloading the approved collection. Choices are kept in the page address so reload and browser Back can restore them. Applying a new filter returns to page 1 because the old page number may no longer exist.
+In this feature, filtering happens in the browser after the collection is downloaded. Each filter change does not ask Django to run a matching database search. Filtering and sorting the whole collection before choosing a page ensures that matches outside the previously displayed page are included.
 
 **Files and functions to check**
 
 - [recipeSearch.js → searchRecipes](frontend/src/data/recipeSearch.js#L81), then [paginateRecipeResults](frontend/src/data/recipeSearch.js#L122).
 - [SearchResultsPage.jsx](frontend/src/pages/SearchResultsPage.jsx).
 
-## 8. Another program asks our site for recipes
+## 8. The Public API Tester: a second program calls the site
 
-An **API** is a set of addresses that programs can use to ask for information or changes. The separate Public API Tester uses these addresses when its buttons create, read, edit or delete a recipe.
+The recipe website uses its API for its own pages. The separate **Public API Tester** demonstrates another program reading or changing recipes through the public API. The tester has its own browser page and its own Python server.
 
-1. The tester sends an **API key**, a secret identifying its account's access.
-2. The server checks that the key is valid, enabled, unexpired and belongs to an active account.
-3. It checks the account's allowance: **60 requests in 60 seconds**. Too many returns **429** with a waiting time.
-4. It checks the account's ownership/staff permissions. An ordinary user's key cannot edit another user's recipe.
+1. The user connects an **API key**, a secret granting access for an account, in the tester. When they click a tester action, its browser page sends a request to the tester's server.
+2. For example, to read its tracked recipe 60, the tester server sends `GET /api/public/v1/recipes/60/` to the recipe website over HTTPS. It adds the API key in the request headers so Django can identify the account.
+3. The request reaches the website's Nginx, which forwards the public API path to Django. Django checks that the key is valid, enabled, unexpired and belongs to an active account.
+4. Django then checks the account's allowance of **60 requests per 60 seconds**, shared across its keys. If exhausted, it returns status **429**, meaning too many requests, with a waiting time. Nginx also has a separate limit on rapid public API traffic from the same client address.
+5. If the request can proceed, Django checks the key's permission and the account's recipe access. A change requires a key allowed to write as well as the normal ownership or staff permission. A valid key alone does not let an ordinary user edit someone else's recipe.
+6. Django performs the allowed action and returns its response through Nginx to the tester server. The tester server sends the result to its own browser page, which displays the outcome.
 
-The allowance belongs to the account, so another key does not reset it. This key can expire or be disabled independently of the website login token.
+The API key can expire or be disabled independently of the website login token from section 2. Both identify an account, but they are checked as separate credentials for their respective APIs.
 
 **Files and functions to check**
 
 - [authentication.py → PublicAPIKeyAuthentication](backend/public_api/authentication.py#L35) and [consume_public_api_quota](backend/public_api/authentication.py#L19).
 - [permissions.py → PublicAPIKeyPermission](backend/public_api/permissions.py#L6).
+- [Public API Tester server → outgoing API request](demos/public-api-tester/server.py#L216) and [public API addresses](backend/public_api/urls.py#L8).
 
-## 9. Exporting and importing recipes
+## 9. Recipe files: export, check and import
 
-**Export** turns selected recipes into a downloadable file. **Import** reads such a file and creates new recipe copies. Our website's JSON files keep named fields/lists; CSV files arrange recipes into rows. Both include photos.
+**Export** turns selected recipes into a downloadable file. **Import** reads a file to create new recipe copies. Our JSON format keeps named fields and lists; CSV arranges the records into rows. Both formats include the image contents encoded as text, so the file carries the photos too.
 
-1. The user selects their recipes and downloads a file.
-2. When importing, the server checks the whole file and its photos before saving.
-3. A valid batch becomes new copies owned by the importing user, pending approval. The original recipes remain unchanged.
-4. If the save succeeds but the connection drops before its reply arrives, a saved **receipt** identifies the request and file. Retrying that request returns its existing result instead of creating the batch twice.
+1. To export, the browser sends selected recipe IDs and the chosen format in `POST /api/me/recipe-data/export/`, with the login token. Nginx forwards it to Django. Django checks that the recipes belong to the user, reads their connected records and photos, and returns the requested file. The browser saves that response as the download.
+2. To import, the user first chooses a file for checking. The browser sends it to `/api/me/recipe-data/validate/` using `POST`. Django checks the whole file and its photos, then returns a preview and a **fingerprint**, a value calculated from the file's contents.
+3. When the user confirms import, the browser sends that file, its fingerprint and a unique request ID to `/api/me/recipe-data/import/`. Django rechecks them, then saves the recipe copies and an import receipt together. The new recipes belong to the importing user and await staff approval. The original recipes remain unchanged.
+4. Django returns the receipt, including the new recipe IDs, through Nginx. The page can now show which recipes were created.
 
-Starting a new import deliberately creates another batch, even with the same file. The receipt protects a retry, not every future use of that file.
+The receipt also handles a lost connection. Django might finish saving before the browser receives its response. In that case, the browser can ask for the receipt using the request ID or retry the same import request and file. Django returns the existing result instead of creating those recipes twice.
+
+Starting a new import uses a new request ID and deliberately creates another batch, even with the same file. The receipt ties retries to one particular attempted import.
 
 **Files and functions to check**
 
 - [transfer_views.py → RecipeExportView](backend/recipes/transfer_views.py#L57), [RecipeValidateView](backend/recipes/transfer_views.py#L109), [RecipeImportView](backend/recipes/transfer_views.py#L142) and [RecipeImportStatusView](backend/recipes/transfer_views.py#L203).
 - [transfer_formats.py](backend/recipes/transfer_formats.py).
 
-## 10. Displaying activity charts
+## 10. Analytics: from saved events to charts and a matching download
 
-Analytics turns many saved records into useful counts, averages and charts. A recipe created last month can receive a review today: that is **a review today**, not **a recipe created today**.
+The Analytics page lets the user choose a date range, category, recipe title text and review grade. To turn those choices into charts, React sends them as parameters in `GET /api/analytics/`. Nginx forwards the request to Django, which checks that the choices are valid before calculating the results.
 
-1. Select currently approved recipes matching the category/title choices.
-2. Count recipe creation and review activity using each event's own date, within the selected range.
-3. Apply a star choice to review statistics. The ratings distribution still displays all grades so people can compare them.
-4. Send those results to the page, which draws the charts.
-5. Export the displayed results together with their filters and generation time. Later refreshes can load newer relevant changes.
+Django starts with recipes that are **currently approved** and match the category and title choices. It reads a consistent database snapshot, so the returned counts and charts describe the same saved state. It then separates recipe creation from review activity: a recipe created last month can receive a review today, so it contributes to today's review count without being counted as a recipe created today.
 
-The report describes the displayed results, rather than quietly downloading a different report.
+The date range limits each activity using its own date. Choosing one review grade narrows the review statistics, while the rating distribution still shows all five grades for comparison. That grade choice does not change the recipe counts.
+
+Django sends the calculated counts, averages and grouped values back through Nginx as JSON. React reads the response and draws the charts. A later refresh requests another response and can show newly saved activity.
+
+When the user downloads the report, the browser builds the file from the response currently displayed, including its filters and generation time. It does not make a separate request for a newly calculated report, so the downloaded figures match the visible charts.
 
 **Files and functions to check**
 
@@ -240,20 +244,20 @@ The report describes the displayed results, rather than quietly downloading a di
 - [AnalyticsPage.jsx](frontend/src/pages/AnalyticsPage.jsx#L229).
 - [recipeAnalytics.js → createAnalyticsDownload](frontend/src/data/recipeAnalytics.js#L195).
 
-## 11. The team starts the site or recovers lost work
+## 11. Startup, status and recovery: how the running parts fit together
 
-The database, server, page-serving software, API Tester and backup worker must run together. Startup prepares these parts, loads shared project data and saves the current shared bundle. It also prepares **HTTPS**, the protected connection between browser and website; the browser must trust our local certificate identifying the site.
+The startup script prepares the local HTTPS certificate and browser trust, starts PostgreSQL and prepares shared recipe records and photos while retaining local work. It builds and starts the website, API Tester and backup worker, then exports the current shared project data. **HTTPS** protects the connection between the browser and website; the local certificate lets the browser check the identity of this local site.
 
-The Status page makes a small real database query to check whether the database answers. It checks availability, not every recipe feature.
+Once the services are running, the Status page can check whether Django and PostgreSQL respond. The browser sends `GET /api/health/` to Nginx, which forwards it to Django. Django runs a small real database query and waits for the result. It returns status **200** when the database answers correctly, or **503** when the database is unavailable. React reads that response to display the service state. This checks availability; it does not exercise every recipe feature.
 
-For recovery:
+The backup worker provides a recovery path if saved work is lost:
 
-1. The backup worker saves a private copy of database records and photos on a schedule.
-2. It verifies the copy before marking it completed.
-3. Restoring creates a **separate database** containing that backup.
-4. Activating it for the website is a separate decision, so checking a restore does not immediately replace current work.
+1. On its schedule, the worker reads the database records and the referenced image files from the shared media volume. In its container, that volume is available at `/media/`.
+2. It writes a private backup and verifies it before marking it completed. The backup container writes under `/backups/`, connected to the project's `data/backups/` folder.
+3. During a requested restore, the recovery tool verifies the backup, creates a separate recovery database, restores its records and installs the needed photos. It checks the recovered recipe count and returns the recovery database's name.
+4. The website can then be deliberately switched to that database. Checking a restore therefore does not immediately switch the running website away from its current database.
 
-Shared Git data delivers project content to partners. Private backups keep recovery information, including credentials, outside Git. Both records and actual photos are needed: a saved image location cannot replace a lost image file.
+The shared bundle under `data/shared-database/` carries project content to partners through Git. Private backups under `data/backups/` keep recovery data, including credentials, outside Git. Both records and photos must be preserved, because a database path pointing to a missing image cannot display that image.
 
 **Files and functions to check**
 
@@ -261,17 +265,17 @@ Shared Git data delivers project content to partners. Private backups keep recov
 - [health.py → health](backend/config/health.py#L15).
 - [backups-worker.py → daemon](scripts/backups-worker.py#L720), [create_backup](scripts/backups-worker.py#L537) and [restore_backup](scripts/backups-worker.py#L655).
 - [share-postgres.py → export_snapshot](scripts/share-postgres.py#L467).
+- [StatusPage.jsx → request and display the health result](frontend/src/pages/StatusPage.jsx#L66).
 
-## 12. The same controls appear across pages and browsers
+## 12. Shared controls: from reusable page code to browser actions
 
-A **component** is a reusable page piece. Several screens use the same button component, while each supplies its own label and action.
+A **component** is a reusable piece of a React page. For example, a recipe form and a login form can both use the shared button component, while passing it different labels and actions.
 
-1. Shared buttons, icons, colors and spacing keep pages consistent.
-2. A correction to a shared piece can improve every page using it.
-3. Before deployment, the build tool prepares browser-ready files using the supported browser settings.
-4. Firefox and Edge run those files. Their own calendars or file choosers may look different, while the selected values and resulting actions must agree.
+When React builds either page, that component produces an actual button in the browser. The shared styles give it the site's colors, spacing and focus appearance. Clicking it runs the action supplied by that page: the login button starts the login request in section 2, while the recipe button starts the submission flow in section 3. Correcting the shared button or its styles can therefore improve every page using it.
 
-Browser support depends on the page code behaving correctly and the browser trusting the local HTTPS connection. A date picker's appearance alone does not determine whether the feature works.
+Before those pages reach a browser, Vite, the build tool, prepares the React JavaScript and styles as files Nginx can serve. Its configured browser targets guide which language features those files may use. Nginx sends those built files to Chrome, Firefox, Edge or another supported browser, which executes the page code and sends the applicable API requests.
+
+A browser's own date picker or file chooser may look different, but the page must still read the selected value and send the correct request. The browser must also trust the local HTTPS certificate to reach the site successfully. Code compatibility and connection trust are separate requirements that meet when the user loads and uses the page.
 
 **Files and functions to check**
 
