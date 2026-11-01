@@ -2,7 +2,7 @@
 
 # Recipe Site
 
-The team names, 42 logins, roles, GitHub accounts and feature contributions below are confirmed. Commit-author aliases and the final chosen-module list with contributor assignments still need confirmation. The module review below does not establish a completed 14-point total.
+The team names, 42 logins, roles, GitHub accounts and feature contributions below are confirmed. The ten selected modules target 14 points; their implementation and verification status are recorded below. Commit-author aliases and remaining contributor assignments still need confirmation.
 
 ## Description
 
@@ -10,12 +10,31 @@ Recipe Site is a recipe-sharing application built for ft_transcendence. Visitors
 
 The project uses the requirements in [ft_transcendence.pdf](ft_transcendence.pdf), version 21.1. Module requirements and the README requirements are separate from the application's feature checklist.
 
+<a id="partner-start"></a>
+## Partners: start here
+
+1. Clone the repository and enter its root. For an existing clean checkout, update to the shared version:
+
+   ```sh
+   git switch main
+   git pull --ff-only origin main
+   ```
+
+2. Read [Prerequisites](#prerequisites) and [Configure a checkout](#configure-a-checkout). Keep an existing private `.env`; on a new installation, fill the required values in a copy of `.env.example`. Arrange account credentials privately with the team; passwords are not published in this README.
+3. Run **`sh scripts/start.sh` once** and follow [Start the application](#start-the-application). This builds/starts the services and loads the shared recipes/photos automatically. With defaults, open [Recipe Site](https://localhost:8443/), [Django administration](https://localhost:8443/admin/), [Public API Tester](http://localhost:8765/) and [Status](https://localhost:8443/status). Resolve browser trust using the printed public CA path and the [browser guide](#browser-support-guide).
+4. Read [Demo catalogue](#demo-catalogue) for the three ordinary demo users and existing administrator roles. **Do not run the seed command for a normal partner checkout**: the shared catalogue is already included. The ignored demo-password file is local to the computer where passwords were generated; it is not downloaded by Git. An authorized `superadmin` can sign into `/admin/`, open **Users**, select a demo user and use the password-change link to set that user's local password. This changes the selected user's password, not its role. Website sign-in and Django-admin sign-in are separate.
+5. Follow the [core website walkthrough](#core-website-walkthrough), then use the [module test route](#partner-test-route) to read and check each feature. For the same current checkout after successful normal startup, go directly to usage/checks: individual module rebuild commands are for loading later source changes, not additional startup requirements.
+6. Record results using [Report a test result](#report-a-test-result). The priority outstanding qualification is Module09's three browser checks and Module10's complete Firefox/Edge matrix. Existing accepted results remain recorded separately; assign other checks between partners as needed.
+
 ## Guides
 
 The user and operator guides are kept together in this README:
 
 | Guide | What it covers |
 | --- | --- |
+| [Partner starting sequence](#partner-start) | Update main, configure, start once and arrange account access. |
+| [Core website walkthrough](#core-website-walkthrough) | Accounts, profiles, recipe submission/editing, moderation, reviews, favorites and cleanup. |
+| [Module test route and result format](#partner-test-route) | Where to read and what result to check for all ten selected modules. |
 | [Public API setup and usage](#public-api-guide) | Account API keys, endpoint paths, request examples and rate limits. |
 | [JSON API responses](#json-api-responses) | Disable the DRF HTML viewer, load the setting and check account/moderation access. |
 | [Public API Tester](#separate-public-api-tester) | Open the tester, connect a key and demonstrate GET/POST/PUT/DELETE. |
@@ -34,14 +53,13 @@ The user and operator guides are kept together in this README:
 
 The reusable catalogue in `demos/catalogue/` provides 25 realistic recipes with ingredients, ordered instructions and AI-generated food photos. These are fictional demonstrations, not records of real cooks or reviews. Three additional copies illustrate pending approval, rejection with a reason and an approved recipe with a deletion request. The last remains public under the normal moderation rules: there are initially 28 demo recipes, 26 approved, and 31 synthetic reviews from three ordinary demo users. Existing recipes and accounts are preserved.
 
-With the matching backend and PostgreSQL already running, load the catalogue once:
+Normal partner startup loads the catalogue from `data/shared-database/`; no seed command is needed. With services running, this optional command only reads its current state:
 
 ```sh
-python3 scripts/seed-demo-data.py seed
 python3 scripts/seed-demo-data.py status
 ```
 
-No application rebuild is required for data changes. The loader validates contents/photos with the existing application helpers and writes the new linked records in one transaction. It directly seeds the stated moderation states and historical dates as demo fixtures; it does not simulate browser submissions or prove the workflow passed. Repeating `seed` retains the identified set without resetting edits, passwords, reviews or moderation exercises. `status` reads only. Do not run the seed again on a partner computer that has already received these accounts through the shared snapshot just to obtain passwords.
+Only a maintainer preparing an installation **without the shared demo set** should run `python3 scripts/seed-demo-data.py seed`, after starting the matching backend/PostgreSQL. No application rebuild is required for data changes. The loader validates contents/photos with the existing application helpers and writes the new linked records in one transaction. It directly seeds the stated moderation states and historical dates as demo fixtures; it does not simulate browser submissions or prove the workflow passed. Repeating `seed` retains the identified set without resetting edits, passwords, reviews or moderation exercises. Do not use it to obtain passwords on a computer that already received the shared accounts.
 
 | Account | Demonstration role |
 | --- | --- |
@@ -145,13 +163,65 @@ Open **https://localhost:8443/** for Recipe Site and **http://localhost:8765/** 
 
 Use **Connect** to sign up or sign in. Login accepts a username or email address with a password. Pending/rejected recipe details are available to their owner and staff.
 
-If you need to create the first local Django administrator, this command creates a superuser interactively:
+The shared dataset already contains `admin` and `superadmin`; use their privately arranged existing credentials. An authorized operator on their own local development installation can reset a lost existing `superadmin` password interactively with `docker compose exec backend python manage.py changepassword superadmin`. This changes that local password and creates no account. Only an installation with **no administrator account at all** needs the first-user command below:
 
 ```sh
 docker compose exec backend python manage.py createsuperuser
 ```
 
 Website staff status and Django model permissions are distinct: access to `/staff` does not by itself grant every Django-admin permission.
+
+<a id="core-website-walkthrough"></a>
+### Core website walkthrough
+
+Use separate browser profiles or normal/private windows for an ordinary account and `admin`, so the account being tested is clear. Use a unique title such as **Partner check YOURNAME DATE** for recipe writes; keep the permanent demo recipes/photos as the shared catalogue. The example photo `demos/catalogue/photos/lemon-herb-roast-chicken.png` is a real uploadable PNG.
+
+| Step | Action | Expected result |
+| --- | --- | --- |
+| 1 — Visitor | Open home, a recipe and its author's public profile. Follow the footer **Privacy** and **Terms** links, then reload a recipe URL directly. | Approved content/photos and public profiles load; policies are readable and direct navigation works. A visitor cannot submit a recipe or enter private profile/staff pages as an authenticated user. |
+| 2 — Accounts/profile | Use **Connect** to sign in with an ordinary demo user. For signup/profile-edit checks, register a disposable ordinary account with a unique username/email, sign in, then edit its name, **Bio** and optional profile photo from Profile. | Signup leads to login; successful sign-in opens the site. Saved profile changes and photo remain after reload. Keep the catalogue author profiles intact when testing edits. |
+| 3 — Submission | As an ordinary user, open `/add-recipe`. Enter the unique **Recipe name**, at least one ingredient with a positive quantity/unit, categories, numbered instructions and one or two valid photos. Choose **Add recipe**. | The new recipe appears in the owner's submitted recipes as pending, with its saved ingredients, steps and photos. It is not yet public. |
+| 4 — Rejection/resubmission | As `admin`, open `/staff` → **Pending**, open the unique recipe title and **Reject** it with a reason. As its owner, open it from Profile, select **Edit and resubmit**, correct it and choose **Save and resubmit**. | The owner sees the rejection reason; resubmission returns it to pending. Other ordinary users cannot see or edit the unpublished recipe. |
+| 5 — Approval/reviews/favorites | As `admin`, **Approve** the pending recipe. In a different ordinary account, find it publicly, choose a **Rating**, write a **Review**, and choose **Post review**. Toggle **Add to favorites** / **Remove from favorites**, then remove your own review with **Delete review**. | Approval makes it public. Review count/average and the reviewer's history reflect the saved/deleted review. Favorites appear/disappear only in the signed-in account's saved recipes. Visible pages refresh after the next five-second refresh; reload also confirms saved state. |
+| 6 — Owner edit | As the owner, open `/recipe/<id>/edit` for this disposable recipe. Change the name or a step, retain at least one photo, and choose **Save and submit for approval**. | The changed contents persist and the ordinary owner's edit returns the recipe to pending. Have `admin` approve it again before the deletion exercise. Owner/staff can edit; a different ordinary user cannot. |
+| 7 — Deletion/cleanup | As owner, **Request deletion**. As `admin`, first **Reject deletion** to retain it, then let the owner request again and choose **Approve deletion**. | Rejection keeps the recipe; approval permanently removes this disposable recipe and its reviews. It disappears from public/owner lists and its direct URL no longer loads it. Remove other disposable API/import copies through the same staff workflow. |
+
+For form feedback, try submitting an empty form or a zero quantity before a valid submission: errors should identify the field and no successful recipe should appear. Keep ordinary and administrator roles separate when judging a denial. Use existing `superadmin` only for the [account/permission exercise](#module03-guide), and delete only a disposable test user after its content exercises are finished. These are instructions for partners, not newly reported passes.
+
+<a id="partner-test-route"></a>
+### Module test route
+
+Read the purpose/implementation and follow the linked check for each selected module. All commands assume the repository root; URLs below use the default local configuration.
+
+| Module / points | Read and do | Expected evidence |
+| --- | --- | --- |
+| 01 — Frameworks / 2 | [React and Django](#module01-guide): follow the request flow and open the normal page/API. | React UI and Django API source/response are connected through Nginx. |
+| 02 — ORM / 1 | [Django ORM](#module02-guide): inspect model relationships and reload the disposable recipe after saving. | Author, ingredient amounts, categories, steps and photos persist as linked records. |
+| 03 — Permissions / 2 | [Role/user checks](#module03-guide) plus the core walkthrough. | Ordinary/staff views differ; user CRUD and scoped grants/revocation work through existing administration. |
+| 04 — Design system / 1 | [Visual/keyboard checks](#module04-guide). | Shared controls, readable desktop/narrow layouts, visible focus and field feedback work consistently. |
+| 05 — Search / 1 | [Filter/sort/page checks](#module05-guide). | Results follow combined settings; page sizes and reload/Back restore the applied URL state. |
+| 06 — Public API / 2 | [API guide](#public-api-guide) and [tester](#separate-public-api-tester); use an account key issued on your installation. | Real GET/POST/PUT/DELETE outcomes and documented key/quota responses; remove the tester's disposable recipe. |
+| 07 — Recipe files / 1 | [Profile import/export](#recipe-data-guide), including the three-recipe and invalid samples. | Both downloads contain recipes/photos; valid preview/import works, invalid input saves no rows. |
+| 08 — Status/backups / 1 | [Status](#start-and-check-the-status-page) and [backup commands](#backup-command-reference): list a backup, verify it, restore it separately. | Real readiness, completed backup metadata, verification success and a separate restored database. Stop before activation for an ordinary recovery check. |
+| 09 — Analytics / 2 | [Dashboard guide and its three checks](#recipe-analytics-guide). | Interactive filters/charts, matching CSV/JSON reports and one relevant live review update. These results are still pending. |
+| 10 — Firefox/Edge / 1 | [Browser matrix](#browser-support-guide), every row in each browser. | Actual versions/OS/date and complete feature/UI results in both additional browsers. These runs are still pending. |
+
+<a id="report-a-test-result"></a>
+### Report a test result
+
+Record the commit being tested (`git rev-parse --short HEAD`), tester, date, browser version and OS. For each assigned check use this format in the team's existing test report or message:
+
+```text
+Commit / tester / date:
+Browser version / OS:
+Module and step:
+Action and recipe title/ID or file used:
+Expected result:
+Actual result: PASS / FAIL / NOT RUN, with what was observed
+Evidence: screenshot or HTTP status/error if relevant, with credentials omitted
+```
+
+Report a failure with its exact step and visible error, rather than marking the entire project passed from startup alone. A step not performed stays NOT RUN. For Module10 also fill the browser version/result table below. Clean up only your disposable recipes/users before exporting test data; keep the permanent catalogue and private backup files intact. The agreed Modules01–08 checks remain accepted at 11/14; record new partner results without replacing that history or counting Modules09/10 before their outstanding checks pass.
 
 ### JSON API responses
 
@@ -286,7 +356,7 @@ The team confirmed the frontend/backend credits below. Roh and Hugo also handled
 
 The agreed recipe-admin feature scope has been accepted by the user. Qualification for a particular subject module still depends on that module's complete requirements and its evaluation demonstration.
 
-## Modules
+## Selected modules
 
 The combined React + Django frameworks Major, Django ORM Minor, advanced permissions Major, custom design system Minor, advanced recipe search Minor, secured public API Major, recipe data export/import Minor and health/status/backups Minor are complete, with contributors recorded below. Module09 analytics is implemented and awaiting user verification; Module10 Firefox/Edge compatibility preparation and guides are ready, with browser runs pending. Remaining contributor assignments are unfinished. In this subject, a Major module is worth 2 points and a Minor is worth 1. Incomplete modules do not contribute points.
 
@@ -296,19 +366,45 @@ The combined React + Django frameworks Major, Django ORM Minor, advanced permiss
 | Django ORM — Minor | 1 | Selected and implemented with Django models, relationships, migrations and querysets to manage PostgreSQL data consistently in Python. Contributor: Tomaz (backend). |
 | Advanced permissions — Major | 2 | Selected, implemented and user-verified to control who can manage accounts and recipes. Django administration provides user CRUD (Create, Read, Update, and Delete: fundamental operations used to manage persistent data in software, database, and APIs) and scoped model-permission grants/revocation; backend checks and role-specific frontend controls enforce owner/staff/guest access. Django admin saves create missing website profiles. Contributors: Tomaz (backend); Roh and Hugo (frontend); Roh (Codex-assisted admin/profile integration fix and verification). |
 | Custom design system — Minor | 1 | Complete: Savour Studio palette, typography, shared SVG icons and ten reusable components are implemented and documented below. Guided mobile, desktop, keyboard and form-validation checks were user-verified. Contributor: Roh (design direction, Codex-assisted implementation and verification), building on the shared frontend by Roh and Hugo. |
-| File upload/management — Minor | 1 | Image validation, profile previews and saved recipe photo removal exist. Complete the requirement check for supported file types, previews, upload progress, deletion and access policy. |
 | Advanced search — Minor | 1 | Module05 is complete: frontend category/ingredient/minimum-rating filters, four sorts and 6/12/24-item pagination are implemented, documented and user-verified, including page reset and URL restoration. Contributor: Roh (Codex-assisted implementation and browser verification), building on Roh and Hugo's frontend and Tomaz's existing approved-recipe API. |
 | Public API — Major | 2 | Module06 is complete: a separate public API with automatic account-bound keys and private Profile controls, five database paths covering GET/POST/PUT/DELETE, application/proxy rate limiting and usage documentation are implemented. The user reports Public API Tester works; all five path reads returned 200, missing/invalid keys returned 401, and the account quota allowed 60 requests before returning 429 with `Retry-After: 49`. Its 2 points are included. Contributor: Roh (Codex-assisted integration), using Tomaz's existing recipe validation/write flows and the shared Roh/Hugo account frontend. |
-| Standard user management — Major | 2 | Profiles/authentication exist; friends, online status and a default avatar remain absent. |
-| User interaction — Major | 2 | Profiles/reviews exist; the module also requires chat and friends. |
 | Health/status/backups — Minor | 1 | Module08 is complete: a public Status page/readiness endpoint, existing Docker health checks, automatic daily private database/photo backups retaining seven copies, and documented separate-database recovery are implemented. Roh reported the setup works, listed a backup of 16 recipes / 17 photos and successfully restored it to a separate database. Its 1 point is included; actual activation was not needed for verification. Contributor: Roh (Codex-assisted integration), building on the existing Docker and data-sharing work. |
 | Data export/import — Minor | 1 | Module07 is complete: Profile → Recipe data provides own-recipe selection, portable JSON/CSV downloads with photos, file validation/preview and transactional bulk imports as new pending copies. Digest-bound import receipts support result checks and safe same-request retries. Roh reported both import and export working well on October 31, 2026, following the JSON/CSV downloads. The existing snapshot tools also export readable JSON/CSV and validate bulk restores. Its 1 point is included. Contributor: Roh (Codex-assisted integration), reusing Tomaz's recipe models/validation and the shared account frontend. |
 | Recipe analytics dashboard — Major | 2 | Module09 source implementation is ready: public approved-recipe charts, five-second visible-page refresh, displayed-snapshot CSV/JSON exports and customizable UTC dates/category/title/review-star filters. Browser verification is pending, so its 2 points are not yet included. Contributor: Roh (Codex-assisted implementation), reusing Tomaz's recipe/review models and the shared Roh/Hugo frontend. See the analytics guide below. |
 | Additional browsers — Minor | 1 | Module10 targets desktop Firefox and Edge in addition to the accepted Chrome baseline. Explicit build targets, source compatibility review, HTTPS/browser-trust setup, known differences and feature-check instructions are recorded. Actual runs in both browsers remain pending; its 1 point is not yet included. Contributor: Roh (Codex-assisted review/configuration/guides), building on the shared Roh/Hugo frontend and existing HTTPS tooling. |
-| Accessibility — Major | 2 | Labels/ARIA/native dialogs help, but source review does not establish full WCAG 2.1 AA compliance. |
 
-The completed frameworks Major (**2 points**), Django ORM Minor (**1 point**), advanced permissions Major (**2 points**), custom design system Minor (**1 point**), advanced search Minor (**1 point**), secured public API Major (**2 points**), recipe data export/import Minor (**1 point**) and health/status/backups Minor (**1 point**) total **11 of 14 target points**, leaving **3 points**. Other rows describe possibilities and remaining gaps; this table does not claim a completed 14-point total. Custom modules require their own scope, implementation evidence, contributor attribution and justification.
+These are the ten selected modules, targeting **14 points**. The completed frameworks Major (**2 points**), Django ORM Minor (**1 point**), advanced permissions Major (**2 points**), custom design system Minor (**1 point**), advanced search Minor (**1 point**), secured public API Major (**2 points**), recipe data export/import Minor (**1 point**) and health/status/backups Minor (**1 point**) total **11 accepted points**. Module09 and Module10 represent the remaining **3 points awaiting verification**. File management, standard user management, user interaction and WCAG accessibility are not additional selected point claims; their incomplete features are not part of this 14-point total.
 
+<a id="module01-guide"></a>
+### React and Django frameworks — Module 01 (2 points, complete)
+
+React builds the reusable browser pages and controls in `frontend/src/`. Django routes and validates API requests in `backend/`. Nginx serves the built React app and forwards `/api/` requests to Django; Django reads or saves PostgreSQL data through its models. The combined frontend/backend framework choice counts once for 2 points. Contributors are Roh and Hugo (frontend) and Tomaz (backend).
+
+**Partner check:** Open the homepage and a recipe, then use the browser's Network panel to inspect their `/api/` JSON requests. Navigate between pages and reload a recipe's direct URL: the correct page, photos and saved recipe content should appear. Read `frontend/src/App.jsx`, `frontend/nginx.conf` and `backend/config/urls.py` to connect the browser route to React and the API route to Django. Continue with the [core website walkthrough](#core-website-walkthrough) for actual writes.
+
+<a id="module02-guide"></a>
+### Django ORM — Module 02 (1 point, complete)
+
+The ORM maps Python model objects to PostgreSQL tables and relationships. `backend/recipes/models.py` defines recipes, linked ingredients/quantities, categories, ordered steps and photos; user profiles/favorites and reviews are in the matching `users` and `reviews` models. Existing serializers and querysets use these relationships when saving and reading the website. Contributor: Tomaz (backend).
+
+**Partner check:** Follow the [core website walkthrough](#core-website-walkthrough) using its disposable recipe. After saving, reload its page and compare the ingredient quantities, categories, numbered steps and photo with the submitted form. After approval, add a review from another ordinary account and reload the recipe and that reviewer's profile: the saved review, rating/count and review history should remain connected to the correct records. Inspect the model relationships alongside these results; this check does not require raw database edits.
+
+<a id="module03-guide"></a>
+### Advanced permissions — Module 03 (2 points, complete)
+
+The website checks the signed-in account's ownership and staff status for recipe actions. Django administration separately checks model permissions for account management. Existing `admin` handles website moderation; existing `superadmin` can manage users and permission grants. `Staff status` enables the website staff role and Django-admin login eligibility; `auth.view_user` only grants viewing Django users, and does not grant account changes. The module table above records the contributors.
+
+For recipe ownership, ordinary-user denial, approval/rejection and deletion decisions, follow the [core website walkthrough](#core-website-walkthrough). For user CRUD and permission grants/revocation, use this separate disposable-account check:
+
+1. Sign in as `superadmin` at `/admin/`, open **Users**, and **Add user** with a clearly temporary username and private password. Leave **Staff status** and **Superuser status** off. Save, find the user, change its first name, and save again: the user list/detail should show the change. This covers create, read and update; its website profile is provisioned by the admin save.
+2. In a separate browser/session, sign in to the website through **Connect** as that temporary user. Open `/profile`, then `/staff`: its own profile should load, while staff management should be denied. Its credentials should not grant access to Django `/admin/` while **Staff status** is off.
+3. As `superadmin`, edit only the temporary user: enable **Staff status** and add only **User permissions → Can view user** (`auth.view_user`); keep **Superuser status** off. Refresh or sign in again in the temporary session. `/staff` should now load; a separate sign-in to Django `/admin/` should permit viewing **Users**, with no user add/change/delete authority. Do not perform recipe actions on existing content during this role check.
+4. Revoke **Can view user** from that temporary user and refresh: Django's `/admin/auth/user/` should be denied, while website `/staff` remains allowed because **Staff status** is still on. Then turn **Staff status** off and refresh/sign in again: website staff management and Django administration should both be denied.
+5. As `superadmin`, delete only the temporary user through **Users**, inspect the deletion confirmation, and confirm it is absent from the list. Never delete a demo recipe author or change the existing `admin`/`superadmin` accounts for this check.
+
+These are partner instructions for learning and recording their own results; the existing accepted Module01–05 checks remain accepted. Follow the [partner test route](#partner-test-route) for the shared result format and remaining qualification work.
+
+<a id="module04-guide"></a>
 ### Custom design system — Module 04 (1 point, complete)
 
 The Savour Studio design system gives recipe discovery, recipe details and forms a consistent appearance while sharing controls and layouts across pages. Its charcoal panels, ivory text, gold actions and sage accents are defined alongside spacing and corner-radius tokens in [index.css](frontend/src/index.css). DM Serif Display is the heading font and Manrope is the body font, with local system fallbacks. [Icon.jsx](frontend/src/components/Icon.jsx) provides a shared local SVG icon set; [savour-system.css](frontend/src/styles/savour-system.css) applies the common controls, fields, panels and responsive navigation.
@@ -330,6 +426,15 @@ These ten reusable components have active application consumers in [frontend/src
 
 Roh selected the Savour Studio direction, supplied the six visual references and directed the Codex-assisted implementation, building on the existing shared frontend by Roh and Hugo. Source review confirms the component contracts and their consumers. On October 29, 2026, Roh reported passing the guided visual checks at **390 × 844** for the homepage/menu, recipe details, Add Recipe, profile editor, login/signup, search results, staff, Privacy and Terms pages, including content clearance above mobile navigation. Desktop home/recipe/form layouts and the narrowed-window or docked-DevTools header check also passed. Keyboard checks confirmed visible Tab/Shift+Tab focus, Enter/Escape menu operation with focus returned to the toggle, and readable empty-form validation with focus on the first invalid field. Extra ingredient/category/step cards can be removed while the first card in each group stays protected. These user-reported results complete the module's **1-point** qualification; details are saved in [WORK_LOG.md](WORK_LOG.md).
 
+#### Partner check
+
+1. Open home, a recipe, `/add-recipe`, Profile, login/signup, search and the public policy pages at desktop width and a narrow **390 × 844** viewport. Shared colors, typography, buttons and cards should remain consistent; text/actions should fit, photos should retain their shape, and mobile navigation should not cover page content.
+2. Use Tab/Shift+Tab to move through controls. Focus should be visible; open the menu with Enter, close it with Escape, and confirm focus returns to the menu button.
+3. Submit an empty recipe form: readable field errors should appear and focus should move to the first invalid field. Add extra ingredient/category/step rows, remove those extras, and confirm the first row in each group stays protected. Leave the form without submitting a recipe for this visual check.
+
+Record these as your own observations using the [partner test route](#partner-test-route); the passed historical checks above are retained.
+
+<a id="module05-guide"></a>
 ### Advanced recipe search — Module 05 (1 point, complete)
 
 Advanced search helps people narrow the approved recipe collection and browse matching recipes in a useful order. [SearchResultsPage.jsx](frontend/src/pages/SearchResultsPage.jsx) uses [recipeSearch.js](frontend/src/data/recipeSearch.js) to combine the existing case-insensitive recipe-title substring search with an exact category match ignoring case and outer spaces, an ingredient-name substring filter and a minimum average rating from 1 to 5. A minimum-rating filter includes only reviewed recipes with a qualifying average. Category choices come from the approved collection and merge names that differ only by case or outer spaces. People still match the search text by username or name, including `@username`; recipe filters, sorting and pages do not affect those matches.
@@ -339,6 +444,16 @@ The recipe sorts are **Title: A–Z**, **Title: Z–A**, **Highest rated** and *
 This implementation loads the full approved collection through the existing `/api/recipes/all_recipes/` API and performs recipe filtering, sorting and pagination in the browser. No backend or API-response change was needed. Server-side search and pagination would be needed to reduce transfer and browser work for a large catalogue. Creation dates are absent from the summary response, so the controls do not offer a newest-first sort.
 
 Roh requested and directed the Codex-assisted Module05 frontend implementation, building on the shared frontend by Roh and Hugo and the existing approved-recipe API by Tomaz. On October 30, 2026, Roh reported passing the new controls' appearance, combined category/ingredient filtering and clearing, minimum-rating filtering and all four sorts. Using 30 marked sample recipes, Roh also verified Next/Previous, the 6/12/24-item page sizes and ranges, applying a filter from a later page returning to page 1, refresh persistence and browser Back restoring the earlier search/page. These user-run checks, the source review and the purpose/implementation/contributor documentation complete Module05 for **1 point**, bringing the completed subtotal to **7/14**. Roh subsequently confirmed the temporary sample cleanup was done. See [WORK_LOG.md](WORK_LOG.md) for the actual verification and cleanup record.
+
+#### Partner check
+
+1. Open `/results/search`, enter `chickpea` in **Recipe title or person**, choose **Category → Vegetarian**, enter `chickpea` in **Ingredient contains**, and select **Minimum average rating → 3+ stars**. Click **Apply search**: each recipe result should satisfy all selected filters. People results use the text query only; an empty recipe result is valid if the current data has no qualifying match.
+2. Click **Clear recipe filters**, then empty **Recipe title or person** and click **Apply search** for the full catalogue. Try every **Sort recipes** option: **Title: A–Z**, **Title: Z–A**, **Highest rated**, and **Most reviewed**. Compare titles, displayed averages and review counts with the selected order.
+3. Select each **Recipes per page** size, **6**, **12**, and **24**, and apply it. Use **Next**, **Previous**, and numbered pages: the displayed range and cards should match the chosen page; the demo catalogue provides more than 24 public recipes before exercises change it.
+4. On a later page, apply a category or ingredient filter: results should return to page 1. Reload the filtered URL, change a setting, then use browser Back: the earlier applied controls and result page should be restored.
+5. Click **Clear recipe filters**: category, ingredient and minimum-rating constraints should clear and the page should reset to 1. The text query, sort and page size are retained. Clear the text query separately when returning to all recipes.
+
+Use the [partner test route](#partner-test-route) to record actual outcomes; these instructions do not claim a new test pass.
 
 <a id="public-api-guide"></a>
 
@@ -525,6 +640,8 @@ This module lets signed-in users download recipe records to their computer and i
 
 #### Load the website controls
 
+If current `main` has already started successfully through `sh scripts/start.sh`, go straight to **Use Profile → Recipe data**. The current shared bundle already includes this migration. The following rebuild/migration notes apply when upgrading an older installation.
+
 With the existing project/PostgreSQL running, rebuild the backend and frontend:
 
 ```sh
@@ -540,6 +657,8 @@ Backend startup applies recipe migration `0008_recipe_import_receipt`; the front
 3. Under **Import recipes**, choose a JSON or CSV file downloaded from this section, then click **Check file**. This validates the whole batch and its photos without saving recipes, then lists the recipe names or row/field errors.
 4. Click **Import N recipes** after reviewing the names. The whole batch becomes new copies owned by your account, pending approval even for staff. Existing recipes, ownership and moderation decisions are not overwritten. Imported copies appear in your own recipes after refresh/live refresh.
 5. If a response is lost, use **Check import result** or **Retry same import** with the same file. The saved request ID and digest let the server return the existing result without creating that batch twice. A not-yet-confirmed result may still be running; retain the same request rather than starting another batch.
+
+For the supplied demo batch, choose [import-samples.json](demos/catalogue/import-samples.json) or [import-samples.csv](demos/catalogue/import-samples.csv) from your checkout. **Check file** should preview **3 recipes**; **Import 3 recipes** should create three new pending copies in the importing account. Either format works; importing both deliberately creates two batches of copies. Then choose [import-invalid.json](demos/catalogue/import-invalid.json) and **Check file**: expect validation errors and **no imported rows**. The seed source `demos/catalogue/recipes.json`, shared-folder sidecars and analytics reports are different formats. For a download check, select at least two owned recipes, download each format, and preview each original file to confirm the same contents/photos before importing one chosen batch. Use existing `admin` to remove only the imported exercise copies after observing them; keep the original catalogue.
 
 The website accepts **1–25 recipes** and files up to **20 MiB**, with one or two JPEG/PNG/GIF/WebP photos per recipe (each at most **5 MiB**). Transfer records support up to 100 ingredients, 50 categories and 200 steps, using the existing field lengths, positive quantities, unique names/step numbers and image-byte validation. JSON includes a `recipe-transfer` marker and version. CSV has a fixed versioned header and nested JSON cells for ingredients/categories/steps/photos; its spreadsheet escaping is reversible to preserve leading apostrophes and formula-like text. Photos are embedded in both formats. Use the original downloaded CSV for import, since a spreadsheet editor can truncate large photo cells. The website files contain recipe contents, not account credentials, owner IDs, reviews or moderation instructions.
 
@@ -619,6 +738,8 @@ Run these from the repository root through the wrapper so local/rootless Docker 
 | Activate a restored database | `sh scripts/backups.sh activate RESTORED_DATABASE_NAME` | Deliberately switch the website to that successful restore and recreate backend/backups. Use for an actual recovery. |
 
 Replace `BACKUP_ID` with an ID printed by `list`. Replace `RESTORED_DATABASE_NAME` with the exact name printed by a successful `restore`. Restoring and activating are separate actions: an ordinary recovery check can stop after the restore. Listing prints metadata rather than record contents or secrets. Scheduling is automatic; `now` is available for an additional copy. To change interval/retention, edit their settings in private `.env` and recreate/start the worker through the wrapper.
+
+For a partner demonstration after normal startup: open Status and confirm readiness; run `sh scripts/backups.sh list` and choose an actual completed ID; run `verify` for that ID and expect `Backup verified: BACKUP_ID`; then run `restore` for the same ID and expect a new `Restored database: NAME`. The website should retain its current catalogue because this restore is separate. **Stop there for the recovery check**; activation below is for deliberately changing the live selection during real recovery. If no backup is listed yet, let the automatic initial backup finish before selecting an ID.
 
 #### Disaster recovery
 
