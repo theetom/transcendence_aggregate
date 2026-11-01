@@ -28,7 +28,7 @@ CATALOGUE = ROOT / "demos/catalogue"
 PRIVATE = ROOT / "data/database-private"
 ACCESS = PRIVATE / "demo-catalogue-v1-access.json"
 MARKER = "Savour demo catalogue v1"
-USERNAMES = ("demo_ana", "demo_marco", "demo_lee", "demo_staff")
+USERNAMES = ("demo_ana", "demo_marco", "demo_lee")
 MAX_PHOTO_BYTES = 5 * 1024 * 1024
 
 
@@ -46,7 +46,7 @@ django.setup()
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
-from django.contrib.auth.models import Group, Permission
+from django.contrib.auth.models import Group
 from django.db import connection, transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -58,12 +58,10 @@ from reviews.serializers import ReviewSerializer
 from users.models import UserProfile
 
 MARKER = 'Savour demo catalogue v1'
-VIEW_GROUP = 'Savour demo account viewers v1'
 ACCOUNTS = (
     ('demo_ana', 'Ana', 'Silva', 'Portuguese home cooking, seasonal soups and weekend baking.'),
     ('demo_marco', 'Marco', 'Costa', 'Mediterranean suppers, fish dishes and market vegetables.'),
     ('demo_lee', 'Lee', 'Park', 'Rice bowls, vegetarian lunches and quick weekday cooking.'),
-    ('demo_staff', 'Savour', 'Moderator', 'Fictional staff account for moderation and read-only account views.'),
 )
 NAMES = [item[0] for item in ACCOUNTS]
 EMAILS = [name + '@example.com' for name in NAMES]
@@ -79,7 +77,7 @@ COMMENTS = (
 
 
 def existing_set():
-    """A marker group plus its four fictional profiles identifies our own data."""
+    """A marker group plus its three fictional profiles identifies our own data."""
     group = Group.objects.filter(name=MARKER).first()
     users = list(get_user_model().objects.filter(username__in=NAMES).order_by('id'))
     if group is None:
@@ -154,14 +152,6 @@ def run(payload):
                 occupied |= Q(username__iexact=name) | Q(email__iexact=email)
             if User.objects.filter(occupied).exists() or Group.objects.filter(name__iexact=MARKER).exists():
                 raise RuntimeError('A reserved demo username, email or marker group exists; nothing changed.')
-            if Group.objects.filter(name__iexact=VIEW_GROUP).exists():
-                raise RuntimeError('The reserved demo viewer group exists; nothing changed.')
-            permissions = list(Permission.objects.filter(
-                Q(content_type__app_label='auth', content_type__model='user', codename='view_user')
-                | Q(content_type__app_label='users', content_type__model='userprofile',
-                    codename='view_userprofile')))
-            if len(permissions) != 2:
-                raise RuntimeError('Required account view permissions are missing; nothing changed.')
 
             specs = payload['recipes']
             if len(specs) != 25:
@@ -192,17 +182,13 @@ def run(payload):
                 moderation.append((serializer, raw))
 
             marker = Group.objects.create(name=MARKER)
-            viewers = Group.objects.create(name=VIEW_GROUP)
-            viewers.permissions.set(permissions)
             users = []
             for name, first, last, bio in ACCOUNTS:
                 user = User.objects.create_user(
                     username=name, email=name + '@example.com', password=payload['passwords'][name],
                     first_name=first, last_name=last, is_active=True,
-                    is_staff=(name == 'demo_staff'), is_superuser=False)
+                    is_staff=False, is_superuser=False)
                 user.groups.add(marker)
-                if user.is_staff:
-                    user.groups.add(viewers)
                 UserProfile.objects.create(
                     user=user, bio=MARKER + '\nFictional demonstration account. ' + bio
                     + ' Recipe and review dates are synthetic for analytics demonstrations.')
@@ -230,7 +216,7 @@ def run(payload):
                 attach_photo(recipe, raw)
                 recipes.append(recipe)
                 reviewers = [user for user in users if user.pk != recipe.user_id]
-                # Zero to three different reviewers, all five grades, and recent reviews on old recipes.
+                # Zero to two different reviewers, all five grades, and recent reviews on old recipes.
                 for offset, reviewer in enumerate(reviewers[:(index + 1) % 4]):
                     grade = (index + offset) % 5 + 1
                     review_serializer = ReviewSerializer(data={
@@ -304,11 +290,13 @@ def access_file():
                 or info.st_nlink != 1 or info.st_mode & 0o077 or info.st_size > 65536):
             raise RuntimeError("Existing demo access file must be a private regular file owned by you.")
         value = json.loads(ACCESS.read_text(encoding="utf-8"))
-        if (value.get("marker") != MARKER or set(value.get("passwords", {})) != set(USERNAMES)
-                or any(not isinstance(password, str) or len(password) < 24
-                       for password in value["passwords"].values())):
+        passwords = value.get("passwords", {})
+        if (value.get("marker") != MARKER or not isinstance(passwords, dict)
+                or set(passwords) not in (set(USERNAMES), set(USERNAMES) | {"demo_staff"})
+                or any(not isinstance(passwords[name], str) or len(passwords[name]) < 24
+                       for name in USERNAMES)):
             raise RuntimeError("Existing private demo access file is invalid; it was not replaced.")
-        return value
+        return {**value, "passwords": {name: passwords[name] for name in USERNAMES}}
     value = {"marker": MARKER, "passwords": {name: secrets.token_urlsafe(24) for name in USERNAMES}}
     descriptor = os.open(ACCESS, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(descriptor, "w", encoding="utf-8") as stream:

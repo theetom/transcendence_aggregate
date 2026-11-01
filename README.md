@@ -32,7 +32,7 @@ The user and operator guides are kept together in this README:
 <a id="demo-catalogue"></a>
 ### Demo catalogue
 
-The reusable catalogue in `demos/catalogue/` provides 25 realistic recipes with ingredients, ordered instructions and AI-generated food photos. These are fictional demonstrations, not records of real cooks or reviews. Three additional copies illustrate pending approval, rejection with a reason and an approved recipe with a deletion request. The last remains public under the normal moderation rules: there are initially 28 demo recipes, 26 approved. Existing recipes and accounts are preserved.
+The reusable catalogue in `demos/catalogue/` provides 25 realistic recipes with ingredients, ordered instructions and AI-generated food photos. These are fictional demonstrations, not records of real cooks or reviews. Three additional copies illustrate pending approval, rejection with a reason and an approved recipe with a deletion request. The last remains public under the normal moderation rules: there are initially 28 demo recipes, 26 approved, and 31 synthetic reviews from three ordinary demo users. Existing recipes and accounts are preserved.
 
 With the matching backend and PostgreSQL already running, load the catalogue once:
 
@@ -48,15 +48,16 @@ No application rebuild is required for data changes. The loader validates conten
 | `demo_ana` | Ordinary author: Portuguese dishes, own recipes, favorites and review history. |
 | `demo_marco` | A different ordinary owner for account isolation and review demonstrations. |
 | `demo_lee` | Ordinary author/reviewer with a separate favorites collection. |
-| `demo_staff` | Website moderator, with read-only Django-admin user/profile permissions; not a superuser. |
 
-Generated passwords are saved privately in `data/database-private/demo-catalogue-v1-access.json` with owner-only access. Open that local file to sign in; keep it out of Git and chat. The shared snapshot includes password hashes, not that private access file. On another computer, an existing authorized administrator can reset the demo accounts' passwords. Use your existing administrator to demonstrate account creation, changes and permission grants on these fictional accounts; the demo moderator is deliberately not given account-management authority.
+Use your existing `admin` account for website moderation and your existing `superadmin` account for full user and permission administration. The demo loader does not create or change either account.
+
+Generated passwords for the three ordinary demo users are saved privately in `data/database-private/demo-catalogue-v1-access.json` with owner-only access. Open that local file to sign in; keep it out of Git and chat. The shared snapshot includes password hashes, not that private access file. On another computer, an existing authorized administrator can reset the demo accounts' passwords. Use your existing administrator to demonstrate account creation, changes and permission grants on these fictional accounts.
 
 | Module | What to demonstrate with this data |
 | --- | --- |
 | 01 — Frameworks, 2 points | Browse recipes, profiles and reviews through the React interface and Django API. |
 | 02 — ORM, 1 point | Linked authors, ingredients, categories, steps, photos, reviews and favorites use the existing models. |
-| 03 — Permissions, 2 points | Compare ordinary owners with staff; review the three moderation examples and use the existing administrator for user/role changes. |
+| 03 — Permissions, 2 points | Compare the ordinary demo owners with your existing `admin` for website moderation; use your existing `superadmin` for user/role administration. |
 | 04 — Design system, 1 point | Recipe cards/photos, varied titles, category chips, forms, profile lists, dialogs and empty review states. |
 | 05 — Search, 1 point | Combine shared ingredients/categories/title/rating filters; compare rating/count sorts and paginate at 6, 12 or 24 items. The demo set alone has more than 24 public results. |
 | 06 — Public API, 2 points | Sign in to issue an installation-local key, then use the existing Public API Tester with a catalogue photo. Create its disposable CRUD recipe normally and remove it before exporting shared data. Keys and quota records are never seeded or shared. |

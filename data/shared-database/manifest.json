@@ -1,7 +1,7 @@
 {
   "archive_format": "postgresql-custom",
-  "created_at_utc": "2026-11-01T07:09:32.622520+00:00",
-  "data_bytes": 86838,
+  "created_at_utc": "2026-11-01T07:38:53.285035+00:00",
+  "data_bytes": 86594,
   "excluded_table_data": [
     "public.django_session",
     "public.authtoken_token",
@@ -357,17 +357,17 @@
     "files": {
       "recipes.csv": {
         "bytes": 69832,
-        "sha256": "627cc2534aec29bbe3825f4e5d37063981d111a9ddd30c1affa24c7bc16b5e5d"
+        "sha256": "2401aac21eee909ed82c9139e6ec2deb0863d9bda9358e9f297460ebcaa7bcbf"
       },
       "recipes.json": {
         "bytes": 72656,
-        "sha256": "5e1d31493c27c1b183114f0d157753f05fc9ab8d350f4643fbd4502ba187d6c6"
+        "sha256": "1332fb98c395082832fa5fd73f79c0dd31ec89a034df691db93b2267201270a2"
       }
     },
     "format_version": 1,
     "recipe_count": 44
   },
-  "snapshot_id": "20261101T070920Z_e62fb19157e4",
+  "snapshot_id": "20261101T073841Z_0ce83444a41a",
   "source_database": "recipes_shared_20261021t080220z_8dde02ab0694",
-  "source_git_revision": "b194209deb21e084901a491cc66e5faf0ebbbb0a"
+  "source_git_revision": "4710c9835fde32c93099727d00b1b34940fc431e"
 }
