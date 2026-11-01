@@ -5,7 +5,8 @@ From the repository root with the matching backend/PostgreSQL already running:
     python3 scripts/seed-demo-data.py seed
     python3 scripts/seed-demo-data.py status
 
-Passwords are generated once in ignored data/database-private/, never printed.
+Fresh demo accounts use the documented simple demo-only passwords.
+The local access copy is kept in ignored data/database-private/, never printed.
 The seed is additive and transactional. Reruns report the existing marked set;
 they never reset accounts, moderation exercises, reviews or favourites.
 """
@@ -16,7 +17,6 @@ import json
 import os
 from pathlib import Path
 import re
-import secrets
 import stat
 import subprocess
 import sys
@@ -28,7 +28,9 @@ CATALOGUE = ROOT / "demos/catalogue"
 PRIVATE = ROOT / "data/database-private"
 ACCESS = PRIVATE / "demo-catalogue-v1-access.json"
 MARKER = "Savour demo catalogue v1"
-USERNAMES = ("demo_ana", "demo_marco", "demo_lee")
+USERNAMES = ("ana", "marco", "lee")
+DEFAULT_PASSWORDS = {"ana": "anapassword", "marco": "marcopassword", "lee": "leepassword"}
+LEGACY_USERNAMES = {"ana": "demo_ana", "marco": "demo_marco", "lee": "demo_lee"}
 MAX_PHOTO_BYTES = 5 * 1024 * 1024
 
 
@@ -59,9 +61,9 @@ from users.models import UserProfile
 
 MARKER = 'Savour demo catalogue v1'
 ACCOUNTS = (
-    ('demo_ana', 'Ana', 'Silva', 'Portuguese home cooking, seasonal soups and weekend baking.'),
-    ('demo_marco', 'Marco', 'Costa', 'Mediterranean suppers, fish dishes and market vegetables.'),
-    ('demo_lee', 'Lee', 'Park', 'Rice bowls, vegetarian lunches and quick weekday cooking.'),
+    ('ana', 'Ana', 'Silva', 'Portuguese home cooking, seasonal soups and weekend baking.'),
+    ('marco', 'Marco', 'Costa', 'Mediterranean suppers, fish dishes and market vegetables.'),
+    ('lee', 'Lee', 'Park', 'Rice bowls, vegetarian lunches and quick weekday cooking.'),
 )
 NAMES = [item[0] for item in ACCOUNTS]
 EMAILS = [name + '@example.com' for name in NAMES]
@@ -290,14 +292,20 @@ def access_file():
                 or info.st_nlink != 1 or info.st_mode & 0o077 or info.st_size > 65536):
             raise RuntimeError("Existing demo access file must be a private regular file owned by you.")
         value = json.loads(ACCESS.read_text(encoding="utf-8"))
-        passwords = value.get("passwords", {})
-        if (value.get("marker") != MARKER or not isinstance(passwords, dict)
-                or set(passwords) not in (set(USERNAMES), set(USERNAMES) | {"demo_staff"})
-                or any(not isinstance(passwords[name], str) or len(passwords[name]) < 24
-                       for name in USERNAMES)):
+        passwords = value.get("passwords") if isinstance(value, dict) else None
+        legacy_names = set(LEGACY_USERNAMES.values())
+        if (not isinstance(value, dict) or value.get("marker") != MARKER
+                or not isinstance(passwords, dict)
+                or set(passwords) not in (set(USERNAMES), legacy_names, legacy_names | {"demo_staff"})):
             raise RuntimeError("Existing private demo access file is invalid; it was not replaced.")
-        return {**value, "passwords": {name: passwords[name] for name in USERNAMES}}
-    value = {"marker": MARKER, "passwords": {name: secrets.token_urlsafe(24) for name in USERNAMES}}
+        current_passwords = {
+            name: passwords[name if name in passwords else LEGACY_USERNAMES[name]]
+            for name in USERNAMES
+        }
+        if any(not isinstance(password, str) or not password for password in current_passwords.values()):
+            raise RuntimeError("Existing private demo access file is invalid; it was not replaced.")
+        return {**value, "passwords": current_passwords}
+    value = {"marker": MARKER, "passwords": dict(DEFAULT_PASSWORDS)}
     descriptor = os.open(ACCESS, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
         json.dump(value, stream, indent=2)
@@ -358,7 +366,7 @@ def main():
     access = None
     if arguments.mode == "seed":
         specs, photos = load_catalogue()
-        access = access_file()  # Persist generated passwords before any backend operation.
+        access = access_file()  # Persist demo access details before any backend operation.
         payload.update(recipes=specs, photos=photos, passwords=access["passwords"],
                        fixture_recipe_ids=access.get("fixture_recipe_ids", []))
     result = subprocess.run(

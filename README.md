@@ -20,9 +20,9 @@ The project uses the requirements in [ft_transcendence.pdf](ft_transcendence.pdf
    git pull --ff-only origin main
    ```
 
-2. Read [Prerequisites](#prerequisites) and [Configure a checkout](#configure-a-checkout). Keep an existing private `.env`; on a new installation, fill the required values in a copy of `.env.example`. Arrange account credentials privately with the team; passwords are not published in this README.
+2. Read [Prerequisites](#prerequisites) and [Configure a checkout](#configure-a-checkout). Keep an existing private `.env`; on a new installation, fill the required values in a copy of `.env.example`. The ordinary demo logins are listed below; arrange existing administrator credentials privately with the team.
 3. Run **`sh scripts/start.sh` once** and follow [Start the application](#start-the-application). This builds/starts the services and loads the shared recipes/photos automatically. With defaults, open [Recipe Site](https://localhost:8443/), [Django administration](https://localhost:8443/admin/), [Public API Tester](http://localhost:8765/) and [Status](https://localhost:8443/status). Resolve browser trust using the printed public CA path and the [browser guide](#browser-support-guide).
-4. Read [Demo catalogue](#demo-catalogue) for the three ordinary demo users and existing administrator roles. **Do not run the seed command for a normal partner checkout**: the shared catalogue is already included. The ignored demo-password file is local to the computer where passwords were generated; it is not downloaded by Git. An authorized `superadmin` can sign into `/admin/`, open **Users**, select a demo user and use the password-change link to set that user's local password. This changes the selected user's password, not its role. Website sign-in and Django-admin sign-in are separate.
+4. Read [Demo catalogue](#demo-catalogue) for the three simple ordinary demo logins and existing administrator roles. **Do not run the seed command for a normal partner checkout**: the shared catalogue is already included. Website sign-in and Django-admin sign-in are separate. If someone changed a demo password on their installation, an authorized `superadmin` can use **Users** in `/admin/` to set it again; that changes the selected user's password, not its role.
 5. Follow the [core website walkthrough](#core-website-walkthrough), then use the [module test route](#partner-test-route) to read and check each feature. For the same current checkout after successful normal startup, go directly to usage/checks: individual module rebuild commands are for loading later source changes, not additional startup requirements.
 6. Record results using [Report a test result](#report-a-test-result). Use the analytics checks and Firefox/Edge matrix to learn, demonstrate and record your own results; assign checks between partners as needed.
 
@@ -62,15 +62,15 @@ python3 scripts/seed-demo-data.py status
 
 Only a maintainer preparing an installation **without the shared demo set** should run `python3 scripts/seed-demo-data.py seed`, after starting the matching backend/PostgreSQL. No application rebuild is required for data changes. The loader validates contents/photos with the existing application helpers and writes the new linked records in one transaction. It directly seeds the stated moderation states and historical dates as demo fixtures; it does not simulate browser submissions or prove the workflow passed. Repeating `seed` retains the identified set without resetting edits, passwords, reviews or moderation exercises. Do not use it to obtain passwords on a computer that already received the shared accounts.
 
-| Account | Demonstration role |
-| --- | --- |
-| `demo_ana` | Ordinary author: Portuguese dishes, own recipes, favorites and review history. |
-| `demo_marco` | A different ordinary owner for account isolation and review demonstrations. |
-| `demo_lee` | Ordinary author/reviewer with a separate favorites collection. |
+| Name | Username | Demo password | Demonstration role |
+| --- | --- | --- | --- |
+| Ana Silva | `ana` | `anapassword` | Ordinary author: Portuguese dishes, own recipes, favorites and review history. |
+| Marco Costa | `marco` | `marcopassword` | A different ordinary owner for account isolation and review demonstrations. |
+| Lee Park | `lee` | `leepassword` | Ordinary author/reviewer with a separate favorites collection. |
 
 Use your existing `admin` account for website moderation and your existing `superadmin` account for full user and permission administration. The demo loader does not create or change either account.
 
-Generated passwords for the three ordinary demo users are saved privately in `data/database-private/demo-catalogue-v1-access.json` with owner-only access. Open that local file to sign in; keep it out of Git and chat. The shared snapshot includes password hashes, not that private access file. On another computer, an existing authorized administrator can reset the demo accounts' passwords. Use your existing administrator to demonstrate account creation, changes and permission grants on these fictional accounts.
+These are intentionally simple credentials for the three fictional demo users. The loader also keeps a local access copy in ignored `data/database-private/demo-catalogue-v1-access.json`; the shared snapshot carries the accounts and their password hashes. Re-running the loader retains existing accounts and does not reset their passwords. The existing `admin` and `superadmin` passwords were not changed; use their existing credentials for moderation and account/permission demonstrations.
 
 | Module | What to demonstrate with this data |
 | --- | --- |
