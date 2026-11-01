@@ -27,6 +27,47 @@ The user and operator guides are kept together in this README:
 | [Backup command reference](#backup-command-reference) | Start, list, make, verify, restore and activate a backup. |
 | [Disaster recovery](#disaster-recovery) | Restore a separate database, deliberately activate it and refresh shared data. |
 | [Shared project data](#shared-project-data) | Export the database/photos for the existing Git-sharing workflow. |
+| [Demo catalogue for all modules](#demo-catalogue) | Fictional accounts, food photos, moderation examples, analytics history and import samples. |
+
+<a id="demo-catalogue"></a>
+### Demo catalogue
+
+The reusable catalogue in `demos/catalogue/` provides 25 realistic recipes with ingredients, ordered instructions and AI-generated food photos. These are fictional demonstrations, not records of real cooks or reviews. Three additional copies illustrate pending approval, rejection with a reason and an approved recipe with a deletion request. The last remains public under the normal moderation rules: there are initially 28 demo recipes, 26 approved. Existing recipes and accounts are preserved.
+
+With the matching backend and PostgreSQL already running, load the catalogue once:
+
+```sh
+python3 scripts/seed-demo-data.py seed
+python3 scripts/seed-demo-data.py status
+```
+
+No application rebuild is required for data changes. The loader validates contents/photos with the existing application helpers and writes the new linked records in one transaction. It directly seeds the stated moderation states and historical dates as demo fixtures; it does not simulate browser submissions or prove the workflow passed. Repeating `seed` retains the identified set without resetting edits, passwords, reviews or moderation exercises. `status` reads only. Do not run the seed again on a partner computer that has already received these accounts through the shared snapshot just to obtain passwords.
+
+| Account | Demonstration role |
+| --- | --- |
+| `demo_ana` | Ordinary author: Portuguese dishes, own recipes, favorites and review history. |
+| `demo_marco` | A different ordinary owner for account isolation and review demonstrations. |
+| `demo_lee` | Ordinary author/reviewer with a separate favorites collection. |
+| `demo_staff` | Website moderator, with read-only Django-admin user/profile permissions; not a superuser. |
+
+Generated passwords are saved privately in `data/database-private/demo-catalogue-v1-access.json` with owner-only access. Open that local file to sign in; keep it out of Git and chat. The shared snapshot includes password hashes, not that private access file. On another computer, an existing authorized administrator can reset the demo accounts' passwords. Use your existing administrator to demonstrate account creation, changes and permission grants on these fictional accounts; the demo moderator is deliberately not given account-management authority.
+
+| Module | What to demonstrate with this data |
+| --- | --- |
+| 01 — Frameworks, 2 points | Browse recipes, profiles and reviews through the React interface and Django API. |
+| 02 — ORM, 1 point | Linked authors, ingredients, categories, steps, photos, reviews and favorites use the existing models. |
+| 03 — Permissions, 2 points | Compare ordinary owners with staff; review the three moderation examples and use the existing administrator for user/role changes. |
+| 04 — Design system, 1 point | Recipe cards/photos, varied titles, category chips, forms, profile lists, dialogs and empty review states. |
+| 05 — Search, 1 point | Combine shared ingredients/categories/title/rating filters; compare rating/count sorts and paginate at 6, 12 or 24 items. The demo set alone has more than 24 public results. |
+| 06 — Public API, 2 points | Sign in to issue an installation-local key, then use the existing Public API Tester with a catalogue photo. Create its disposable CRUD recipe normally and remove it before exporting shared data. Keys and quota records are never seeded or shared. |
+| 07 — Import/export, 1 point | Download owned recipes from Profile. Preview `demos/catalogue/import-samples.json` or `.csv`, containing the first three recipes with photos. Either imports as new pending copies; use one format per batch unless demonstrating duplicate content deliberately. `import-invalid.json` intentionally has invalid recipe fields and must be rejected. |
+| 08 — Status/backups, 1 point | Open the actual Status page and use the documented real backup commands with the expanded catalogue. No successful health check, backup or recovery is fabricated by the seed. |
+| 09 — Analytics, 2 points | Explore 90 days of synthetic recipe/review history, all five grades, different review counts and unreviewed recipes. Compare 7/30/90-day views and filtered CSV/JSON reports. Add an ordinary review to observe live updates. |
+| 10 — Browsers, 1 point | Reuse the same catalogue and disposable workflow examples in Firefox and Edge using the browser-support matrix below. |
+
+The loader writes the three-recipe portable import samples after a successful load. `recipes.json` is the seed source, not a website import file. Food-photo prompts and AI provenance are saved in `demos/catalogue/photo-prompts.json`; the 25 original PNG assets are in `demos/catalogue/photos/`. New demo creation/review timestamps are deliberately spread across the preceding 90 days, while existing timestamps are untouched. They are simulated activity, not evidence of project usage.
+
+After any desired changes and public approvals, run `sh scripts/export.sh`, then save the **whole** `data/shared-database/` bundle together with the code/docs. Partners receive the catalogue and photos through the normal launcher. Do not import the seed source again after restoring that shared bundle. Remove disposable API/import exercise copies through the normal staff workflow before exporting. Demo preparation does not complete the still-pending Module09 functional confirmations or Module10 Firefox/Edge runs; accepted total remains 11/14 until those results are recorded.
 
 ## Instructions
 
@@ -796,3 +837,5 @@ For Module09, Roh directed Codex-assisted implementation of the public approved-
 For Module10, Roh directed Codex-assisted source audits of CSS/forms, browser APIs/downloads and HTTPS/build setup. The work added explicit Vite browser targets, clearer launcher/public-CA guidance and the Firefox/Edge operating and verification guide. No speculative frontend rewrite or dependency was added after the audit found no actionable app-source incompatibility. Source review is separate from the pending actual Firefox/Edge runs; no runtime pass is claimed.
 
 Team members must review, test and understand the implementation attributed to them.
+
+For the demo catalogue, Roh directed Codex-assisted recipe text, isolated account/recipe/review/favorite fixtures, deliberately simulated 90-day activity, portable import samples and the additive loader. The built-in imagegen tool generated 25 food photographs; exact prompts/provenance are in `demos/catalogue/photo-prompts.json`. The loader and shared export were executed to prepare actual demonstration data. This does not represent real user activity or replace the pending analytics/browser acceptance checks.

@@ -1,7 +1,7 @@
 {
   "archive_format": "postgresql-custom",
-  "created_at_utc": "2026-10-31T09:50:08.981569+00:00",
-  "data_bytes": 73915,
+  "created_at_utc": "2026-11-01T07:09:32.622520+00:00",
+  "data_bytes": 86838,
   "excluded_table_data": [
     "public.django_session",
     "public.authtoken_token",
@@ -10,7 +10,7 @@
   ],
   "format_version": 3,
   "media_included": true,
-  "media_sha256": "ba4a5b3d88de8e895601241d34052be3c92aa60af0f4e55d539fff02527dfb13",
+  "media_sha256": "0726e535c4004f34bbb5bd64e391c31996508782d05412d3b9d7ee8562f543e3",
   "migration_fingerprint": "6b7b436bdd9e18c18e41ff87dcc7dbb542dd73f2ff1fbf0164648a4600bb4a5d",
   "photos": {
     "files": {
@@ -18,21 +18,73 @@
         "bytes": 27862,
         "sha256": "06e1c0eafe4c198312480e794836ad9509546b83ccd4fc0fd8d4e85123c8b041"
       },
+      "083754a30dc1e7b45483bbc862f821ed9b2d1e618e7dce43734213b06e1ab021.png": {
+        "bytes": 2482302,
+        "sha256": "083754a30dc1e7b45483bbc862f821ed9b2d1e618e7dce43734213b06e1ab021"
+      },
       "0c2f721aef10b1bf41e64a97f5b6219497db2031c5edbc07c49ffda5a4ec149b.jpg": {
         "bytes": 2226984,
         "sha256": "0c2f721aef10b1bf41e64a97f5b6219497db2031c5edbc07c49ffda5a4ec149b"
+      },
+      "0f6af4108e7a5ee69f968ba5d743a9703cd59fa1e0477d0ba3f4f7cc3b728740.png": {
+        "bytes": 3004531,
+        "sha256": "0f6af4108e7a5ee69f968ba5d743a9703cd59fa1e0477d0ba3f4f7cc3b728740"
       },
       "288d646784d42d9c9d113472b4553d441ba91ce2446da5374a9fa8143678f38f.jpg": {
         "bytes": 234081,
         "sha256": "288d646784d42d9c9d113472b4553d441ba91ce2446da5374a9fa8143678f38f"
       },
+      "2b970aaa84e036fcdd2f46ada500ac2d66e566163105d15e358b2bd68bceeb00.png": {
+        "bytes": 2830556,
+        "sha256": "2b970aaa84e036fcdd2f46ada500ac2d66e566163105d15e358b2bd68bceeb00"
+      },
       "2ef7f768421195cec476d029844984f6334d5c06eaa77b88fa74ab83464256aa.jpg": {
         "bytes": 53881,
         "sha256": "2ef7f768421195cec476d029844984f6334d5c06eaa77b88fa74ab83464256aa"
       },
+      "33c6e0660b56c8aa0dc42901a3683bba12fa7cba83e40705ce3ba6ec37a67f0c.png": {
+        "bytes": 2906113,
+        "sha256": "33c6e0660b56c8aa0dc42901a3683bba12fa7cba83e40705ce3ba6ec37a67f0c"
+      },
+      "36a37ba693f21dcb04f1accab58d32084fcf29df6cd7cd3098da53fc7c7b5f45.png": {
+        "bytes": 2921727,
+        "sha256": "36a37ba693f21dcb04f1accab58d32084fcf29df6cd7cd3098da53fc7c7b5f45"
+      },
+      "3c029517b863d1d6de932e35a1fe16796dcb926088e2e88e550db436b2c01481.png": {
+        "bytes": 2996634,
+        "sha256": "3c029517b863d1d6de932e35a1fe16796dcb926088e2e88e550db436b2c01481"
+      },
+      "413f3b4c7015a8cfa529c48545fd234de4dbdda7670537d42ce9fd91b22a089c.png": {
+        "bytes": 2895849,
+        "sha256": "413f3b4c7015a8cfa529c48545fd234de4dbdda7670537d42ce9fd91b22a089c"
+      },
+      "45c5b0ab318b88bf533508972f2f65fa59e36278731c560a262c3fe4a7415363.png": {
+        "bytes": 2882811,
+        "sha256": "45c5b0ab318b88bf533508972f2f65fa59e36278731c560a262c3fe4a7415363"
+      },
+      "4641029b26d18353250cb17d50bbe097eac784263cd605c21653fa65ed6c1692.png": {
+        "bytes": 2636067,
+        "sha256": "4641029b26d18353250cb17d50bbe097eac784263cd605c21653fa65ed6c1692"
+      },
       "5b298f55188b76ddc286f435395caeb97bc00df9caec39cef00bfb6586c71ab4.jpg": {
         "bytes": 3643629,
         "sha256": "5b298f55188b76ddc286f435395caeb97bc00df9caec39cef00bfb6586c71ab4"
+      },
+      "5f7c4fc55523ed204acbede42be77e5617cc48b3701270a1cfde0538d68ed9ac.png": {
+        "bytes": 2769789,
+        "sha256": "5f7c4fc55523ed204acbede42be77e5617cc48b3701270a1cfde0538d68ed9ac"
+      },
+      "67ad751c9ce44011fd9cf09f66a5824f90b5d64cf0afd98bf53dab3169ccbf64.png": {
+        "bytes": 2442387,
+        "sha256": "67ad751c9ce44011fd9cf09f66a5824f90b5d64cf0afd98bf53dab3169ccbf64"
+      },
+      "698f56dcd517b7216ad0f521a630b5ad61e79d1bb063eb98ed051808dd5ad653.png": {
+        "bytes": 2945481,
+        "sha256": "698f56dcd517b7216ad0f521a630b5ad61e79d1bb063eb98ed051808dd5ad653"
+      },
+      "7650971324aaa00628441269caf636865d18e70d15dc9fc12041694fc73ceb08.png": {
+        "bytes": 2703287,
+        "sha256": "7650971324aaa00628441269caf636865d18e70d15dc9fc12041694fc73ceb08"
       },
       "792960a232dc9f41c235167dec39416a36da24d33153e870e1d59eafe311ccae.webp": {
         "bytes": 71116,
@@ -42,13 +94,29 @@
         "bytes": 58448,
         "sha256": "7e52183148124bb31f5ae6e1096a739670a8e9ffada4642ea5f3fd7f54b79611"
       },
+      "7ea3e17873c3e0ac0f4fadb83e72ff1ef7ef9e3d7a429c3d7437e49d59a36ab5.png": {
+        "bytes": 2829039,
+        "sha256": "7ea3e17873c3e0ac0f4fadb83e72ff1ef7ef9e3d7a429c3d7437e49d59a36ab5"
+      },
+      "82086615388ced5e5b4f429eb0b4eceba016b53292d123c1d85fa412a3df83d5.png": {
+        "bytes": 2914753,
+        "sha256": "82086615388ced5e5b4f429eb0b4eceba016b53292d123c1d85fa412a3df83d5"
+      },
       "89fdb7dcffefc4b0554e70b5bbb1e873bd3bdab2094d9c254685a68acfb6a717.jpg": {
         "bytes": 19562,
         "sha256": "89fdb7dcffefc4b0554e70b5bbb1e873bd3bdab2094d9c254685a68acfb6a717"
       },
+      "91c25579dc9fa5171a52a738d1a145baf1cdcbd70fc3eddc48c99219d12e464c.png": {
+        "bytes": 3102324,
+        "sha256": "91c25579dc9fa5171a52a738d1a145baf1cdcbd70fc3eddc48c99219d12e464c"
+      },
       "9e04d345b40249fb99eb8c25cb573d7687ab5be4b6784aeff865829c68520a08.jpg": {
         "bytes": 26560,
         "sha256": "9e04d345b40249fb99eb8c25cb573d7687ab5be4b6784aeff865829c68520a08"
+      },
+      "9f11459bc0dc531d1777841ad2368c6b3cecd99e79afb644e6e1dea396284a99.png": {
+        "bytes": 2854064,
+        "sha256": "9f11459bc0dc531d1777841ad2368c6b3cecd99e79afb644e6e1dea396284a99"
       },
       "a9273fb4bf976e4dcc159179b5d0ae67b5974483405cc7f1a1f810a9ce0eecce.jpg": {
         "bytes": 235567,
@@ -58,9 +126,41 @@
         "bytes": 286869,
         "sha256": "ae04c91431223594bf76339354a2b31cb0f3775865971d827a288394cecf4a3a"
       },
+      "b4c1193368a091cf8ec485a879fabe4aa320ea7eee6072a7027a81f5ac06c636.png": {
+        "bytes": 2789036,
+        "sha256": "b4c1193368a091cf8ec485a879fabe4aa320ea7eee6072a7027a81f5ac06c636"
+      },
+      "b65e4b2c7f9d01993aed71123712ab62e5b86857d96ebfdd2dfbb22e384787ae.png": {
+        "bytes": 2635193,
+        "sha256": "b65e4b2c7f9d01993aed71123712ab62e5b86857d96ebfdd2dfbb22e384787ae"
+      },
+      "bbc9cb944f672d070938f84701c02001cf7b5959d55ddc06aa866feef887e634.png": {
+        "bytes": 2821458,
+        "sha256": "bbc9cb944f672d070938f84701c02001cf7b5959d55ddc06aa866feef887e634"
+      },
+      "c7686c34f870c9e8f9e00d95b5531c21d19b35762bd02c412b01af3411f887a0.png": {
+        "bytes": 2922537,
+        "sha256": "c7686c34f870c9e8f9e00d95b5531c21d19b35762bd02c412b01af3411f887a0"
+      },
+      "cf6e54bb606571b31610d2b8a542c1c340a13038a05d49e077f15baf2251df30.png": {
+        "bytes": 2507950,
+        "sha256": "cf6e54bb606571b31610d2b8a542c1c340a13038a05d49e077f15baf2251df30"
+      },
+      "da55733953e4a197d8bebe1f20aa38730ce0b951893f0e4ae6fbc67e4ab1245c.png": {
+        "bytes": 2812393,
+        "sha256": "da55733953e4a197d8bebe1f20aa38730ce0b951893f0e4ae6fbc67e4ab1245c"
+      },
       "db21da8ccaaacaf3258066c2f1126ea766fce209f93431b03f4b0cf25f1206ca.jpg": {
         "bytes": 329694,
         "sha256": "db21da8ccaaacaf3258066c2f1126ea766fce209f93431b03f4b0cf25f1206ca"
+      },
+      "e179912acc1cd0f5f9cf9767492ed366e1c7e13aebaf83b93c5d33ee0e827a7c.png": {
+        "bytes": 3133119,
+        "sha256": "e179912acc1cd0f5f9cf9767492ed366e1c7e13aebaf83b93c5d33ee0e827a7c"
+      },
+      "edde296012d33337678554aeb5b30ef7943c1b5b8b5202f53850e5777b866596.png": {
+        "bytes": 2790333,
+        "sha256": "edde296012d33337678554aeb5b30ef7943c1b5b8b5202f53850e5777b866596"
       }
     },
     "profiles": {
@@ -118,17 +218,129 @@
         "file": "db21da8ccaaacaf3258066c2f1126ea766fce209f93431b03f4b0cf25f1206ca.jpg",
         "path": "recipes/49517564917e4fa8900b0cedd26c4b87.jpg"
       },
+      "28": {
+        "file": "da55733953e4a197d8bebe1f20aa38730ce0b951893f0e4ae6fbc67e4ab1245c.png",
+        "path": "recipes/savour-demo-v1-baff6329437548638c95ec1b90dece0a.png"
+      },
+      "29": {
+        "file": "4641029b26d18353250cb17d50bbe097eac784263cd605c21653fa65ed6c1692.png",
+        "path": "recipes/savour-demo-v1-4ef195f759ae43eaabc857e81f07229d.png"
+      },
       "3": {
         "file": "5b298f55188b76ddc286f435395caeb97bc00df9caec39cef00bfb6586c71ab4.jpg",
         "path": "shared/recipes/5b298f55188b76ddc286f435395caeb97bc00df9caec39cef00bfb6586c71ab4.jpg"
+      },
+      "30": {
+        "file": "413f3b4c7015a8cfa529c48545fd234de4dbdda7670537d42ce9fd91b22a089c.png",
+        "path": "recipes/savour-demo-v1-e9f5546e29b4421bbe4066fa24a35c81.png"
+      },
+      "31": {
+        "file": "698f56dcd517b7216ad0f521a630b5ad61e79d1bb063eb98ed051808dd5ad653.png",
+        "path": "recipes/savour-demo-v1-fe7ea183ab974c4f9aec96587863268b.png"
+      },
+      "32": {
+        "file": "2b970aaa84e036fcdd2f46ada500ac2d66e566163105d15e358b2bd68bceeb00.png",
+        "path": "recipes/savour-demo-v1-8675619c5ab04875b5182d7e3569ef36.png"
+      },
+      "33": {
+        "file": "e179912acc1cd0f5f9cf9767492ed366e1c7e13aebaf83b93c5d33ee0e827a7c.png",
+        "path": "recipes/savour-demo-v1-f50422e278d54d22a05f7c462e01fb52.png"
+      },
+      "34": {
+        "file": "9f11459bc0dc531d1777841ad2368c6b3cecd99e79afb644e6e1dea396284a99.png",
+        "path": "recipes/savour-demo-v1-86e52561e52f406d9c430c15bc0268e3.png"
+      },
+      "35": {
+        "file": "edde296012d33337678554aeb5b30ef7943c1b5b8b5202f53850e5777b866596.png",
+        "path": "recipes/savour-demo-v1-85dd73468fd64eddbe2ce403846b5e42.png"
+      },
+      "36": {
+        "file": "c7686c34f870c9e8f9e00d95b5531c21d19b35762bd02c412b01af3411f887a0.png",
+        "path": "recipes/savour-demo-v1-21035a4f639647039560867e5bf774ef.png"
+      },
+      "37": {
+        "file": "0f6af4108e7a5ee69f968ba5d743a9703cd59fa1e0477d0ba3f4f7cc3b728740.png",
+        "path": "recipes/savour-demo-v1-365823bbcf4d4277b7ad64b557290378.png"
+      },
+      "38": {
+        "file": "cf6e54bb606571b31610d2b8a542c1c340a13038a05d49e077f15baf2251df30.png",
+        "path": "recipes/savour-demo-v1-2a616e773fdb454f88bae3eef71acabe.png"
+      },
+      "39": {
+        "file": "5f7c4fc55523ed204acbede42be77e5617cc48b3701270a1cfde0538d68ed9ac.png",
+        "path": "recipes/savour-demo-v1-372a5bb2d6194afdb90952aa0a266a76.png"
       },
       "4": {
         "file": "0c2f721aef10b1bf41e64a97f5b6219497db2031c5edbc07c49ffda5a4ec149b.jpg",
         "path": "shared/recipes/0c2f721aef10b1bf41e64a97f5b6219497db2031c5edbc07c49ffda5a4ec149b.jpg"
       },
+      "40": {
+        "file": "b4c1193368a091cf8ec485a879fabe4aa320ea7eee6072a7027a81f5ac06c636.png",
+        "path": "recipes/savour-demo-v1-5b822b1c0fde4d998aeafda6ce8c6ebf.png"
+      },
+      "41": {
+        "file": "3c029517b863d1d6de932e35a1fe16796dcb926088e2e88e550db436b2c01481.png",
+        "path": "recipes/savour-demo-v1-4beb769dca534d948424b857734b474f.png"
+      },
+      "42": {
+        "file": "083754a30dc1e7b45483bbc862f821ed9b2d1e618e7dce43734213b06e1ab021.png",
+        "path": "recipes/savour-demo-v1-467e8f8e22884d41ac25c6902f09235b.png"
+      },
+      "43": {
+        "file": "b65e4b2c7f9d01993aed71123712ab62e5b86857d96ebfdd2dfbb22e384787ae.png",
+        "path": "recipes/savour-demo-v1-b4b9cf14479444ea90a21a8e233a48c5.png"
+      },
+      "44": {
+        "file": "bbc9cb944f672d070938f84701c02001cf7b5959d55ddc06aa866feef887e634.png",
+        "path": "recipes/savour-demo-v1-b3cc3a40193d420584884e6dc66fdaad.png"
+      },
+      "45": {
+        "file": "7ea3e17873c3e0ac0f4fadb83e72ff1ef7ef9e3d7a429c3d7437e49d59a36ab5.png",
+        "path": "recipes/savour-demo-v1-fdef54a2e1964b6c8458dcf15c746fa9.png"
+      },
+      "46": {
+        "file": "36a37ba693f21dcb04f1accab58d32084fcf29df6cd7cd3098da53fc7c7b5f45.png",
+        "path": "recipes/savour-demo-v1-1c72d939884d42a79696a1d5dff2d4f9.png"
+      },
+      "47": {
+        "file": "45c5b0ab318b88bf533508972f2f65fa59e36278731c560a262c3fe4a7415363.png",
+        "path": "recipes/savour-demo-v1-58dcee043247467c87fb668924da5f21.png"
+      },
+      "48": {
+        "file": "82086615388ced5e5b4f429eb0b4eceba016b53292d123c1d85fa412a3df83d5.png",
+        "path": "recipes/savour-demo-v1-8e8c5120cad841f2ac2073a3931c3879.png"
+      },
+      "49": {
+        "file": "67ad751c9ce44011fd9cf09f66a5824f90b5d64cf0afd98bf53dab3169ccbf64.png",
+        "path": "recipes/savour-demo-v1-af2d0796b3924679af15d2bc73912a72.png"
+      },
       "5": {
         "file": "7e52183148124bb31f5ae6e1096a739670a8e9ffada4642ea5f3fd7f54b79611.jpg",
         "path": "shared/recipes/7e52183148124bb31f5ae6e1096a739670a8e9ffada4642ea5f3fd7f54b79611.jpg"
+      },
+      "50": {
+        "file": "7650971324aaa00628441269caf636865d18e70d15dc9fc12041694fc73ceb08.png",
+        "path": "recipes/savour-demo-v1-2503d048c06f419caf90a92884ceb04a.png"
+      },
+      "51": {
+        "file": "91c25579dc9fa5171a52a738d1a145baf1cdcbd70fc3eddc48c99219d12e464c.png",
+        "path": "recipes/savour-demo-v1-d84f6757e34b44b4a38becb27285f64e.png"
+      },
+      "52": {
+        "file": "33c6e0660b56c8aa0dc42901a3683bba12fa7cba83e40705ce3ba6ec37a67f0c.png",
+        "path": "recipes/savour-demo-v1-147fd9757b4647ec93a521c4404e45ca.png"
+      },
+      "53": {
+        "file": "da55733953e4a197d8bebe1f20aa38730ce0b951893f0e4ae6fbc67e4ab1245c.png",
+        "path": "recipes/savour-demo-v1-b0bbf029dd6048ec94664651aabb00d6.png"
+      },
+      "54": {
+        "file": "4641029b26d18353250cb17d50bbe097eac784263cd605c21653fa65ed6c1692.png",
+        "path": "recipes/savour-demo-v1-044633c426674ae2b8ec1e2a872f93e7.png"
+      },
+      "55": {
+        "file": "413f3b4c7015a8cfa529c48545fd234de4dbdda7670537d42ce9fd91b22a089c.png",
+        "path": "recipes/savour-demo-v1-6614f7c1ba0d4d09a1907d6360d9c3da.png"
       },
       "7": {
         "file": "288d646784d42d9c9d113472b4553d441ba91ce2446da5374a9fa8143678f38f.jpg",
@@ -144,18 +356,18 @@
   "record_exports": {
     "files": {
       "recipes.csv": {
-        "bytes": 8099,
-        "sha256": "7c4dab56f2a23de996a90c2d0515e7a572345d1b41dfd7831e284770d9493c62"
+        "bytes": 69832,
+        "sha256": "627cc2534aec29bbe3825f4e5d37063981d111a9ddd30c1affa24c7bc16b5e5d"
       },
       "recipes.json": {
-        "bytes": 10603,
-        "sha256": "5df5da2686d04303ed8c1de7d97a854dbb65372aa9f3148d60e18497c6ea6717"
+        "bytes": 72656,
+        "sha256": "5e1d31493c27c1b183114f0d157753f05fc9ab8d350f4643fbd4502ba187d6c6"
       }
     },
     "format_version": 1,
-    "recipe_count": 16
+    "recipe_count": 44
   },
-  "snapshot_id": "20261031T094958Z_269f9c39934e",
+  "snapshot_id": "20261101T070920Z_e62fb19157e4",
   "source_database": "recipes_shared_20261021t080220z_8dde02ab0694",
-  "source_git_revision": "a2140ccfbdbe97f7b9065054ffa91b07d31b5c61"
+  "source_git_revision": "b194209deb21e084901a491cc66e5faf0ebbbb0a"
 }

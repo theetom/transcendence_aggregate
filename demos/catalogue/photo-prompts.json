@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "provenance": "AI-generated demo recipe food photos using the built-in image_gen tool; fictional illustrative food, not photographs of user-made dishes.",
+  "mode": "built-in image_gen",
+  "entries": [
+    {
+      "slug": "lemon-herb-roast-chicken",
+      "file": "photos/lemon-herb-roast-chicken.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. A realistic editorial food photograph of lemon herb roast chicken thighs, golden roasted skin, lemon slices and rosemary in a ceramic roasting dish, on a warm neutral kitchen table. Soft natural window light, three-quarter overhead close framing, appetizing home cooking, no people, no text, no logos, no collage. Save-ready square food photograph."
+    },
+    {
+      "slug": "tomato-basil-pasta",
+      "file": "photos/tomato-basil-pasta.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of spaghetti coated in a rich red tomato sauce, fresh basil leaves and a modest scattering of grated parmesan, in a shallow ceramic bowl. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "chickpea-spinach-curry",
+      "file": "photos/chickpea-spinach-curry.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of a chickpea and spinach curry with a golden tomato coconut sauce, a few chickpeas and wilted spinach visible, served in a ceramic bowl with rice beside it. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "mushroom-risotto",
+      "file": "photos/mushroom-risotto.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of creamy arborio rice risotto with browned sliced mushrooms, parsley and a light parmesan garnish, in a broad shallow bowl. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "salmon-rice-bowl",
+      "file": "photos/salmon-rice-bowl.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of a cooked glazed salmon fillet over rice with sliced cucumber, avocado and sesame seeds, in a ceramic bowl. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "roasted-vegetable-couscous",
+      "file": "photos/roasted-vegetable-couscous.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of fluffy couscous with roasted courgette, red pepper, carrot and chickpeas, a few parsley leaves and lemon wedge, in a ceramic serving bowl. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "black-bean-tacos",
+      "file": "photos/black-bean-tacos.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of three soft corn tortillas filled with black beans, diced tomato, sliced avocado, red cabbage and coriander, with lime wedges on a simple plate. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "portuguese-caldo-verde",
+      "file": "photos/portuguese-caldo-verde.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of a rustic Portuguese caldo verde soup, pale potato broth with very finely shredded dark green kale and a few slices of cooked chourico sausage, in a stoneware soup bowl. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "garlic-prawn-rice",
+      "file": "photos/garlic-prawn-rice.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of Portuguese style saucy rice with cooked pink prawns, tomato, garlic and chopped coriander, in a shallow rustic casserole. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "spinach-feta-frittata",
+      "file": "photos/spinach-feta-frittata.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of a thick golden baked frittata with spinach and crumbled feta, one wedge cut out to show the interior, in a small cast iron skillet. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "blueberry-oat-pancakes",
+      "file": "photos/blueberry-oat-pancakes.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of a stack of three oat pancakes with blueberries, a small spoonful of yogurt and a little maple syrup, on a ceramic breakfast plate. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "banana-walnut-porridge",
+      "file": "photos/banana-walnut-porridge.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of creamy oat porridge topped with banana slices, chopped walnuts and cinnamon, in a simple breakfast bowl. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "avocado-egg-toast",
+      "file": "photos/avocado-egg-toast.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of two slices of toasted sourdough with mashed avocado and fully set poached eggs, black pepper and a few chilli flakes, on a stoneware plate. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "apple-cinnamon-crumble",
+      "file": "photos/apple-cinnamon-crumble.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of a baked apple cinnamon crumble with a golden oat crumb topping, a serving spoon revealing soft cooked apples, in a ceramic baking dish. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "lemon-yogurt-cake",
+      "file": "photos/lemon-yogurt-cake.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of a simple round lemon yogurt cake with a light lemon glaze and one cut slice beside it, fine moist crumb, a lemon nearby, on a plain ceramic cake plate. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "dark-chocolate-mousse",
+      "file": "photos/dark-chocolate-mousse.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of two small glass cups filled with dark chocolate mousse, topped with a few chocolate curls, on a warm neutral tabletop. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "greek-chickpea-salad",
+      "file": "photos/greek-chickpea-salad.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of a fresh Greek chickpea salad with chickpeas, tomato, cucumber, red onion, olives, feta cubes and oregano in a white ceramic bowl. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "ginger-tofu-stir-fry",
+      "file": "photos/ginger-tofu-stir-fry.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of golden tofu cubes stir-fried with broccoli, red pepper and ginger soy sauce, sesame seeds and rice alongside, in a ceramic bowl. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "sweet-potato-lentil-soup",
+      "file": "photos/sweet-potato-lentil-soup.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of a thick orange sweet potato and red lentil soup with soft lentils visible, a few parsley leaves, in a rustic ceramic soup bowl. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "roasted-tomato-bruschetta",
+      "file": "photos/roasted-tomato-bruschetta.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of four pieces of toasted country bread topped with roasted cherry tomatoes, garlic, basil and olive oil, on a simple wooden board. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "baked-falafel-bowls",
+      "file": "photos/baked-falafel-bowls.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of a bowl with crisp baked chickpea falafel, couscous, cucumber, tomato, shredded lettuce and a spoonful of tahini sauce. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "berry-yogurt-parfait",
+      "file": "photos/berry-yogurt-parfait.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of two clear breakfast glasses layered with plain yogurt, oats granola, fresh strawberries and blueberries, on a neutral kitchen table. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "portuguese-custard-tarts",
+      "file": "photos/portuguese-custard-tarts.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of six Portuguese pasteis de nata custard tarts with flaky pastry shells and blistered golden custard tops, on a ceramic serving plate. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "mediterranean-baked-cod",
+      "file": "photos/mediterranean-baked-cod.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of a fully cooked baked cod fillet in a ceramic baking dish with cherry tomatoes, olives, red pepper, lemon and parsley. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    },
+    {
+      "slug": "peanut-sesame-noodles",
+      "file": "photos/peanut-sesame-noodles.png",
+      "prompt": "Use case: photorealistic-natural. Asset type: recipe catalogue food photo. Primary request: a realistic editorial food photograph of a bowl of noodles coated in peanut sesame sauce with shredded carrot, cucumber, spring onion and sesame seeds, no meat. Scene/backdrop: warm neutral kitchen table with simple understated tableware. Style/medium: natural food photography, appetizing home cooking with believable texture. Composition: square, close three-quarter overhead view, entire main dish comfortably within frame. Lighting: soft natural window light. Constraints: no people, hands, text, logos, watermark, labels or collage; one food photograph."
+    }
+  ]
+}
