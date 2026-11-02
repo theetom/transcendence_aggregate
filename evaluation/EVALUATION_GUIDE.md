@@ -18,8 +18,8 @@ The **recipe owner** is the submitting user. **Staff** can moderate recipes. The
 
 **Files and functions to check**
 
-- [README → Demo account logins](README.md#demo-catalogue).
-- [models.py → Recipe](backend/recipes/models.py#L4).
+- [README → Demo account logins](../README.md#demo-catalogue).
+- [models.py → Recipe](../backend/recipes/models.py#L4).
 
 ## 1. Opening a recipe: from the page address to saved data
 
@@ -45,9 +45,9 @@ The response also contains image addresses. After React places those addresses i
 
 **Files and functions to check**
 
-- [App.jsx](frontend/src/App.jsx#L46) and [RecipePage.jsx → loadRecipe](frontend/src/pages/RecipePage.jsx#L648).
-- [recipeApi.js → getRecipeDetails](frontend/src/data/recipeApi.js#L245).
-- [nginx.conf](frontend/nginx.conf), [main address list](backend/config/urls.py#L24), [recipe address list](backend/recipes/urls.py#L9), then [views.py → _recipe_detail](backend/recipes/views.py#L530).
+- [App.jsx](../frontend/src/App.jsx#L46) and [RecipePage.jsx → loadRecipe](../frontend/src/pages/RecipePage.jsx#L648).
+- [recipeApi.js → getRecipeDetails](../frontend/src/data/recipeApi.js#L245).
+- [nginx.conf](../frontend/nginx.conf), [main address list](../backend/config/urls.py#L24), [recipe address list](../backend/recipes/urls.py#L9), then [views.py → _recipe_detail](../backend/recipes/views.py#L530).
 
 ## 2. Signing in: how later requests belong to an account
 
@@ -63,11 +63,11 @@ This connects signing in to ownership: Django gets the author from the checked l
 
 **Files and functions to check**
 
-- [LoginPage.jsx → handleSubmit](frontend/src/pages/LoginPage.jsx#L15).
-- [users/serializers.py → SignupSerializer](backend/users/serializers.py#L120).
-- [users/views.py → WebsiteLoginView](backend/users/views.py#L35), [sign_up](backend/users/views.py#L62) and [logout](backend/users/views.py#L117).
-- [recipeApi.js → requestRecipeApi](frontend/src/data/recipeApi.js#L5).
-- [SignupPage.jsx → signup request and login navigation](frontend/src/pages/SignupPage.jsx#L86) and [SiteHeader.jsx → logout](frontend/src/components/SiteHeader.jsx#L70).
+- [LoginPage.jsx → handleSubmit](../frontend/src/pages/LoginPage.jsx#L15).
+- [users/serializers.py → SignupSerializer](../backend/users/serializers.py#L120).
+- [users/views.py → WebsiteLoginView](../backend/users/views.py#L35), [sign_up](../backend/users/views.py#L62) and [logout](../backend/users/views.py#L117).
+- [recipeApi.js → requestRecipeApi](../frontend/src/data/recipeApi.js#L5).
+- [SignupPage.jsx → signup request and login navigation](../frontend/src/pages/SignupPage.jsx#L86) and [SiteHeader.jsx → logout](../frontend/src/components/SiteHeader.jsx#L70).
 
 ## 3. Saving a recipe: connected records and actual photo files
 
@@ -79,7 +79,13 @@ The user fills in a recipe form and clicks **Add recipe**. React has to send bot
 4. Django saves a recipe owned by that user, then saves the related ingredient amounts, instructions and photo records connected to its ID. It uses a **transaction**: these database changes finish together, or they are undone together if saving fails. Newly written image files also receive separate cleanup if creation fails.
 5. Once saving succeeds, Django returns status **201**, meaning a new record was created. The response comes back through Nginx, and React opens the submission confirmation page. The recipe is saved as pending approval, leading to the moderation process in section 4.
 
-The connected records matter because the same ingredient can appear in several recipes with different amounts. One recipe's ingredient record can link “Potatoes” to **600 g**, while another recipe's record links it to **300 g**. Each amount belongs to that recipe's connection to the ingredient. Instructions and photos likewise have their own records linked to a particular recipe.
+Each record is one database row. Its `id` identifies that row. A field such as `recipe_id` stores the ID of another row; this reference is called a **foreign key**. Matching IDs connect the records. These example values are illustrative, using the project's actual model fields.
+
+![alt text](01_recipe_database_relationships.png)
+
+Row 101 connects recipe **60** to ingredient **7**: Roasted potatoes uses **600 g of Potatoes**. Row 102 connects recipe **61** to the same ingredient **7**: Potato soup uses **300 g of Potatoes**. The amount belongs in this connection table because it depends on the recipe. The shared Ingredient row only stores the name.
+
+To assemble recipe **60**, Django reads its Recipe row and the ingredient connections, steps and images whose `recipe_id` is **60**. It follows each connection's `ingredient_id` to read the ingredient name. Steps and images link directly to the recipe; they do not need links to each other or to an ingredient connection. Image rows store paths; the actual files live in the storage described below.
 
 ### Following one photo from saving to display
 
@@ -97,15 +103,17 @@ When the recipe response gives React an image address such as `/media/recipes/ph
 
 The project folder also contains `data/shared-database/photos/`. Those are photo copies created when exporting shared project data for partners. Their generated filenames are mapped in `data/shared-database/manifest.json`; the live website reads its images through the Docker volume described above.
 
+![alt text](<Recipe Photo_ Save to Display Workflow.png>)
+
 **Files and functions to check**
 
-- [AddRecipePage.jsx → handleSubmit](frontend/src/pages/AddRecipePage.jsx#L277).
-- [recipes/views.py → _recipe_intake](backend/recipes/views.py#L21).
-- [serializers.py → RecipeDetailedSerializer](backend/recipes/serializers.py#L126), especially [create](backend/recipes/serializers.py#L224).
-- [models.py → RecipeIngredient](backend/recipes/models.py#L41), [RecipeStep](backend/recipes/models.py#L54) and [RecipeImage](backend/recipes/models.py#L73).
-- [views.py → save the photo file and its database record](backend/recipes/views.py#L113), [settings.py → photo storage paths](backend/config/settings.py#L169) and [nginx.conf → serve photo files](frontend/nginx.conf#L77).
-- [docker-compose.yml → backend image storage](docker-compose.yml#L35) and [the same storage connected to Nginx](docker-compose.yml#L68).
-- [share-postgres.py → publish exported photo copies](scripts/share-postgres.py#L403).
+- [AddRecipePage.jsx → handleSubmit](../frontend/src/pages/AddRecipePage.jsx#L277).
+- [recipes/views.py → _recipe_intake](../backend/recipes/views.py#L21).
+- [serializers.py → RecipeDetailedSerializer](../backend/recipes/serializers.py#L126), especially [create](../backend/recipes/serializers.py#L224).
+- [models.py → RecipeIngredient](../backend/recipes/models.py#L41), [RecipeStep](../backend/recipes/models.py#L54) and [RecipeImage](../backend/recipes/models.py#L73).
+- [views.py → save the photo file and its database record](../backend/recipes/views.py#L113), [settings.py → photo storage paths](../backend/config/settings.py#L169) and [nginx.conf → serve photo files](../frontend/nginx.conf#L77).
+- [docker-compose.yml → backend image storage](../docker-compose.yml#L35) and [the same storage connected to Nginx](../docker-compose.yml#L68).
+- [share-postgres.py → publish exported photo copies](../scripts/share-postgres.py#L403).
 
 From the project root, list the actual image files inside the backend container with:
 
@@ -123,20 +131,24 @@ docker volume inspect transcendence_aggregate_django_media --format '{{.Mountpoi
 
 Saving a submission does not make it public immediately. Django initially marks it pending approval, so the owner and staff can inspect it while ordinary visitors cannot see it.
 
-1. Staff open the submission and inspect its contents. Clicking Approve sends `POST /api/recipes/60/approve/` with their login token and the version they inspected. Nginx forwards the request to Django, which checks staff permission and that the contents still match that version.
+1. Staff open the submission and inspect its contents. Clicking Approve sends `POST /api/recipes/60/approve/` with their login token and the recipe version number loaded with that page (explained in section 5). Nginx forwards the request to Django, which checks staff permission and that the contents still match that version.
 2. If those checks pass, Django marks the recipe approved and returns the saved result through Nginx. Later requests for public recipe lists can include it, and ordinary visitors can open its page.
 3. If staff reject it instead, their request includes a reason. Django saves the rejection and reason. The owner can then read that reason, correct the recipe and submit it for approval again.
 4. When an ordinary owner edits a recipe's contents, the browser sends the changes to Django using `PUT`, meaning update, at `/api/recipes/60/`. After checking ownership and the loaded version, Django saves the contents and returns the recipe to pending approval. Staff content edits normally preserve its existing approval state.
 5. If the owner requests deletion, the browser uses `DELETE /api/recipes/60/`. Django records a deletion request and returns status **202**, meaning the request was accepted for later action. An approved recipe can stay public while staff decide. When staff approve removal, Django deletes it and returns **204**, meaning success with no response data.
 
-Django checks these permissions on the request itself. Hiding a button in React helps show appropriate controls, but changing those controls cannot give a user staff permission or ownership. Managing accounts and granting permissions is a separate administration action.
+React only shows the **Approve** and **Reject** buttons to staff. An ordinary user does not see these buttons on the recipe page. This is what “hiding a button” means here: the page leaves out an action that the user is not allowed to perform.
+
+Django still checks permission whenever it receives a request. Even if an ordinary user manually sends an approval request without using a button, Django identifies their account from the login token, checks whether that account is staff and refuses the action if it is not. For editing a recipe, Django checks whether the account is its saved owner or is staff. Changing what appears in the browser cannot change these saved account details or who owns a recipe.
+
+Approving a recipe only changes that recipe's approval status. It does not make its author a staff member. Giving an account staff access is a separate action performed by an administrator who has permission to manage accounts.
 
 **Files and functions to check**
 
-- [views.py → _recipe_detail](backend/recipes/views.py#L530).
-- [views.py → _recipe_edit_or_delete](backend/recipes/views.py#L333).
-- [recipe_approve](backend/recipes/views.py#L184) and [recipe_reject](backend/recipes/views.py#L233).
-- [users/admin.py](backend/users/admin.py).
+- [views.py → _recipe_detail](../backend/recipes/views.py#L530).
+- [views.py → _recipe_edit_or_delete](../backend/recipes/views.py#L333).
+- [recipe_approve](../backend/recipes/views.py#L184) and [recipe_reject](../backend/recipes/views.py#L233).
+- [users/admin.py](../backend/users/admin.py).
 
 ## 5. Two people edit: how the newer save is protected
 
@@ -149,11 +161,18 @@ Opening an edit form loads both the recipe contents and a version number. Suppos
 
 If the versions match, Django can save the changes and increase the version before releasing the lock. The lock keeps simultaneous saves from both passing the check against the same old state; the version number also catches an old form submitted much later.
 
-Staff approval and rejection requests carry the inspected version too, so a decision about old contents cannot silently apply to newer contents. Adding a review or favorite does not change the recipe's content version because it does not edit the recipe itself.
+The same version check also protects staff approval and rejection. Here, the **version** is the number identifying the saved recipe contents currently loaded on the staff member's page. For example:
+
+1. A staff member opens version **3** and reads its instructions.
+2. The owner changes an instruction and saves it. Django saves the updated recipe as version **4**.
+3. If the staff member clicks **Approve** or **Reject** while their page still has version **3**, the browser sends that number with the decision.
+4. Django compares **3** with the current saved number, **4**. They differ, so Django refuses the decision with status **409**. Staff must reload the updated recipe, read the changes and decide again.
+
+This prevents staff from approving or rejecting changed instructions based on the older instructions they read. Posting a review or adding the recipe to favorites does not change its name, ingredients, instructions or photos. Those actions save separate records or links, so the recipe's version number stays the same.
 
 **Files and functions to check**
 
-- [views.py → _recipe_edit_or_delete](backend/recipes/views.py#L333) and [recipe_approve](backend/recipes/views.py#L184).
+- [views.py → _recipe_edit_or_delete](../backend/recipes/views.py#L333) and [recipe_approve](../backend/recipes/views.py#L184).
 - In those functions, find `content_revision` for the version comparison, `select_for_update()` for waiting, and `transaction.atomic()` for keeping the operation together.
 
 ## 6. Reviews and favorites: saving a change and seeing it elsewhere
@@ -168,10 +187,10 @@ Another person's open recipe page will not receive these changes automatically f
 
 **Files and functions to check**
 
-- [views.py → _recipe_review](backend/recipes/views.py#L499).
-- [serializers.py → RecipeReviewStatisticsMixin](backend/recipes/serializers.py#L102).
-- [users/views.py → user_favorite](backend/users/views.py#L150).
-- [useLiveRefresh.js](frontend/src/hooks/useLiveRefresh.js#L5).
+- [views.py → _recipe_review](../backend/recipes/views.py#L499).
+- [serializers.py → RecipeReviewStatisticsMixin](../backend/recipes/serializers.py#L102).
+- [users/views.py → user_favorite](../backend/users/views.py#L150).
+- [useLiveRefresh.js](../frontend/src/hooks/useLiveRefresh.js#L5).
 
 ## 7. Search: from downloaded recipes to the selected results page
 
@@ -186,8 +205,8 @@ In this feature, filtering happens in the browser after the collection is downlo
 
 **Files and functions to check**
 
-- [recipeSearch.js → searchRecipes](frontend/src/data/recipeSearch.js#L81), then [paginateRecipeResults](frontend/src/data/recipeSearch.js#L122).
-- [SearchResultsPage.jsx](frontend/src/pages/SearchResultsPage.jsx).
+- [recipeSearch.js → searchRecipes](../frontend/src/data/recipeSearch.js#L81), then [paginateRecipeResults](../frontend/src/data/recipeSearch.js#L122).
+- [SearchResultsPage.jsx](../frontend/src/pages/SearchResultsPage.jsx).
 
 ## 8. The Public API Tester: a second program calls the site
 
@@ -204,9 +223,9 @@ The API key can expire or be disabled independently of the website login token f
 
 **Files and functions to check**
 
-- [authentication.py → PublicAPIKeyAuthentication](backend/public_api/authentication.py#L35) and [consume_public_api_quota](backend/public_api/authentication.py#L19).
-- [permissions.py → PublicAPIKeyPermission](backend/public_api/permissions.py#L6).
-- [Public API Tester server → outgoing API request](demos/public-api-tester/server.py#L216) and [public API addresses](backend/public_api/urls.py#L8).
+- [authentication.py → PublicAPIKeyAuthentication](../backend/public_api/authentication.py#L35) and [consume_public_api_quota](../backend/public_api/authentication.py#L19).
+- [permissions.py → PublicAPIKeyPermission](../backend/public_api/permissions.py#L6).
+- [Public API Tester server → outgoing API request](../demos/public-api-tester/server.py#L216) and [public API addresses](../backend/public_api/urls.py#L8).
 
 ## 9. Recipe files: export, check and import
 
@@ -223,8 +242,8 @@ Starting a new import uses a new request ID and deliberately creates another bat
 
 **Files and functions to check**
 
-- [transfer_views.py → RecipeExportView](backend/recipes/transfer_views.py#L57), [RecipeValidateView](backend/recipes/transfer_views.py#L109), [RecipeImportView](backend/recipes/transfer_views.py#L142) and [RecipeImportStatusView](backend/recipes/transfer_views.py#L203).
-- [transfer_formats.py](backend/recipes/transfer_formats.py).
+- [transfer_views.py → RecipeExportView](../backend/recipes/transfer_views.py#L57), [RecipeValidateView](../backend/recipes/transfer_views.py#L109), [RecipeImportView](../backend/recipes/transfer_views.py#L142) and [RecipeImportStatusView](../backend/recipes/transfer_views.py#L203).
+- [transfer_formats.py](../backend/recipes/transfer_formats.py).
 
 ## 10. Analytics: from saved events to charts and a matching download
 
@@ -240,9 +259,9 @@ When the user downloads the report, the browser builds the file from the respons
 
 **Files and functions to check**
 
-- [analytics.py → read_filters](backend/recipes/analytics.py#L34) and [build_analytics](backend/recipes/analytics.py#L110).
-- [AnalyticsPage.jsx](frontend/src/pages/AnalyticsPage.jsx#L229).
-- [recipeAnalytics.js → createAnalyticsDownload](frontend/src/data/recipeAnalytics.js#L195).
+- [analytics.py → read_filters](../backend/recipes/analytics.py#L34) and [build_analytics](../backend/recipes/analytics.py#L110).
+- [AnalyticsPage.jsx](../frontend/src/pages/AnalyticsPage.jsx#L229).
+- [recipeAnalytics.js → createAnalyticsDownload](../frontend/src/data/recipeAnalytics.js#L195).
 
 ## 11. Startup, status and recovery: how the running parts fit together
 
@@ -261,11 +280,11 @@ The shared bundle under `data/shared-database/` carries project content to partn
 
 **Files and functions to check**
 
-- [docker-compose.yml](docker-compose.yml#L1) and [start.sh](scripts/start.sh).
-- [health.py → health](backend/config/health.py#L15).
-- [backups-worker.py → daemon](scripts/backups-worker.py#L720), [create_backup](scripts/backups-worker.py#L537) and [restore_backup](scripts/backups-worker.py#L655).
-- [share-postgres.py → export_snapshot](scripts/share-postgres.py#L467).
-- [StatusPage.jsx → request and display the health result](frontend/src/pages/StatusPage.jsx#L66).
+- [docker-compose.yml](../docker-compose.yml#L1) and [start.sh](../scripts/start.sh).
+- [health.py → health](../backend/config/health.py#L15).
+- [backups-worker.py → daemon](../scripts/backups-worker.py#L720), [create_backup](../scripts/backups-worker.py#L537) and [restore_backup](../scripts/backups-worker.py#L655).
+- [share-postgres.py → export_snapshot](../scripts/share-postgres.py#L467).
+- [StatusPage.jsx → request and display the health result](../frontend/src/pages/StatusPage.jsx#L66).
 
 ## 12. Shared controls: from reusable page code to browser actions
 
@@ -279,6 +298,6 @@ A browser's own date picker or file chooser may look different, but the page mus
 
 **Files and functions to check**
 
-- [Button.jsx](frontend/src/components/Button.jsx#L1), [Icon.jsx](frontend/src/components/Icon.jsx#L13) and [savour-system.css](frontend/src/styles/savour-system.css).
-- [vite.config.js](frontend/vite.config.js#L10).
-- [start.sh](scripts/start.sh).
+- [Button.jsx](../frontend/src/components/Button.jsx#L1), [Icon.jsx](../frontend/src/components/Icon.jsx#L13) and [savour-system.css](../frontend/src/styles/savour-system.css).
+- [vite.config.js](../frontend/vite.config.js#L10).
+- [start.sh](../scripts/start.sh).
